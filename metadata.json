@@ -1,0 +1,7 @@
+{
+  "name": "Sistema de Cadastro Policial",
+  "description": "Sistema integrado para gestão de cadastros, reconhecimento e emissão de documentos policiais.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
