@@ -14,5 +14,8 @@ export default defineConfig(({mode}) => {
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
     },
+    preview: {
+      allowedHosts: ['prototypecadastro-production.up.railway.app'],
+    },
   };
 });
