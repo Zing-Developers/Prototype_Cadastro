@@ -12,8 +12,9 @@ import {
   ClipboardList, 
   Fingerprint, 
   FileCheck, 
-  FileWarning, 
-  History, 
+  FileWarning,
+  AlertTriangle,
+  History,
   LogOut,
   Plus,
   Calendar,
@@ -59,6 +60,21 @@ interface UserProfile {
   username: string;
   name: string;
   role: string;
+}
+
+// --- Photo helpers ---
+
+function seedToId(seed: string): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return (Math.abs(hash) % 70) + 1;
+}
+
+function getPortraitUrl(seed: string, gender: 'men' | 'women' = 'men'): string {
+  return `https://randomuser.me/api/portraits/${gender}/${seedToId(seed)}.jpg`;
 }
 
 // --- Components ---
@@ -175,17 +191,17 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [currentView, setCurrentView] = useState<'dashboard' | 'person_list' | 'person_detail' | 'ficha_list' | 'ficha_detail' | 'recognition' | 'rehabilitation_list' | 'document_registration' | 'document_detail' | 'document_search' | 'certificate_list' | 'certificate_registration'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'person_list' | 'person_detail' | 'ficha_list' | 'ficha_new' | 'ficha_detail' | 'recognition' | 'rehabilitation_list' | 'document_registration' | 'document_detail' | 'document_search' | 'certificate_list' | 'certificate_registration'>('dashboard');
   const [selectedPerson, setSelectedPerson] = useState<any>(null);
   const [selectedFicha, setSelectedFicha] = useState<any>(null);
   const [persons, setPersons] = useState<any[]>([
     {
       id: 1,
-      process_number: '0001', unit: 'ESF', full_name: 'Bruno Fonseca', birth_date: '2010-05-15', gender: 'Masculino', marital_status: 'Solteiro', 
+      process_number: '0001', occurrence_number: 'OC-2023-001', unit: 'ESF', full_name: 'Bruno Fonseca', birth_date: '2010-05-15', gender: 'Masculino', marital_status: 'Solteiro', 
       naturality: 'Cabo Verde', nationality: 'Cabo Verde', father_name: 'António Fonseca', mother_name: 'Maria Fonseca', profession: 'Estudante', 
-      doc_type: 'CNI', doc_number: '9884565', doc_issue_date: '2020-10-15', doc_expiry_date: '2025-10-15', doc_issue_location: 'Praia', 
+      doc_type: 'BI', doc_number: '001234567LA041', doc_issue_date: '2020-01-01', doc_expiry_date: '2030-01-01', doc_issue_location: 'Praia',
       phone: '9884565', email: 'bruno@email.cv', island: 'Santiago', municipality: 'Praia', parish: 'N.S. Da Graça', locality: 'Cidade Da Praia', zone: 'Txadinha', reference_point: 'Perto da Escola',
-      nif: '123456789', status: 'Por Registar', sent_by: 'Agente Mascarenha', sent_date: '2023-03-20', sent_unit: 'ESF Praia', completed_by: null, completed_date: null, completed_unit: null,
+      nif: '200123456', status: 'Por Registar', sent_by: 'Agente Mascarenha', sent_date: '2023-03-20', sent_unit: 'ESF Praia', completed_by: null, completed_date: null, completed_unit: null,
       records: [
         {id: 1, person_id: 1, date: '2023-05-12', reason: 'Furto qualificado em residência', ref_note: 'REF-2023-045', destination: 'Ministério Público', measures: 'Termo de Identidade e Residência', type: 'Criminal'}
       ],
@@ -196,11 +212,22 @@ export default function App() {
     }
   ]);
   const [fichas, setFichas] = useState<any[]>([
-    { 
-      id: 1, 
-      number: '0006', 
-      name: 'Bruno Fonseca', 
-      birthDate: '1998-04-29', 
+    {
+      id: 1,
+      number: '0006',
+      name: 'Bruno Fonseca',
+      birthDate: '1998-04-29',
+      gender: 'Masculino',
+      civilStatus: 'Solteiro(a)',
+      nationality: 'Cabo-verdiana',
+      birthPlace: 'Praia',
+      fatherName: 'António Fonseca',
+      motherName: 'Maria Fonseca',
+      nif: '200123456',
+      docNumber: '001234567LA041',
+      docIssueDate: '2020-01-01',
+      docExpiryDate: '2030-01-01',
+      photo: getPortraitUrl('bruno_fonseca', 'men'),
       island: 'Santiago',
       complementaryGroups: [
         {
@@ -266,56 +293,59 @@ export default function App() {
             requestedBy: 'Agente Bruno Fonseca'
           }
         },
-        { id: 2, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: '---', destination: '---', measures: '---', type: 'Policial', status: 'Ativo' }
+        { id: 2, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: '---', destination: '---', measures: '---', type: 'Policial', status: 'Ativo' },
+        { id: 3, date: '15/03/2023', reason: 'Suspeito de furto qualificado', refNo: 'OC-2023-0821', destination: 'Tribunal de Comarca da Praia', measures: 'Liberdade provisória', type: 'Criminal', status: 'Ativo',
+          rejectedRehabilitation: {
+            reason: 'O período mínimo de 3 anos após a condenação ainda não foi cumprido. A reabilitação só poderá ser solicitada novamente após 15/03/2026.',
+            rejectedAt: '02/01/2025',
+            rejectedBy: 'Superintendente Carlos Mendes'
+          }
+        },
+        { id: 4, date: '20/06/2021', reason: 'Desordem pública e resistência à autoridade', refNo: 'OC-2021-0345', destination: '---', measures: 'Multa aplicada', type: 'Policial', status: 'Reabilitado',
+          rehabilitationDetails: {
+            reason: 'O indivíduo cumpriu integralmente as obrigações impostas, pagou a multa e não registou novos incidentes nos últimos 4 anos. A reabilitação é amplamente justificada.',
+            attachments: [
+              { name: 'comprovativo_multa_paga.pdf', size: 1024 * 85 },
+              { name: 'declaracao_bom_comportamento.pdf', size: 1024 * 210 }
+            ],
+            requestedAt: '10/07/2025',
+            requestedBy: 'Agente Mónica Tavares',
+            acceptedAt: '18/07/2025',
+            acceptedBy: 'Superintendente Carlos Mendes'
+          }
+        }
       ],
       photoHistory: [
-        { 
-          id: 1, 
-          createdAt: '2023-01-10', 
-          updatedAt: '2024-01-15', 
-          createdBy: 'Maria', 
+        {
+          id: 1,
+          createdAt: '2023-01-10',
+          updatedAt: '2024-01-15',
+          createdBy: 'Maria',
           updatedBy: 'Paulo',
           photos: [
             { label: 'Frontal', seed: 'h1_frontal' },
             { label: 'Perfil Esquerdo', seed: 'h1_left' }
           ]
         },
-        { 
-          id: 2, 
-          createdAt: '2022-05-20', 
-          updatedAt: '2023-01-09', 
-          createdBy: 'João', 
+        {
+          id: 2,
+          createdAt: '2022-05-20',
+          updatedAt: '2023-01-09',
+          createdBy: 'João',
           updatedBy: 'Maria',
           photos: [
             { label: 'Frontal', seed: 'h2_frontal' },
             { label: 'Tatuagem', seed: 'h2_tattoo' }
           ]
         }
+      ],
+      attachments: [
+        { id: 1, name: 'auto_detencao_2024.pdf', type: 'PDF', size: 524288, uploadedBy: 'Paulo', uploadedAt: '10/10/2024', description: 'Auto de detenção em flagrante delito' },
+        { id: 2, name: 'termo_identificacao.pdf', type: 'PDF', size: 204800, uploadedBy: 'Paulo', uploadedAt: '10/10/2024', description: 'Termo de identificação e apresentação' },
+        { id: 3, name: 'foto_tatuagem_braco.jpg', type: 'Imagem', size: 1048576, uploadedBy: 'Maria', uploadedAt: '15/01/2025', description: 'Fotografia de tatuagem tribal no braço direito' },
+        { id: 4, name: 'relatorio_ocorrencia_006.docx', type: 'Documento', size: 327680, uploadedBy: 'Maria', uploadedAt: '14/03/2024', description: 'Relatório de ocorrência nº 006' }
       ]
     },
-    { 
-      id: 2, 
-      number: '123456789', 
-      name: 'Alvino Mota', 
-      birthDate: '1995-12-15', 
-      island: 'Santiago',
-      birthPlace: 'Praia',
-      fatherName: 'António Mota',
-      motherName: 'Maria Mota',
-      gender: 'Masculino',
-      civilStatus: 'Solteiro(a)',
-      nationality: 'Cabo-verdiana',
-      photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200',
-      addresses: [
-        { id: 1, type: 'Residência', island: 'Santiago', council: 'Praia', parish: 'Nossa Senhora da Graça', locality: 'Achada Santo António', reference: 'Próximo ao BCA' }
-      ],
-      contacts: [
-        { id: 1, type: 'Telemovel', info: '9123456' },
-        { id: 2, type: 'Email', info: 'alvino@example.com' }
-      ],
-      docNumber: '123456789',
-      nif: '123456789'
-    }
   ]);
   const [showAssociateModal, setShowAssociateModal] = useState(false);
   const [hideNewCadastroInAssociate, setHideNewCadastroInAssociate] = useState(false);
@@ -334,6 +364,8 @@ export default function App() {
   const [suggestedFicha, setSuggestedFicha] = useState<any>(null);
   const [isNewRegistration, setIsNewRegistration] = useState(false);
   const [showConfirmNew, setShowConfirmNew] = useState(false);
+  const [showConfirmConcluir, setShowConfirmConcluir] = useState(false);
+  const [pendingConcluirAction, setPendingConcluirAction] = useState<(() => void) | null>(null);
   const [showComplementaryModal, setShowComplementaryModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [tempPhotos, setTempPhotos] = useState<any[]>([]);
@@ -379,10 +411,22 @@ export default function App() {
   const [selectedReasonForRehab, setSelectedReasonForRehab] = useState<any>(null);
   const [showPhotoHistoryDetailsModal, setShowPhotoHistoryDetailsModal] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [showExportSelectModal, setShowExportSelectModal] = useState(false);
+  const [exportOptions, setExportOptions] = useState<{
+    photo: boolean;
+    sinalComplementar: boolean;
+    outrasInfo: boolean;
+    motivoIds: number[];
+  }>({ photo: true, sinalComplementar: true, outrasInfo: false, motivoIds: [] });
   const [selectedPhotoGroup, setSelectedPhotoGroup] = useState<any>(null);
   const [rehabilitationReason, setRehabilitationReason] = useState('');
   const [rehabilitationAttachments, setRehabilitationAttachments] = useState<File[]>([]);
   const [showApproveConfirmModal, setShowApproveConfirmModal] = useState(false);
+  const [showRejectConfirmModal, setShowRejectConfirmModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rehabDetailsViewOnly, setRehabDetailsViewOnly] = useState(false);
+  const [showRejectionReasonModal, setShowRejectionReasonModal] = useState(false);
+  const [selectedRejectionDetails, setSelectedRejectionDetails] = useState<any>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -479,7 +523,35 @@ export default function App() {
   const [bioSearchDocNumber, setBioSearchDocNumber] = useState('');
   const [bioSearchResults, setBioSearchResults] = useState<any[]>([]);
   const [showBioSearchModal, setShowBioSearchModal] = useState(false);
-  const [bioSearchTarget, setBioSearchTarget] = useState<'certificate' | 'document' | null>(null);
+  const [bioSearchTarget, setBioSearchTarget] = useState<'certificate' | 'document' | 'ficha' | null>(null);
+
+  const emptyNewFicha = () => ({
+    name: '', birthDate: '', gender: '', civilStatus: '', birthPlace: '',
+    nationality: '', fatherName: '', motherName: '', nif: '', profession: '',
+    docType: 'CNI', docNumber: '', docIssueDate: '', docExpiryDate: '', docIssueLocation: '',
+    photo: null as string | null,
+  });
+  const [newFichaData, setNewFichaData] = useState(emptyNewFicha());
+  const [newFichaExpanded, setNewFichaExpanded] = useState<Record<string,boolean>>({
+    biographic: true, complementary: false, outras: false, motivo: false, biometric: false, observations: false, attachments: false
+  });
+  const toggleNewFicha = (k: string) => setNewFichaExpanded(p => ({...p, [k]: !p[k]}));
+  const [newFichaChars, setNewFichaChars] = useState<{name:string;value:string;observation:string}[]>([]);
+  const [newFichaNewChar, setNewFichaNewChar] = useState({ name: '', value: '', observation: '' });
+  const [newFichaAddresses, setNewFichaAddresses] = useState<any[]>([]);
+  const [newFichaNewAddress, setNewFichaNewAddress] = useState({ type: 'Residência', island: '', county: '', parish: '', locality: '', zone: '', reference: '' });
+  const [newFichaContacts, setNewFichaContacts] = useState<any[]>([]);
+  const [newFichaNewContact, setNewFichaNewContact] = useState({ type: 'Telemovel', info: '' });
+  const [newFichaNicknames, setNewFichaNicknames] = useState<string[]>([]);
+  const [newFichaNewNickname, setNewFichaNewNickname] = useState('');
+  const [newFichaSocials, setNewFichaSocials] = useState<any[]>([]);
+  const [newFichaNewSocial, setNewFichaNewSocial] = useState({ type: 'Facebook', link: '' });
+  const [newFichaReasons, setNewFichaReasons] = useState<any[]>([]);
+  const [newFichaNewReason, setNewFichaNewReason] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' });
+  const [newFichaObservations, setNewFichaObservations] = useState<{content:string;author:string;date:string}[]>([]);
+  const [newFichaNewObs, setNewFichaNewObs] = useState('');
+  const [newFichaAttachments, setNewFichaAttachments] = useState<{name:string;type:string}[]>([]);
+  const [newFichaNewAttach, setNewFichaNewAttach] = useState({ name: '', type: 'Documento' });
 
   const handleBioSearch = () => {
     const results = fichas.filter(f => {
@@ -532,11 +604,39 @@ export default function App() {
           birthPlace: person.birthPlace || '',
           fatherName: person.fatherName || '',
           motherName: person.motherName || '',
-          nif: person.nif || '',
           phone: person.contacts?.find((c: any) => c.type === 'Telemovel')?.info || '',
           photo: person.photo || null,
+          type: bioSearchDocType || docData.document.type,
+          number: person.docNumber || '',
+          issueDate: person.docIssueDate || docData.document.issueDate,
+          expiryDate: person.docExpiryDate || docData.document.expiryDate,
         }
       });
+    } else if (bioSearchTarget === 'ficha') {
+      setNewFichaData({
+        name: person.name || '',
+        birthDate: person.birthDate || '',
+        gender: person.gender || '',
+        civilStatus: person.civilStatus || '',
+        birthPlace: person.birthPlace || '',
+        nationality: person.nationality || 'Cabo-verdiana',
+        fatherName: person.fatherName || '',
+        motherName: person.motherName || '',
+        nif: person.nif || '',
+        profession: person.profession || '',
+        docType: person.docType || bioSearchDocType,
+        docNumber: person.docNumber || person.number || '',
+        docIssueDate: person.docIssueDate || '',
+        docExpiryDate: person.docExpiryDate || '',
+        docIssueLocation: person.docIssueLocation || '',
+        photo: person.photo || null,
+      });
+      if (person.addresses?.length > 0) {
+        setNewFichaAddresses(person.addresses.map((a: any) => ({ ...a })));
+      }
+      if (person.contacts?.length > 0) {
+        setNewFichaContacts(person.contacts.map((c: any) => ({ ...c })));
+      }
     }
     setShowBioSearchModal(false);
     setBioSearchName('');
@@ -545,9 +645,52 @@ export default function App() {
   const [mockAnalysisCertificates, setMockAnalysisCertificates] = useState<any[]>([
     {
       id: '000004',
-      name: 'Manuel Sousa',
+      name: 'Bruno Fonseca',
       birthDate: '29/04/1998',
-      requestDate: '19/02/2023',
+      requestDate: '19/02/2025',
+      status: 'Por analisar',
+      biographic: {
+        fullName: 'Bruno Fonseca',
+        birthDate: '1998-04-29',
+        gender: 'Masculino',
+        civilStatus: 'Solteiro',
+        birthPlace: 'Praia',
+        nationality: 'Cabo-verdiana',
+        fatherName: 'António Fonseca',
+        motherName: 'Maria Fonseca',
+        nif: '200123456',
+        docType: 'BI',
+        docNumber: '001234567LA041'
+      },
+      address: {
+        island: 'Santiago',
+        council: 'Praia',
+        parish: 'N.S Da Graça',
+        locality: 'Palmarejo',
+        reference: 'Perto do Mercado'
+      },
+      contact: {
+        mobile: '9843347',
+        email: 'joai@gmail.com'
+      },
+      reason: 'Emprego Público',
+      attachments: [
+        { name: 'Documento de Identificação.pdf', type: 'pdf' },
+        { name: 'Representante Legal.pdf', type: 'pdf' },
+        { name: 'Duc', type: 'pdf' }
+      ],
+      observations: [
+        { user: 'Mascarenhas', date: '20/03/2025', text: 'Pedido de certificado para concurso público. Documentação em ordem.' }
+      ],
+      history: [
+        { date: '19/02/2025', phase: 'Analise', status: 'Por analisar', user: 'Maria' }
+      ]
+    },
+    {
+      id: '000005',
+      name: 'Manuel Sousa',
+      birthDate: '27/06/1997',
+      requestDate: '19/02/2025',
       status: 'Por analisar',
       biographic: {
         fullName: 'Manuel Sousa',
@@ -572,23 +715,24 @@ export default function App() {
         mobile: '9876545',
         email: 'manuel@gmail.com'
       },
-      reason: 'Matricula Universidade',
+      reason: 'Matrícula Universidade',
       attachments: [
         { name: 'Documento de Identificação.pdf', type: 'pdf' },
-        { name: 'Representante Legal.pdf', type: 'pdf' },
         { name: 'Duc', type: 'pdf' }
       ],
       observations: [
-        { user: 'Mascarenhas', date: '20/03/2023', text: 'vjhvuj hyasd ubasiud asdabjsd asjdba sdjbsd asaia asi ia a ikabsidubasd ubiasd kbiuasbd kjbasd basidb ibasidb iuasa' }
+        { user: 'Mascarenhas', date: '20/03/2025', text: 'Pedido para fins académicos.' }
       ],
       history: [
-        { date: '14/03/2024', phase: 'Analise', status: 'Por analisar', user: 'Maria' }
+        { date: '19/02/2025', phase: 'Analise', status: 'Por analisar', user: 'Maria' }
       ]
     }
   ]);
   const [mockDecisionCertificates, setMockDecisionCertificates] = useState<any[]>([]);
+  const [mockConcludedCertificates, setMockConcludedCertificates] = useState<any[]>([]);
   const [selectedAnalysisCertificate, setSelectedAnalysisCertificate] = useState<any>(null);
   const [selectedDecisionCertificate, setSelectedDecisionCertificate] = useState<any>(null);
+  const [selectedHistoryCertificate, setSelectedHistoryCertificate] = useState<any>(null);
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [returnReason, setReturnReason] = useState('');
   const [registeredDoc, setRegisteredDoc] = useState<any>(null);
@@ -601,6 +745,7 @@ export default function App() {
     island: '',
     organicUnit: ''
   });
+  const [docSearchResults, setDocSearchResults] = useState<any[] | null>(null);
   const [mockDocuments, setMockDocuments] = useState<any[]>([
     {
       id: '001',
@@ -612,7 +757,13 @@ export default function App() {
         expiryDate: '2030-01-01',
         fullName: 'Bruno Fonseca',
         birthDate: '1998-04-29',
-        nationality: 'Cabo-verdiana'
+        nationality: 'Cabo-verdiana',
+        birthPlace: 'Praia',
+        fatherName: 'António Fonseca',
+        motherName: 'Maria Fonseca',
+        nif: '200123456',
+        phone: '9912345',
+        photo: getPortraitUrl('bruno_fonseca', 'men')
       },
       finder: {
         type: 'Civil',
@@ -636,16 +787,91 @@ export default function App() {
         organicUnit: 'Esquadra Fazenda',
         observations: 'Documento em bom estado.'
       },
+      attachments: [
+        { name: 'foto_frente_bi.jpg', type: 'Imagem' },
+        { name: 'auto_ocorrencia.pdf', type: 'PDF' }
+      ],
       registeredBy: 'Agente PN - 001',
       registeredAt: '2024-03-01'
+    },
+    {
+      id: '002',
+      document: {
+        reason: 'Roubo',
+        type: 'Passaporte',
+        number: 'CV0098234',
+        issueDate: '2019-06-15',
+        expiryDate: '2029-06-15',
+        fullName: 'Maria Santos',
+        birthDate: '1985-11-20',
+        nationality: 'Cabo-verdiana',
+        birthPlace: 'Mindelo',
+        fatherName: 'Carlos Santos',
+        motherName: 'Ana Santos',
+        nif: '200765432',
+        phone: '9823456'
+      },
+      finder: {
+        type: 'Policial',
+        name: '',
+        idType: '',
+        idNumber: '',
+        contact: '',
+        foundDate: '2024-07-10',
+        location: { island: 'São Vicente', county: 'São Vicente', parish: 'Nossa Senhora da Luz', locality: 'Centro', zone: '', reference: '' }
+      },
+      storage: {
+        island: 'São Vicente',
+        county: 'São Vicente',
+        organicUnit: 'Esquadra Platô',
+        observations: 'Passaporte com sinais de uso intenso.'
+      },
+      attachments: [],
+      registeredBy: 'Agente PN - 042',
+      registeredAt: '2024-07-10'
+    },
+    {
+      id: '003',
+      document: {
+        reason: 'Encontrado',
+        type: 'CNI',
+        number: 'CNI2023001122',
+        issueDate: '2023-02-01',
+        expiryDate: '2033-02-01',
+        fullName: 'Pedro Lopes',
+        birthDate: '2000-03-05',
+        nationality: 'Cabo-verdiana',
+        birthPlace: 'Praia',
+        fatherName: 'Manuel Lopes',
+        motherName: 'Rosa Lopes',
+        nif: '200543210',
+        phone: '9756789'
+      },
+      finder: {
+        type: 'Civil',
+        name: 'Ana Tavares',
+        idType: 'CNI',
+        idNumber: 'CNI2020005678',
+        contact: '9611234',
+        foundDate: '2025-01-22',
+        location: { island: 'Santiago', county: 'Praia', parish: 'Nossa Senhora da Graça', locality: 'Achada Santo António', zone: 'Zona 2', reference: 'Paragem de autocarro' }
+      },
+      storage: {
+        island: 'Santiago',
+        county: 'Praia',
+        organicUnit: 'Esquadra Achada Santo António',
+        observations: ''
+      },
+      attachments: [
+        { name: 'cni_frente.jpg', type: 'Imagem' }
+      ],
+      registeredBy: 'Agente PN - 017',
+      registeredAt: '2025-01-22'
     }
   ]);
   const [showLevantamentoModal, setShowLevantamentoModal] = useState(false);
-  const [levantamentoData, setLevantamentoData] = useState({
-    nome: '',
-    apelido: '',
-    dataNascimento: ''
-  });
+  const [levantamentoIsOwner, setLevantamentoIsOwner] = useState<boolean | null>(null);
+  const [levantamentoOtherPerson, setLevantamentoOtherPerson] = useState({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' });
   
   const [showOtherInfoHistory, setShowOtherInfoHistory] = useState({
     address: false,
@@ -766,7 +992,36 @@ export default function App() {
 
     setFichas(updatedFichas);
     setShowApproveConfirmModal(false);
-    setSuccessMessage('Reabilitado com sucesso');
+    setShowRehabilitationDetailsModal(false);
+    setRehabDetailsViewOnly(false);
+    setSuccessMessage('Reabilitação aceite com sucesso.');
+    setShowSuccessModal(true);
+    setPendingRehabAction(null);
+  };
+
+  const handleRejectRehabilitation = () => {
+    if (!pendingRehabAction || !rejectReason.trim()) return;
+    const { ficha, reg } = pendingRehabAction;
+
+    const updatedFichas = fichas.map(f => {
+      if (f.id === ficha.id) {
+        const updatedReasons = f.registrationReasons.map((r: any) => {
+          if (r.id === reg.id) {
+            return { ...r, status: 'Recusado', rejectionReason: rejectReason.trim() };
+          }
+          return r;
+        });
+        return { ...f, registrationReasons: updatedReasons };
+      }
+      return f;
+    });
+
+    setFichas(updatedFichas);
+    setShowRejectConfirmModal(false);
+    setShowRehabilitationDetailsModal(false);
+    setRehabDetailsViewOnly(false);
+    setRejectReason('');
+    setSuccessMessage('Reabilitação recusada.');
     setShowSuccessModal(true);
     setPendingRehabAction(null);
   };
@@ -785,8 +1040,13 @@ export default function App() {
     motivo: true,
     registos_associados: true,
     certificateModel: true,
-    associatedMotivo: true
+    associatedMotivo: true,
+    analysisBiographic: true,
+    analysisAnexos: true,
+    analysisObservations: true,
+    analysisHistory: true,
   });
+  const [certAnalysisHasSearched, setCertAnalysisHasSearched] = useState(false);
 
   const characteristicTypes: Record<string, string[]> = {
     'Barba': ['Cavanhaque', 'Barba Comprida', 'Barba Curta', 'Sem Barba'],
@@ -817,10 +1077,10 @@ export default function App() {
       
       setSelectedPerson(data);
       
-      // Auto-match ficha
-      const match = fichas.find(f => 
-        (data.nif && f.nif === data.nif) || 
-        (data.id_number && (f.docNumber === data.id_number || f.number === data.id_number))
+      // Auto-match ficha — por número de documento ou nome completo
+      const match = fichas.find(f =>
+        (data.doc_number && f.docNumber && data.doc_number === f.docNumber) ||
+        (data.full_name && f.name && data.full_name.toLowerCase().trim() === f.name.toLowerCase().trim())
       );
       
       if (match) {
@@ -833,11 +1093,17 @@ export default function App() {
     }
   };
   const [searchFilters, setSearchFilters] = useState({
-    process: '',
+    occurrence_number: '',
+    registration_number: '',
     unit: '',
     name: '',
+    surname: '',
     birth_date: '',
-    island: ''
+    island: '',
+    municipality: '',
+    parish: '',
+    locality: '',
+    zone: ''
   });
 
   const fetchPersons = async () => {
@@ -969,11 +1235,17 @@ export default function App() {
 
   const handleClearFilters = () => {
     setSearchFilters({
-      process: '',
+      occurrence_number: '',
+      registration_number: '',
       unit: '',
       name: '',
+      surname: '',
       birth_date: '',
-      island: ''
+      island: '',
+      municipality: '',
+      parish: '',
+      locality: '',
+      zone: ''
     });
   };
 
@@ -1294,10 +1566,11 @@ export default function App() {
                       description="Processo de decisão e aprovação de documentos."
                       onClick={() => setCurrentView('certificate_decision')}
                     />
-                    <MenuCard 
-                      title="Histórico Certificado de Cadastro" 
-                      icon={History} 
+                    <MenuCard
+                      title="Histórico Certificado de Cadastro"
+                      icon={History}
                       description="Histórico completo de certificados emitidos."
+                      onClick={() => setCurrentView('certificate_history')}
                     />
                     <MenuCard 
                       title="Certificado de Extravio" 
@@ -1338,63 +1611,186 @@ export default function App() {
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Filtrar Pesquisa</h3>
                   </div>
                   
-                  <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Processo / Ocorrência</label>
-                      <input 
-                        type="text" 
-                        value={searchFilters.process}
-                        onChange={(e) => setSearchFilters({...searchFilters, process: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                        placeholder="N.º Processo"
-                      />
+                  <form onSubmit={handleSearch} className="space-y-6">
+                    {/* Linha 1 — Dados do Processo */}
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-300 pl-3 mb-4">Dados do Processo</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</label>
+                        <input
+                          type="text"
+                          value={searchFilters.occurrence_number}
+                          onChange={(e) => setSearchFilters({...searchFilters, occurrence_number: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
+                          placeholder="Nº Ocorrência"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Registo</label>
+                        <input
+                          type="text"
+                          value={searchFilters.registration_number}
+                          onChange={(e) => setSearchFilters({...searchFilters, registration_number: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
+                          placeholder="Nº Registo"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
+                        <select
+                          value={searchFilters.unit}
+                          onChange={(e) => setSearchFilters({...searchFilters, unit: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                        >
+                          <option value="">Selecione...</option>
+                          <option value="ESF">ESF</option>
+                          <option value="DP">DP</option>
+                        </select>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
-                      <select 
-                        value={searchFilters.unit}
-                        onChange={(e) => setSearchFilters({...searchFilters, unit: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
-                      >
-                        <option value="">Selecione...</option>
-                        <option value="ESF">ESF</option>
-                        <option value="DP">DP</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome Completo</label>
-                      <input 
-                        type="text" 
-                        value={searchFilters.name}
-                        onChange={(e) => setSearchFilters({...searchFilters, name: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                        placeholder="Nome do indivíduo"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Nascimento</label>
-                      <input 
-                        type="date" 
-                        value={searchFilters.birth_date}
-                        onChange={(e) => setSearchFilters({...searchFilters, birth_date: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ilha</label>
-                      <select 
-                        value={searchFilters.island}
-                        onChange={(e) => setSearchFilters({...searchFilters, island: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
-                      >
-                        <option value="">Selecione...</option>
-                        <option value="Santiago">Santiago</option>
-                        <option value="São Vicente">São Vicente</option>
-                        <option value="Sal">Sal</option>
-                      </select>
                     </div>
 
-                    <div className="md:col-span-5 flex justify-end gap-3 mt-4">
+                    {/* Linha 2 — Dados da Pessoa */}
+                    <div className="border-t border-slate-100 pt-5">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-300 pl-3 mb-4">Dados da Pessoa</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</label>
+                          <input
+                            type="text"
+                            value={searchFilters.name}
+                            onChange={(e) => setSearchFilters({...searchFilters, name: e.target.value})}
+                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
+                            placeholder="Nome"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apelido</label>
+                          <input
+                            type="text"
+                            value={searchFilters.surname}
+                            onChange={(e) => setSearchFilters({...searchFilters, surname: e.target.value})}
+                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
+                            placeholder="Apelido"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Nascimento</label>
+                          <input
+                            type="date"
+                            value={searchFilters.birth_date}
+                            onChange={(e) => setSearchFilters({...searchFilters, birth_date: e.target.value})}
+                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Linha 2 — Residência */}
+                    <div className="border-t border-slate-100 pt-5">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-300 pl-3 mb-4">Residência</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6 items-end">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ilha</label>
+                          <select
+                            value={searchFilters.island}
+                            onChange={(e) => setSearchFilters({...searchFilters, island: e.target.value})}
+                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                          >
+                            <option value="">Selecione...</option>
+                            <option value="Santiago">Santiago</option>
+                            <option value="São Vicente">São Vicente</option>
+                            <option value="Sal">Sal</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Concelho</label>
+                          <select
+                            value={searchFilters.municipality}
+                            onChange={(e) => setSearchFilters({...searchFilters, municipality: e.target.value})}
+                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                          >
+                            <option value="">Selecione...</option>
+                            <option value="Praia">Praia</option>
+                            <option value="Santa Catarina">Santa Catarina</option>
+                            <option value="Santa Cruz">Santa Cruz</option>
+                            <option value="São Domingos">São Domingos</option>
+                            <option value="São Lourenço dos Órgãos">São Lourenço dos Órgãos</option>
+                            <option value="São Miguel">São Miguel</option>
+                            <option value="São Salvador do Mundo">São Salvador do Mundo</option>
+                            <option value="Tarrafal">Tarrafal</option>
+                            <option value="Ribeira Grande de Santiago">Ribeira Grande de Santiago</option>
+                            <option value="Mindelo">Mindelo</option>
+                            <option value="Santa Catarina do Fogo">Santa Catarina do Fogo</option>
+                            <option value="Sal Rei">Sal Rei</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Freguesia</label>
+                          <select
+                            value={searchFilters.parish}
+                            onChange={(e) => setSearchFilters({...searchFilters, parish: e.target.value})}
+                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                          >
+                            <option value="">Selecione...</option>
+                            <option value="N.S Da Graça">N.S Da Graça</option>
+                            <option value="São João Baptista">São João Baptista</option>
+                            <option value="São Nicolau Tolentino">São Nicolau Tolentino</option>
+                            <option value="Santiago Maior">Santiago Maior</option>
+                            <option value="Santa Catarina">Santa Catarina</option>
+                            <option value="São Lourenço dos Órgãos">São Lourenço dos Órgãos</option>
+                            <option value="São Miguel Arcanjo">São Miguel Arcanjo</option>
+                            <option value="São Salvador do Mundo">São Salvador do Mundo</option>
+                            <option value="Santo Amaro Abade">Santo Amaro Abade</option>
+                            <option value="Nossa Senhora do Rosário">Nossa Senhora do Rosário</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localidade</label>
+                          <select
+                            value={searchFilters.locality}
+                            onChange={(e) => setSearchFilters({...searchFilters, locality: e.target.value})}
+                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                          >
+                            <option value="">Selecione...</option>
+                            <option value="Cidade Da Praia">Cidade Da Praia</option>
+                            <option value="Palmarejo">Palmarejo</option>
+                            <option value="Achada Santo António">Achada Santo António</option>
+                            <option value="Achada Grande Frente">Achada Grande Frente</option>
+                            <option value="Achada Grande Trás">Achada Grande Trás</option>
+                            <option value="Várzea">Várzea</option>
+                            <option value="Terra Branca">Terra Branca</option>
+                            <option value="Tira Chapéu">Tira Chapéu</option>
+                            <option value="Calabaceira">Calabaceira</option>
+                            <option value="Fazenda">Fazenda</option>
+                            <option value="Mindelo">Mindelo</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zona</label>
+                          <select
+                            value={searchFilters.zone}
+                            onChange={(e) => setSearchFilters({...searchFilters, zone: e.target.value})}
+                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                          >
+                            <option value="">Selecione...</option>
+                            <option value="Txadinha">Txadinha</option>
+                            <option value="Monteagarro">Monteagarro</option>
+                            <option value="Achadinha">Achadinha</option>
+                            <option value="Pensamento">Pensamento</option>
+                            <option value="Safende">Safende</option>
+                            <option value="Ponta d'Água">Ponta d'Água</option>
+                            <option value="Eugénio Lima">Eugénio Lima</option>
+                            <option value="Lém Cachorro">Lém Cachorro</option>
+                            <option value="Cruz Vermelha">Cruz Vermelha</option>
+                            <option value="Bairro Craveiro Lopes">Bairro Craveiro Lopes</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
                       <Button variant="outline" onClick={handleClearFilters}>Limpar</Button>
                       <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
                     </div>
@@ -1410,41 +1806,35 @@ export default function App() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Processo / Ocorrência</th>
+                          <th className="px-6 py-4">Nº Ocorrência</th>
+                          <th className="px-6 py-4">Nº Registo</th>
                           <th className="px-6 py-4">Unidade</th>
                           <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Apelido</th>
                           <th className="px-6 py-4">Data Nascimento</th>
                           <th className="px-6 py-4">Ilha</th>
-                          <th className="px-6 py-4">Estado</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {persons.length > 0 ? (
                           persons.map((p, idx) => (
-                            <tr 
-                              key={p.id} 
+                            <tr
+                              key={p.id}
                               className="hover:bg-slate-50 cursor-pointer transition-colors group"
                               onClick={() => fetchPersonDetail(p.id)}
                             >
-                              <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{p.process_number || '---'}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{p.occurrence_number || '---'}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-700">{p.process_number || '---'}</td>
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.unit || '---'}</td>
-                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{p.full_name}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{p.full_name ? p.full_name.split(' ')[0] : '---'}</td>
+                              <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.full_name ? p.full_name.split(' ').slice(1).join(' ') || '---' : '---'}</td>
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : '---'}</td>
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.island || '---'}</td>
-                              <td className="px-6 py-4">
-                                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${
-                                  p.status === 'Concluído' ? 'bg-emerald-50 text-emerald-600' :
-                                  p.status === 'Em Processo' ? 'bg-amber-50 text-amber-600' :
-                                  'bg-slate-100 text-slate-500'
-                                }`}>
-                                  {p.status || 'Por Registar'}
-                                </span>
-                              </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic font-medium">Nenhum registro encontrado na base de dados</td>
+                            <td colSpan={7} className="px-6 py-12 text-center text-slate-400 italic font-medium">Nenhum registro encontrado na base de dados</td>
                           </tr>
                         )}
                       </tbody>
@@ -1656,9 +2046,9 @@ export default function App() {
                               <div className={`w-36 aspect-[3/4] rounded-2xl overflow-hidden border-4 transition-all shadow-lg ${
                                 selectedRecognitionResult?.id === result.id ? 'border-slate-900' : 'border-white'
                               }`}>
-                                <img 
-                                  src={`https://picsum.photos/seed/${result.seed}/300/400`} 
-                                  alt={`Result ${result.number}`} 
+                                <img
+                                  src={getPortraitUrl(result.seed)}
+                                  alt={`Result ${result.number}`}
                                   className="w-full h-full object-cover"
                                   referrerPolicy="no-referrer"
                                 />
@@ -1708,9 +2098,9 @@ export default function App() {
                                   animate={{ opacity: 1, scale: 1 }}
                                   className="w-full aspect-[3/4] bg-white border-2 border-slate-200 rounded-xl shadow-lg overflow-hidden"
                                 >
-                                  <img 
-                                    src={`https://picsum.photos/seed/${selectedRecognitionResult.seed}/600/800`} 
-                                    alt="Frontal" 
+                                  <img
+                                    src={getPortraitUrl(selectedRecognitionResult.seed)}
+                                    alt="Frontal"
                                     className="w-full h-full object-cover"
                                     referrerPolicy="no-referrer"
                                   />
@@ -1728,9 +2118,9 @@ export default function App() {
                                   ].map((photo) => (
                                     <div key={photo.label} className="flex flex-col items-center gap-4">
                                       <div className="w-full aspect-square bg-white border-2 border-white rounded shadow-sm overflow-hidden">
-                                        <img 
-                                          src={`https://picsum.photos/seed/${selectedRecognitionResult.seed}_${photo.seed}/300/300`} 
-                                          alt={photo.label} 
+                                        <img
+                                          src={getPortraitUrl(`${selectedRecognitionResult.seed}_${photo.seed}`)}
+                                          alt={photo.label}
                                           className="w-full h-full object-cover"
                                           referrerPolicy="no-referrer"
                                         />
@@ -1982,104 +2372,111 @@ export default function App() {
                               <img src={docData.document.photo} alt="Pessoa" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                             </div>
                           )}
-                          <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <div className="md:col-span-4">
-                              <DetailField 
-                                label="Motivo" 
-                                value={docData.document.reason} 
-                                type="select" 
-                                readOnly={false}
-                                options={['Perda', 'Roubo', 'Encontrado']}
-                                onChange={(val: string) => setDocData({...docData, document: {...docData.document, reason: val}})}
-                              />
+                          <div className="flex-1 space-y-8">
+
+                            {/* Dados Pessoais */}
+                            <div className="space-y-4">
+                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Pessoais</p>
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <div className="md:col-span-2">
+                                  <DetailField label="Nome Completo" value={docData.document.fullName} readOnly={false}
+                                    onChange={(val: string) => setDocData({...docData, document: {...docData.document, fullName: val}})} />
+                                </div>
+                                <DetailField label="Data Nascimento" value={docData.document.birthDate} type="date" readOnly={false} icon={Calendar}
+                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, birthDate: val}})} />
+                                <DetailField label="Nacionalidade" value={docData.document.nationality} type="select" readOnly={false}
+                                  options={['Cabo-verdiana', 'Portuguesa', 'Angolana', 'Senegalesa', 'Guineense']}
+                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, nationality: val}})} />
+                                <DetailField label="Naturalidade" value={docData.document.birthPlace} readOnly={false}
+                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, birthPlace: val}})} />
+                                <DetailField label="Nome Pai" value={docData.document.fatherName} readOnly={false}
+                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, fatherName: val}})} />
+                                <DetailField label="Nome Mãe" value={docData.document.motherName} readOnly={false}
+                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, motherName: val}})} />
+                              </div>
                             </div>
-                            <DetailField 
-                              label="NIF" 
-                              value={docData.document.nif} 
-                              readOnly={false}
-                              onChange={(val: string) => setDocData({...docData, document: {...docData.document, nif: val}})}
-                            />
-                            <DetailField 
-                              label="Tipo Documento" 
-                              value={docData.document.type} 
-                              type="select" 
-                              readOnly={false}
-                              options={['CNI', 'Passaporte', 'Carta Condução']}
-                              onChange={(val: string) => setDocData({...docData, document: {...docData.document, type: val}})}
-                            />
-                            <DetailField 
-                              label="Numero Documento" 
-                              value={docData.document.number} 
-                              readOnly={false}
-                              onChange={(val: string) => setDocData({...docData, document: {...docData.document, number: val}})}
-                            />
-                            <DetailField 
-                              label="Data Emissão" 
-                              value={docData.document.issueDate} 
-                              type="date"
-                              readOnly={false}
-                              icon={Calendar}
-                              onChange={(val: string) => setDocData({...docData, document: {...docData.document, issueDate: val}})}
-                            />
-                            <DetailField 
-                              label="Data Validade" 
-                              value={docData.document.expiryDate} 
-                              type="date"
-                              readOnly={false}
-                              icon={Calendar}
-                              onChange={(val: string) => setDocData({...docData, document: {...docData.document, expiryDate: val}})}
-                            />
-                            <div className="md:col-span-2">
-                              <DetailField 
-                                label="Nome Completo" 
-                                value={docData.document.fullName} 
-                                readOnly={false}
-                                onChange={(val: string) => setDocData({...docData, document: {...docData.document, fullName: val}})}
-                              />
+
+                            {/* Documentos de Identificação */}
+                            <div className="space-y-4">
+                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documentos de Identificação</p>
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <DetailField label="Tipo Documento" value={docData.document.type} type="select" readOnly={false}
+                                  options={['CNI', 'BI', 'Passaporte', 'TRE', 'Carta Condução']}
+                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, type: val}})} />
+                                <DetailField label="Numero Documento" value={docData.document.number} readOnly={false}
+                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, number: val}})} />
+                                <DetailField label="Data Emissão" value={docData.document.issueDate} type="date" readOnly={false} icon={Calendar}
+                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, issueDate: val}})} />
+                                <DetailField label="Data Validade" value={docData.document.expiryDate} type="date" readOnly={false} icon={Calendar}
+                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, expiryDate: val}})} />
+                                <DetailField label="NIF" value={docData.document.nif} readOnly={false}
+                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, nif: val}})} />
+                              </div>
                             </div>
-                            <DetailField 
-                              label="Data Nascimento" 
-                              value={docData.document.birthDate} 
-                              type="date"
-                              readOnly={false}
-                              icon={Calendar}
-                              onChange={(val: string) => setDocData({...docData, document: {...docData.document, birthDate: val}})}
-                            />
-                            <DetailField 
-                              label="Nacionalidade" 
-                              value={docData.document.nationality} 
-                              type="select" 
-                              readOnly={false}
-                              options={['Cabo-verdiana', 'Portuguesa', 'Angolana']}
-                              onChange={(val: string) => setDocData({...docData, document: {...docData.document, nationality: val}})}
-                            />
-                            <DetailField 
-                              label="Naturalidade" 
-                              value={docData.document.birthPlace} 
-                              readOnly={false}
-                              onChange={(val: string) => setDocData({...docData, document: {...docData.document, birthPlace: val}})}
-                            />
-                            <DetailField 
-                              label="Nome Pai" 
-                              value={docData.document.fatherName} 
-                              readOnly={false}
-                              onChange={(val: string) => setDocData({...docData, document: {...docData.document, fatherName: val}})}
-                            />
-                            <DetailField 
-                              label="Nome Mãe" 
-                              value={docData.document.motherName} 
-                              readOnly={false}
-                              onChange={(val: string) => setDocData({...docData, document: {...docData.document, motherName: val}})}
-                            />
-                            <DetailField 
-                              label="Telemóvel" 
-                              value={docData.document.phone} 
-                              readOnly={false}
-                              onChange={(val: string) => setDocData({...docData, document: {...docData.document, phone: val}})}
-                            />
-                            <div className="md:col-span-4 pt-4">
-                              <Button variant="outline" icon={Paperclip} onClick={() => {}}>Anexar Documento</Button>
+
+                            {/* Contactos */}
+                            <div className="space-y-4">
+                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</p>
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <DetailField label="Telemóvel" value={docData.document.phone} readOnly={false}
+                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, phone: val}})} />
+                              </div>
                             </div>
+
+                            {/* Motivo */}
+                            <div className="space-y-4">
+                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Motivo</p>
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <div className="md:col-span-2">
+                                  <DetailField label="Motivo" value={docData.document.reason} type="select" readOnly={false}
+                                    options={['Perda', 'Roubo', 'Encontrado']}
+                                    onChange={(val: string) => setDocData({...docData, document: {...docData.document, reason: val}})} />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Anexos */}
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">
+                                  Anexos {savedAttachments.length > 0 && <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{savedAttachments.length}</span>}
+                                </p>
+                                <button
+                                  onClick={() => setShowAttachmentModal(true)}
+                                  className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
+                                >
+                                  <Plus size={14} /> Adicionar Anexo
+                                </button>
+                              </div>
+                              {savedAttachments.length > 0 ? (
+                                <div className="space-y-2">
+                                  {savedAttachments.map((att, idx) => {
+                                    const isImg = att.type === 'Imagem';
+                                    return (
+                                      <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 group hover:border-slate-200 transition-all">
+                                        <div className={`p-3 rounded-xl flex-shrink-0 ${isImg ? 'bg-blue-100 text-blue-600' : att.type === 'Relatório' ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'}`}>
+                                          {isImg ? <ImageIcon size={20} /> : <FileText size={20} />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-black text-slate-900 truncate">{att.title}</p>
+                                          <p className="text-[10px] text-slate-400 mt-1"><span className="font-bold">{att.type}</span> · {att.date}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar"><Eye size={16} /></button>
+                                          <button onClick={() => setSavedAttachments(savedAttachments.filter((_, i) => i !== idx))} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Eliminar"><Trash2 size={16} /></button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                                  <Paperclip size={28} className="mx-auto text-slate-200 mb-2" />
+                                  <p className="text-slate-400 text-sm italic">Nenhum anexo associado</p>
+                                </div>
+                              )}
+                            </div>
+
                           </div>
                         </div>
                     </div>
@@ -2292,7 +2689,12 @@ export default function App() {
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Detalhes do Registo</h2>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registo Individual N.º {registeredDoc.id}</p>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-2">
+                    <History size={14} className="text-slate-400 shrink-0" />
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registado por</p>
+                      <p className="text-xs font-black text-slate-900">{registeredDoc.registeredBy || 'Agente PN - 001'} <span className="font-medium text-slate-400">•</span> {registeredDoc.registeredAt || new Date().toLocaleDateString('pt-BR')}</p>
+                    </div>
                   </div>
                 </div>
 
@@ -2318,32 +2720,83 @@ export default function App() {
                     </div>
                     
                     <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                        <div className="md:col-span-4">
-                          <DetailField label="Motivo" value={registeredDoc.document.reason} />
-                        </div>
-                        <DetailField label="NIF" value={registeredDoc.document.nif || '---'} />
-                        <DetailField label="Tipo Documento" value={registeredDoc.document.type} />
-                        <DetailField label="Número Documento" value={registeredDoc.document.number} />
-                        <DetailField label="Data Emissão" value={registeredDoc.document.issueDate} icon={Calendar} />
-                        <DetailField label="Data Validade" value={registeredDoc.document.expiryDate} icon={Calendar} />
-                        <div className="md:col-span-2">
-                          <DetailField label="Nome Completo" value={registeredDoc.document.fullName} />
-                        </div>
-                        <DetailField label="Data Nascimento" value={registeredDoc.document.birthDate} icon={Calendar} />
-                        <DetailField label="Nacionalidade" value={registeredDoc.document.nationality} />
-                      </div>
-
-                      <div className="space-y-4">
-                        <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Anexos</h3>
-                        <div className="flex items-center gap-3 p-3 bg-slate-50 border-2 border-slate-100 rounded-xl w-fit">
-                          <FileText size={20} className="text-slate-900" />
-                          <span className="text-xs font-bold text-slate-900">Copia Documento.pdf</span>
-                          {!isReadOnlyView && (
-                            <button className="text-red-500 hover:text-red-700 transition-colors">
-                              <Trash2 size={14} />
-                            </button>
-                          )}
+                      <div className="flex flex-col md:flex-row gap-8 items-start">
+                        {registeredDoc.document.photo && (
+                          <div className="w-28 h-36 rounded-2xl border-4 border-white shadow-xl overflow-hidden shrink-0 bg-slate-100">
+                            <img src={registeredDoc.document.photo} alt="Pessoa" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          </div>
+                        )}
+                        <div className="flex-1 space-y-8">
+                          {/* Dados Pessoais */}
+                          <div className="space-y-4">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Pessoais</p>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                              <div className="md:col-span-2"><DetailField label="Nome Completo" value={registeredDoc.document.fullName} /></div>
+                              <DetailField label="Data Nascimento" value={registeredDoc.document.birthDate} icon={Calendar} />
+                              <DetailField label="Nacionalidade" value={registeredDoc.document.nationality} />
+                              <DetailField label="Naturalidade" value={registeredDoc.document.birthPlace || '---'} />
+                              <DetailField label="Nome Pai" value={registeredDoc.document.fatherName || '---'} />
+                              <DetailField label="Nome Mãe" value={registeredDoc.document.motherName || '---'} />
+                            </div>
+                          </div>
+                          {/* Documentos de Identificação */}
+                          <div className="space-y-4">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documentos de Identificação</p>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                              <DetailField label="Tipo Documento" value={registeredDoc.document.type} />
+                              <DetailField label="Número Documento" value={registeredDoc.document.number} />
+                              <DetailField label="Data Emissão" value={registeredDoc.document.issueDate} icon={Calendar} />
+                              <DetailField label="Data Validade" value={registeredDoc.document.expiryDate} icon={Calendar} />
+                              <DetailField label="NIF" value={registeredDoc.document.nif || '---'} />
+                            </div>
+                          </div>
+                          {/* Contactos */}
+                          <div className="space-y-4">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</p>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                              <DetailField label="Telemóvel" value={registeredDoc.document.phone || '---'} />
+                            </div>
+                          </div>
+                          {/* Motivo */}
+                          <div className="space-y-4">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Motivo</p>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                              <div className="md:col-span-2"><DetailField label="Motivo" value={registeredDoc.document.reason} /></div>
+                            </div>
+                          </div>
+                          {/* Anexos */}
+                          <div className="space-y-4">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">
+                              Anexos {(registeredDoc.attachments?.length ?? 0) > 0 && <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{registeredDoc.attachments.length}</span>}
+                            </p>
+                            {registeredDoc.attachments?.length > 0 ? (
+                              <div className="space-y-2">
+                                {registeredDoc.attachments.map((att: any, idx: number) => {
+                                  const isImg = att.type === 'Imagem';
+                                  return (
+                                    <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 group hover:border-slate-200 transition-all">
+                                      <div className={`p-3 rounded-xl flex-shrink-0 ${isImg ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'}`}>
+                                        {isImg ? <ImageIcon size={20} /> : <FileText size={20} />}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-black text-slate-900 truncate">{att.name}</p>
+                                        <p className="text-[10px] text-slate-400 mt-1"><span className="font-bold">{att.type}</span></p>
+                                      </div>
+                                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar"><Eye size={16} /></button>
+                                        <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Eliminar"><Trash2 size={16} /></button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                                <Paperclip size={28} className="mx-auto text-slate-200 mb-2" />
+                                <p className="text-slate-400 text-sm italic">Nenhum anexo associado</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2433,57 +2886,44 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Section: Dados de Registo */}
-                  <div className="space-y-4">
-                    <div className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
-                        <span className="uppercase tracking-widest text-xs">Dados de Registo</span>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <DetailField label="Registado Por" value={registeredDoc.registeredBy || 'Agente PN - 001'} />
-                      <DetailField label="Data de Registo" value={registeredDoc.registeredAt || new Date().toLocaleDateString('pt-BR')} icon={Calendar} />
-                    </div>
-                  </div>
-
                   {/* Section: Levantamento */}
-                  {registeredDoc.levantamento ? (
+                  {registeredDoc.levantamento && (
                     <div className="space-y-4">
                       <div className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 shadow-sm">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-green-600 text-white rounded-lg"><Check size={18} /></div>
+                          <div className="p-2 bg-emerald-600 text-white rounded-lg"><Check size={18} /></div>
                           <span className="uppercase tracking-widest text-xs">Dados de Levantamento</span>
                         </div>
                       </div>
-                      
-                      <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                          <DetailField label="Nome" value={registeredDoc.levantamento.nome} />
-                          <DetailField label="Apelido" value={registeredDoc.levantamento.apelido} />
-                          <DetailField label="Data Nascimento" value={registeredDoc.levantamento.dataNascimento} icon={Calendar} />
+                      <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
+                        <div className="flex items-center gap-3">
+                          <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${
+                            registeredDoc.levantamento.isOwner ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
+                          }`}>
+                            {registeredDoc.levantamento.isOwner ? 'O Próprio Titular' : 'Terceiro Autorizado'}
+                          </span>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100">
-                          <DetailField label="Levantamento Registado Por" value={registeredDoc.levantamento.registadoPor} />
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                          <div className="md:col-span-2">
+                            <DetailField label="Nome" value={registeredDoc.levantamento.nome} />
+                          </div>
+                          {registeredDoc.levantamento.dataNascimento && (
+                            <DetailField label="Data Nascimento" value={registeredDoc.levantamento.dataNascimento} icon={Calendar} />
+                          )}
+                          {registeredDoc.levantamento.docType && (
+                            <DetailField label="Tipo Documento" value={registeredDoc.levantamento.docType} />
+                          )}
+                          <DetailField label="Nº Documento" value={registeredDoc.levantamento.docNumber || '---'} />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t-2 border-slate-100">
+                          <DetailField label="Registado Por" value={registeredDoc.levantamento.registadoPor} />
                           <DetailField label="Data de Levantamento" value={registeredDoc.levantamento.dataLevantamento} icon={Calendar} />
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="flex justify-end pt-8 border-t border-slate-100 mt-12">
-                      <Button 
-                        variant="primary" 
-                        className="bg-green-600 hover:bg-green-700 border-green-600 shadow-[4px_4px_0px_0px_rgba(22,163,74,0.2)]"
-                        icon={Check}
-                        onClick={() => setShowLevantamentoModal(true)}
-                      >
-                        Realizar Levantamento
-                      </Button>
-                    </div>
                   )}
 
-                  <div className="flex justify-start pt-4">
+                  <div className="flex items-center justify-between pt-6 border-t-2 border-slate-100">
                     <Button variant="outline" icon={ArrowLeft} onClick={() => {
                       if (isReadOnlyView) {
                         setCurrentView('document_search');
@@ -2493,6 +2933,15 @@ export default function App() {
                     }}>
                       {isReadOnlyView ? 'Voltar para Pesquisa' : 'Voltar ao Início'}
                     </Button>
+                    {!registeredDoc.levantamento && (
+                      <Button
+                        variant="success"
+                        icon={Check}
+                        onClick={() => setShowLevantamentoModal(true)}
+                      >
+                        Realizar Levantamento
+                      </Button>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -2582,23 +3031,35 @@ export default function App() {
                     </div>
 
                     <div className="md:col-span-2 flex justify-end gap-3">
-                      <Button variant="outline" onClick={() => setDocSearchFilters({
-                        type: '',
-                        number: '',
-                        fullName: '',
-                        birthDate: '',
-                        island: '',
-                        organicUnit: ''
-                      })}>Limpar</Button>
-                      <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
+                      <Button variant="outline" onClick={() => {
+                        setDocSearchFilters({ type: '', number: '', fullName: '', birthDate: '', island: '', organicUnit: '' });
+                        setDocSearchResults(null);
+                      }}>Limpar</Button>
+                      <Button variant="primary" icon={Search} onClick={() => {
+                        const f = docSearchFilters;
+                        const results = mockDocuments.filter(doc => {
+                          if (f.type && doc.document.type !== f.type) return false;
+                          if (f.number && !doc.document.number.toLowerCase().includes(f.number.toLowerCase())) return false;
+                          if (f.fullName && !doc.document.fullName.toLowerCase().includes(f.fullName.toLowerCase())) return false;
+                          if (f.birthDate && doc.document.birthDate !== f.birthDate) return false;
+                          if (f.island && doc.storage.island !== f.island) return false;
+                          if (f.organicUnit && doc.storage.organicUnit !== f.organicUnit) return false;
+                          return true;
+                        });
+                        setDocSearchResults(results);
+                      }}>Pesquisar</Button>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Listagem de Documentos</h3>
-                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {mockDocuments.length.toString().padStart(2, '0')}</span>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
+                      {docSearchResults !== null ? 'Resultados da Pesquisa' : 'Listagem de Documentos'}
+                    </h3>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">
+                      Total : {(docSearchResults !== null ? docSearchResults : mockDocuments).length.toString().padStart(2, '0')}
+                    </span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -2613,24 +3074,32 @@ export default function App() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {mockDocuments.map((doc) => (
-                          <tr 
-                            key={doc.id}
-                            onClick={() => {
-                              setRegisteredDoc(doc);
-                              setIsReadOnlyView(true);
-                              setCurrentView('document_detail');
-                            }}
-                            className="hover:bg-blue-50 cursor-pointer transition-colors group"
-                          >
-                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.type}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.number}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.fullName}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.document.birthDate}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.island}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.organicUnit}</td>
+                        {(docSearchResults !== null ? docSearchResults : mockDocuments).length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-12 text-center text-sm font-bold text-slate-400">
+                              Nenhum documento encontrado para os filtros aplicados.
+                            </td>
                           </tr>
-                        ))}
+                        ) : (
+                          (docSearchResults !== null ? docSearchResults : mockDocuments).map((doc) => (
+                            <tr
+                              key={doc.id}
+                              onClick={() => {
+                                setRegisteredDoc(doc);
+                                setIsReadOnlyView(true);
+                                setCurrentView('document_detail');
+                              }}
+                              className="hover:bg-blue-50 cursor-pointer transition-colors group"
+                            >
+                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.type}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.number}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.fullName}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.document.birthDate}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.island}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.organicUnit}</td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -2775,91 +3244,96 @@ export default function App() {
                 </div>
               </motion.div>
             ) : currentView === 'certificate_registration' ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-8 pb-12"
               >
+                {/* Header */}
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Solicitação de Pedido</h2>
                 </div>
 
-                <div className="flex gap-4">
-                  <div className={`flex-1 p-4 rounded-2xl border-2 transition-all ${certificateStep === 1 ? 'bg-blue-50 border-blue-600' : 'bg-white border-slate-100'}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm ${certificateStep === 1 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>1</div>
-                      <span className={`text-xs font-black uppercase tracking-widest ${certificateStep === 1 ? 'text-blue-600' : 'text-slate-400'}`}>Identificação</span>
+                {/* Steps — igual ao cadastro de documentos */}
+                <div className="flex items-center justify-between max-w-2xl mx-auto relative px-4">
+                  <div className="absolute top-6 left-12 right-12 h-1 bg-slate-100 rounded-full"></div>
+                  <div
+                    className="absolute top-6 left-12 h-1 bg-blue-600 rounded-full transition-all duration-500"
+                    style={{ width: certificateStep === 1 ? '0%' : '100%' }}
+                  ></div>
+                  {[
+                    { id: 1, label: 'Identificação', icon: User },
+                    { id: 2, label: 'DUC', icon: FileText }
+                  ].map((step) => (
+                    <div key={step.id} className="relative z-10 flex flex-col items-center gap-3">
+                      <div className={`w-12 h-12 rounded-2xl border-2 flex items-center justify-center transition-all duration-300 ${
+                        certificateStep > step.id
+                          ? 'bg-green-500 border-green-200 text-white shadow-lg shadow-green-100'
+                          : certificateStep === step.id
+                            ? 'bg-blue-600 border-blue-200 text-white shadow-lg shadow-blue-200 scale-110'
+                            : 'bg-white border-slate-100 text-slate-300'
+                      }`}>
+                        {certificateStep > step.id ? <Check size={20} /> : <step.icon size={20} />}
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${certificateStep === step.id ? 'text-blue-600' : 'text-slate-400'}`}>Passo {step.id}</span>
+                        <span className={`text-[10px] font-bold whitespace-nowrap ${certificateStep === step.id ? 'text-slate-900' : 'text-slate-400'}`}>{step.label}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className={`flex-1 p-4 rounded-2xl border-2 transition-all ${certificateStep === 2 ? 'bg-blue-50 border-blue-600' : 'bg-white border-slate-100'}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm ${certificateStep === 2 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>2</div>
-                      <span className={`text-xs font-black uppercase tracking-widest ${certificateStep === 2 ? 'text-blue-600' : 'text-slate-400'}`}>DUC</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
+                {/* Card principal */}
                 <div className="bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-                  <div className="p-8 space-y-12">
+                  {/* Card header */}
+                  <div className="p-6 bg-slate-50 border-b-2 border-slate-100 flex items-center gap-3">
+                    <div className="p-2 bg-slate-900 text-white rounded-lg">
+                      {certificateStep === 1 ? <User size={18} /> : <FileText size={18} />}
+                    </div>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
+                      {certificateStep === 1 ? 'Dados de Identificação' : 'Documento Único de Cobrança'}
+                    </h3>
+                  </div>
+
+                  <div className="p-8 space-y-8">
                     {certificateStep === 1 ? (
-                      <div className="space-y-12">
-                        <div className="space-y-6">
-                          <div className="w-full bg-slate-900 py-3 px-6 rounded-xl text-center">
-                            <span className="text-xs font-black text-white uppercase tracking-[0.3em]">Dados Biograficos</span>
-                          </div>
+                      <div className="space-y-8">
 
-                          {/* Biographical Search bar */}
-                          <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-6 mb-8 space-y-4">
-                            <div className="flex flex-col md:flex-row gap-4 items-end">
-                              <div className="w-full md:w-32 space-y-2">
-                                <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Tipo Doc</label>
-                                <select 
-                                  value={bioSearchDocType}
-                                  onChange={(e) => setBioSearchDocType(e.target.value)}
-                                  className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all"
-                                >
-                                  <option value="CNI">CNI</option>
-                                  <option value="Passaporte">Passaporte</option>
-                                  <option value="TRE">TRE</option>
-                                  <option value="BI">BI</option>
-                                </select>
-                              </div>
-                              <div className="flex-1 space-y-2">
-                                <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">N.º Documento</label>
-                                <input 
-                                  type="text"
-                                  value={bioSearchDocNumber}
-                                  onChange={(e) => setBioSearchDocNumber(e.target.value)}
-                                  placeholder="Digite o número do documento..."
-                                  className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all"
-                                />
-                              </div>
-                              <div className="flex-1 space-y-2">
-                                <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Nome da Pessoa</label>
-                                <input 
-                                  type="text"
-                                  value={bioSearchName}
-                                  onChange={(e) => setBioSearchName(e.target.value)}
-                                  placeholder="Digite o nome..."
-                                  className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all"
-                                />
-                              </div>
-                              <Button 
-                                variant="secondary" 
-                                icon={Search} 
-                                onClick={() => {
-                                  setBioSearchTarget('certificate');
-                                  handleBioSearch();
-                                }}
-                              >
-                                Pesquisar
-                              </Button>
+                        {/* Pesquisa biográfica */}
+                        <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-6 space-y-4">
+                          <div className="flex flex-col md:flex-row gap-4 items-end">
+                            <div className="w-full md:w-32 space-y-2">
+                              <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Tipo Doc</label>
+                              <select value={bioSearchDocType} onChange={(e) => setBioSearchDocType(e.target.value)}
+                                className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all">
+                                <option value="CNI">CNI</option>
+                                <option value="Passaporte">Passaporte</option>
+                                <option value="TRE">TRE</option>
+                                <option value="BI">BI</option>
+                              </select>
                             </div>
+                            <div className="flex-1 space-y-2">
+                              <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">N.º Documento</label>
+                              <input type="text" value={bioSearchDocNumber} onChange={(e) => setBioSearchDocNumber(e.target.value)}
+                                placeholder="Digite o número do documento..."
+                                className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
+                            </div>
+                            <div className="flex-1 space-y-2">
+                              <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Nome da Pessoa</label>
+                              <input type="text" value={bioSearchName} onChange={(e) => setBioSearchName(e.target.value)}
+                                placeholder="Digite o nome..."
+                                className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
+                            </div>
+                            <Button variant="secondary" icon={Search} onClick={() => { setBioSearchTarget('certificate'); handleBioSearch(); }}>Pesquisar</Button>
                           </div>
+                        </div>
 
+                        {/* Dados Biográficos */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Biográficos</p>
                           <div className="flex flex-col md:flex-row gap-8 items-start">
                             {certificateData.photo && (
-                              <div className="w-32 h-40 rounded-2xl border-4 border-white shadow-xl overflow-hidden shrink-0 bg-slate-100 mt-2">
+                              <div className="w-32 h-40 rounded-2xl border-4 border-white shadow-xl overflow-hidden shrink-0 bg-slate-100">
                                 <img src={certificateData.photo} alt="Pessoa" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               </div>
                             )}
@@ -2867,7 +3341,7 @@ export default function App() {
                               <div className="md:col-span-2">
                                 <DetailField label="Nome Completo" value={certificateData.fullName} readOnly={false} onChange={(v) => setCertificateData({...certificateData, fullName: v})} />
                               </div>
-                              <DetailField label="Data Nascimento *" value={certificateData.birthDate} type="date" readOnly={false} onChange={(v) => setCertificateData({...certificateData, birthDate: v})} />
+                              <DetailField label="Data Nascimento" value={certificateData.birthDate} type="date" readOnly={false} icon={Calendar} onChange={(v) => setCertificateData({...certificateData, birthDate: v})} />
                               <DetailField label="Sexo" value={certificateData.gender} type="select" options={['Masculino', 'Feminino']} readOnly={false} onChange={(v) => setCertificateData({...certificateData, gender: v})} />
                               <DetailField label="Estado Civil" value={certificateData.civilStatus} type="select" options={['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)']} readOnly={false} onChange={(v) => setCertificateData({...certificateData, civilStatus: v})} />
                               <DetailField label="Naturalidade" value={certificateData.birthPlace} readOnly={false} onChange={(v) => setCertificateData({...certificateData, birthPlace: v})} />
@@ -2875,75 +3349,93 @@ export default function App() {
                               <DetailField label="Nome Pai" value={certificateData.fatherName} readOnly={false} onChange={(v) => setCertificateData({...certificateData, fatherName: v})} />
                               <DetailField label="Nome Mãe" value={certificateData.motherName} readOnly={false} onChange={(v) => setCertificateData({...certificateData, motherName: v})} />
                               <DetailField label="NIF" value={certificateData.nif} readOnly={false} onChange={(v) => setCertificateData({...certificateData, nif: v})} />
-                            <DetailField label="Tipo Documento" value={certificateData.docType} type="select" options={['BI', 'CNI', 'Passaporte', 'TRE']} readOnly={false} onChange={(v) => setCertificateData({...certificateData, docType: v})} />
-                              <DetailField label="Número Documento" value={certificateData.docNumber} readOnly={false} onChange={(v) => setCertificateData({...certificateData, docNumber: v})} />
                             </div>
                           </div>
                         </div>
 
-                        <div className="space-y-6">
-                          <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Endereço</h3>
+                        {/* Documento de Identificação */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento de Identificação</p>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <DetailField label="Tipo Documento" value={certificateData.docType} type="select" options={['BI', 'CNI', 'Passaporte', 'TRE']} readOnly={false} onChange={(v) => setCertificateData({...certificateData, docType: v})} />
+                            <DetailField label="Número Documento" value={certificateData.docNumber} readOnly={false} onChange={(v) => setCertificateData({...certificateData, docNumber: v})} />
+                          </div>
+                        </div>
+
+                        {/* Endereço */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Endereço</p>
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <DetailField label="Ilha" value={certificateData.island} type="select" options={['Santiago', 'São Vicente', 'Sal', 'Boa Vista', 'Fogo', 'Santo Antão', 'Maio', 'Brava', 'São Nicolau']} readOnly={false} onChange={(v) => setCertificateData({...certificateData, island: v})} />
-                            <DetailField label="Conselho" value={certificateData.county} readOnly={false} onChange={(v) => setCertificateData({...certificateData, county: v})} />
+                            <DetailField label="Concelho" value={certificateData.county} readOnly={false} onChange={(v) => setCertificateData({...certificateData, county: v})} />
                             <DetailField label="Freguesia" value={certificateData.parish} readOnly={false} onChange={(v) => setCertificateData({...certificateData, parish: v})} />
                             <DetailField label="Localidade" value={certificateData.locality} readOnly={false} onChange={(v) => setCertificateData({...certificateData, locality: v})} />
                             <div className="md:col-span-2">
-                              <DetailField label="Ponto de Referencia" value={certificateData.reference} readOnly={false} onChange={(v) => setCertificateData({...certificateData, reference: v})} icon={MapPin} />
+                              <DetailField label="Ponto de Referência" value={certificateData.reference} readOnly={false} icon={MapPin} onChange={(v) => setCertificateData({...certificateData, reference: v})} />
                             </div>
                           </div>
                         </div>
 
-                        <div className="space-y-6">
-                          <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contacto</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <DetailField label="Telemovel" value={certificateData.phone} readOnly={false} onChange={(v) => setCertificateData({...certificateData, phone: v})} />
+                        {/* Contacto */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contacto</p>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <DetailField label="Telemóvel" value={certificateData.phone} readOnly={false} onChange={(v) => setCertificateData({...certificateData, phone: v})} />
                             <DetailField label="Email" value={certificateData.email} readOnly={false} onChange={(v) => setCertificateData({...certificateData, email: v})} />
                           </div>
                         </div>
 
-                        <div className="space-y-6">
-                          <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Motivo de Solicitação</h3>
-                          <div className="grid grid-cols-1">
-                            <DetailField label="Motivo de Solicitação" value={certificateData.reason} readOnly={false} onChange={(v) => setCertificateData({...certificateData, reason: v})} />
+                        {/* Motivo */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Motivo de Solicitação</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <DetailField label="Motivo" value={certificateData.reason} readOnly={false} onChange={(v) => setCertificateData({...certificateData, reason: v})} />
                           </div>
                         </div>
 
-                        <div className="space-y-6">
-                          <div className="w-full bg-slate-900 py-3 px-6 rounded-xl text-center">
-                            <span className="text-xs font-black text-white uppercase tracking-[0.3em]">Anexos</span>
-                          </div>
-                          <div className="flex flex-wrap gap-4">
-                            {certificateData.attachments.map((file, idx) => (
-                              <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 border-2 border-slate-100 rounded-xl">
-                                <FileText size={20} className="text-slate-900" />
-                                <span className="text-xs font-bold text-slate-900">{file.name}</span>
-                                <button className="text-red-500 hover:text-red-700" onClick={() => {
-                                  const newFiles = [...certificateData.attachments];
-                                  newFiles.splice(idx, 1);
-                                  setCertificateData({...certificateData, attachments: newFiles});
-                                }}><Trash2 size={14} /></button>
-                              </div>
-                            ))}
-                            <button 
-                              onClick={() => setCertificateData({...certificateData, attachments: [...certificateData.attachments, { name: 'documento.pdf' }]})}
-                              className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 hover:border-slate-900 hover:text-slate-900 transition-all"
-                            >
-                              <Plus size={18} />
-                              <span className="text-xs font-black uppercase tracking-widest">Adicionar Anexo</span>
+                        {/* Anexos — igual ao cadastro de documentos */}
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">
+                              Anexos {savedAttachments.length > 0 && <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{savedAttachments.length}</span>}
+                            </p>
+                            <button onClick={() => setShowAttachmentModal(true)}
+                              className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2">
+                              <Plus size={14} /> Adicionar Anexo
                             </button>
                           </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {savedAttachments.length > 0 ? (
+                              savedAttachments.map((att, idx) => (
+                                <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-lg group relative">
+                                  <div className="w-12 h-12 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-400">
+                                    {att.type === 'Imagem' ? <ImageIcon size={24} /> : <FileText size={24} />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-slate-800 truncate">{att.title}</p>
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold">{att.type} • {att.date}</p>
+                                  </div>
+                                  <button onClick={() => setSavedAttachments(savedAttachments.filter((_, i) => i !== idx))}
+                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="col-span-full py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                                <Paperclip size={28} className="mx-auto text-slate-200 mb-2" />
+                                <p className="text-slate-400 text-sm italic">Nenhum anexo associado</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
+
                       </div>
                     ) : (
-                      <div className="space-y-12">
-                        <div className="w-full bg-slate-900 py-3 px-6 rounded-xl text-center">
-                          <span className="text-xs font-black text-white uppercase tracking-[0.3em]">Documento Unico de Cobrança</span>
-                        </div>
-                        
+                      <div className="space-y-8">
                         {!ducGenerated ? (
-                          <div className="flex flex-col items-center justify-center py-12 space-y-6">
-                            <div className="p-6 bg-blue-50 text-blue-600 rounded-full">
+                          <div className="flex flex-col items-center justify-center py-16 space-y-6">
+                            <div className="p-6 bg-blue-50 text-blue-600 rounded-2xl">
                               <FileText size={48} />
                             </div>
                             <div className="text-center space-y-2">
@@ -2958,7 +3450,7 @@ export default function App() {
                               <table className="w-full text-left border-collapse">
                                 <thead>
                                   <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                                    <th className="px-6 py-4">Numero DUC</th>
+                                    <th className="px-6 py-4">Número DUC</th>
                                     <th className="px-6 py-4">Total a Pagar</th>
                                     <th className="px-6 py-4">Estado</th>
                                     <th className="px-6 py-4 text-right">Ações</th>
@@ -2969,13 +3461,13 @@ export default function App() {
                                     <td className="px-6 py-4 text-sm font-bold text-slate-900">9865457</td>
                                     <td className="px-6 py-4 text-sm font-bold text-slate-900">500$</td>
                                     <td className="px-6 py-4">
-                                      <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-widest">Por Pagar</span>
+                                      <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black uppercase tracking-tighter">Por Pagar</span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                       <div className="flex justify-end gap-2">
-                                        <button className="p-2 text-slate-400 hover:text-slate-900"><Eye size={16} /></button>
-                                        <button className="p-2 text-slate-400 hover:text-slate-900"><ClipboardList size={16} /></button>
-                                        <button className="p-2 text-slate-400 hover:text-slate-900"><History size={16} /></button>
+                                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"><Eye size={16} /></button>
+                                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"><Printer size={16} /></button>
+                                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"><History size={16} /></button>
                                       </div>
                                     </td>
                                   </tr>
@@ -2988,16 +3480,14 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="p-8 bg-slate-50 border-t-2 border-slate-100 flex justify-between items-center">
+                  {/* Footer navegação */}
+                  <div className="p-6 bg-slate-50 border-t-2 border-slate-100 flex justify-between items-center">
                     <Button variant="outline" icon={ArrowLeft} onClick={() => {
-                      if (certificateStep === 1) {
-                        setCurrentView('certificate_list');
-                      } else {
-                        setCertificateStep(1);
-                      }
+                      if (certificateStep === 1) setCurrentView('certificate_list');
+                      else setCertificateStep(1);
                     }}>Voltar</Button>
-                    
                     <div className="flex gap-3">
+                      <Button variant="outline" onClick={() => setCurrentView('certificate_list')}>Cancelar</Button>
                       {certificateStep === 1 ? (
                         <Button variant="primary" icon={ArrowRight} onClick={() => setCertificateStep(2)}>Próximo</Button>
                       ) : (
@@ -3010,7 +3500,7 @@ export default function App() {
                               requestDate: new Date().toLocaleDateString('pt-BR'),
                               status: 'Por Pagar'
                             }]);
-                            setSuccessMessage('Solicitação de Certificado Registada com Sucesso');
+                            setSuccessMessage('Solicitação de Certificado Registada com Sucesso.');
                             setShowSuccessModal(true);
                             setCurrentView('certificate_list');
                           }}>Concluir</Button>
@@ -3065,17 +3555,18 @@ export default function App() {
                               setSelectedAnalysisCertificate(cert);
                               setAssociatedPerson(null);
                               setSuggestedFicha(null);
-                              
+                              setCertAnalysisHasSearched(false);
+
                               // Auto-match ficha
-                              const match = fichas.find(f => 
-                                (cert.biographic.nif && f.nif === cert.biographic.nif) || 
+                              const match = fichas.find(f =>
+                                (cert.biographic.nif && f.nif === cert.biographic.nif) ||
                                 (cert.biographic.docNumber && (f.docNumber === cert.biographic.docNumber || f.number === cert.biographic.docNumber))
                               );
-                              
+
                               if (match) {
                                 setSuggestedFicha(match);
                               }
-                              
+
                               setCurrentView('certificate_analysis_detail');
                             }}
                             className="hover:bg-blue-50 cursor-pointer transition-colors group"
@@ -3137,7 +3628,7 @@ export default function App() {
                                 <div className="flex-shrink-0">
                                   <div className="w-32 h-40 border-2 border-slate-900 rounded overflow-hidden shadow-md bg-slate-100 relative">
                                     <img 
-                                      src="https://images.unsplash.com/photo-1520341280432-4749d4d7bcf9?q=80&w=300&h=400&auto=format&fit=crop" 
+                                      src="https://randomuser.me/api/portraits/men/32.jpg" 
                                       alt="Perfil" 
                                       className="w-full h-full object-cover grayscale contrast-150 brightness-90"
                                       referrerPolicy="no-referrer"
@@ -3153,35 +3644,23 @@ export default function App() {
                                     <div className="w-full max-w-xs">
                                       <DetailField label="Cadastro nº:" value={associatedPerson.number} />
                                     </div>
-                                    <div className="flex gap-3">
-                                      <button 
-                                        onClick={() => {
-                                          setHideNewCadastroInAssociate(false);
-                                          setShowAssociateModal(true);
-                                        }}
-                                        className="px-4 py-2 bg-blue-700 text-white font-bold rounded-xl hover:bg-blue-800 transition-all text-xs border border-blue-900 shadow-sm flex items-center gap-2"
-                                      >
-                                        <Search size={14} />
-                                        Alterar Vínculo
-                                      </button>
-                                      <button 
-                                        onClick={() => {
-                                          setHideNewCadastroInAssociate(true);
-                                          setIsNewRegistration(true);
-                                        }}
-                                        className="px-4 py-2 bg-blue-400 text-white font-bold rounded-xl hover:bg-blue-500 transition-all text-xs border border-blue-400 shadow-sm flex items-center gap-2"
-                                      >
-                                        <UserPlus size={14} />
-                                        Novo Cadastro
-                                      </button>
-                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        setHideNewCadastroInAssociate(true);
+                                        setShowAssociateModal(true);
+                                      }}
+                                      className="px-4 py-2 bg-blue-700 text-white font-bold rounded-xl hover:bg-blue-800 transition-all text-xs border border-blue-900 shadow-sm flex items-center gap-2"
+                                    >
+                                      <Search size={14} />
+                                      Alterar Vínculo
+                                    </button>
                                   </div>
 
                                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                    <DetailField label="Nome Completo" value={`${associatedPerson.name} ${associatedPerson.surname}`} />
+                                    <DetailField label="Nome Completo" value={`${associatedPerson.name}${associatedPerson.surname ? ' ' + associatedPerson.surname : ''}`} />
                                     <DetailField label="Data Nascimento *" value={new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
                                     <DetailField label="Sexo" value={associatedPerson.gender} />
-                                    <DetailField label="Estado Civil" value={associatedPerson.maritalStatus} />
+                                    <DetailField label="Estado Civil" value={associatedPerson.maritalStatus || associatedPerson.civilStatus} />
                                   </div>
                                 </div>
                               </div>
@@ -3189,11 +3668,11 @@ export default function App() {
                               <div className="space-y-4 pt-4 border-t border-slate-100">
                                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Documento Identificação</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-                                  <DetailField label="NIF" value={associatedPerson.nif || ''} readOnly={false} onChange={(val) => setAssociatedPerson({...associatedPerson, nif: val})} />
-                                  <DetailField label="Tipo Documento" value="CNI" />
+                                  <DetailField label="NIF" value={associatedPerson.nif || ''} readOnly={true} />
+                                  <DetailField label="Tipo Documento" value={associatedPerson.docType || 'CNI'} />
                                   <DetailField label="Número Documento" value={associatedPerson.docNumber || associatedPerson.number || '---'} />
-                                  <DetailField label="Data Emissão" value="15/10/2020" icon={Calendar} />
-                                  <DetailField label="Data Validade" value="15/10/2025" icon={Calendar} />
+                                  <DetailField label="Data Emissão" value={associatedPerson.docIssueDate || '15/10/2020'} icon={Calendar} />
+                                  <DetailField label="Data Validade" value={associatedPerson.docExpiryDate || '15/10/2025'} icon={Calendar} />
                                 </div>
                               </div>
                             </div>
@@ -3204,20 +3683,20 @@ export default function App() {
                       {/* Motivo do Cadastro Accordion */}
                       {associatedPerson.registrationReasons && (
                         <div className="mt-4">
-                          <button 
+                          <button
                             onClick={() => toggleSection('associatedMotivo')}
                             className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
                           >
                             <div className="flex items-center gap-3">
                               <div className="p-2 bg-slate-900 text-white rounded-lg"><HelpCircle size={18} /></div>
-                              <span className="uppercase tracking-widest text-xs">Motivos do Cadastro ASSOCIADO</span>
+                              <span className="uppercase tracking-widest text-xs">Motivos do Cadastro Associado</span>
                             </div>
                             {expandedSections.associatedMotivo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                           </button>
-                          
+
                           <AnimatePresence>
                             {expandedSections.associatedMotivo && (
-                              <motion.div 
+                              <motion.div
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
@@ -3234,11 +3713,10 @@ export default function App() {
                                           <th className="px-6 py-4">Destino</th>
                                           <th className="px-6 py-4">Medidas</th>
                                           <th className="px-6 py-4">Tipo</th>
-                                          <th className="px-6 py-4">Estado</th>
                                         </tr>
                                       </thead>
                                       <tbody className="divide-y divide-slate-50">
-                                        {(associatedPerson.registrationReasons || []).map((reg: any) => (
+                                        {(associatedPerson.registrationReasons || []).filter((reg: any) => reg.status === 'Ativo' || reg.status === 'Aguardando Reabilitação').map((reg: any) => (
                                           <tr key={reg.id} className="hover:bg-slate-50 transition-colors group">
                                             <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.date}</td>
                                             <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.reason}</td>
@@ -3246,22 +3724,17 @@ export default function App() {
                                             <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.destination}</td>
                                             <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.measures}</td>
                                             <td className="px-6 py-4 text-xs">
-                                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${
-                                                reg.type === 'Criminal' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
-                                              }`}>
+                                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${reg.type === 'Criminal' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
                                                 {reg.type}
-                                              </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-xs">
-                                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${
-                                                reg.status === 'Reabilitado' ? 'bg-emerald-50 text-emerald-600' : 
-                                                reg.status === 'Ativo' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
-                                              }`}>
-                                                {reg.status}
                                               </span>
                                             </td>
                                           </tr>
                                         ))}
+                                        {(associatedPerson.registrationReasons || []).filter((reg: any) => reg.status === 'Ativo' || reg.status === 'Aguardando Reabilitação').length === 0 && (
+                                          <tr>
+                                            <td colSpan={6} className="px-6 py-8 text-center text-slate-400 italic text-xs">Nenhum motivo ativo ou aguardando reabilitação.</td>
+                                          </tr>
+                                        )}
                                       </tbody>
                                     </table>
                                   </div>
@@ -3273,7 +3746,7 @@ export default function App() {
                       )}
                     </motion.div>
                   ) : (
-                    <motion.div 
+                    <motion.div
                       key="not-associated"
                       initial={{ opacity: 0, y: -20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -3291,7 +3764,7 @@ export default function App() {
                                 {suggestedFicha ? 'Possível Correspondência Encontrada' : 'Nenhuma Correspondência Encontrada'}
                               </h4>
                               <p className={`text-xs ${suggestedFicha ? 'text-blue-700' : 'text-slate-500'} font-medium italic`}>
-                                {suggestedFicha 
+                                {suggestedFicha
                                   ? <>Dados biográficos coincidem com o cadastro <strong>{suggestedFicha.number}</strong></>
                                   : 'Não foi encontrada nenhuma correspondência automática para este pedido.'}
                               </p>
@@ -3299,10 +3772,11 @@ export default function App() {
                           </div>
                           <div className="flex flex-wrap gap-3">
                             {suggestedFicha && (
-                              <button 
+                              <button
                                 onClick={() => {
                                   setAssociatedPerson(suggestedFicha);
                                   setSuggestedFicha(null);
+                                  setCertAnalysisHasSearched(true);
                                 }}
                                 className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-xs shadow-lg shadow-blue-200 flex items-center gap-2"
                               >
@@ -3310,9 +3784,10 @@ export default function App() {
                                 Aceitar Match
                               </button>
                             )}
-                            <button 
+                            <button
                               onClick={() => {
-                                setHideNewCadastroInAssociate(false);
+                                setHideNewCadastroInAssociate(true);
+                                setCertAnalysisHasSearched(true);
                                 setShowAssociateModal(true);
                               }}
                               className="px-4 py-2.5 bg-white text-slate-600 border border-slate-200 font-bold rounded-xl hover:bg-slate-50 transition-all text-xs flex items-center gap-2"
@@ -3326,7 +3801,7 @@ export default function App() {
 
                       {suggestedFicha && (
                         <>
-                          <button 
+                          <button
                             onClick={() => toggleSection('associated')}
                             className="w-full bg-white border-2 border-blue-200 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
                           >
@@ -3341,7 +3816,7 @@ export default function App() {
 
                           <AnimatePresence>
                             {expandedSections.associated && (
-                              <motion.div 
+                              <motion.div
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
@@ -3351,13 +3826,13 @@ export default function App() {
                                   <div className="absolute top-4 right-8">
                                     <span className="text-[9px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-full uppercase tracking-tighter">Dados em Revisão</span>
                                   </div>
-                                  
+
                                   <div className="flex flex-col md:flex-row gap-8">
                                     <div className="flex-shrink-0">
                                       <div className="w-32 h-40 border-2 border-slate-900 rounded overflow-hidden shadow-md bg-slate-100 relative">
-                                        <img 
-                                          src="https://images.unsplash.com/photo-1520341280432-4749d4d7bcf9?q=80&w=300&h=400&auto=format&fit=crop" 
-                                          alt="Perfil" 
+                                        <img
+                                          src="https://randomuser.me/api/portraits/men/32.jpg"
+                                          alt="Perfil"
                                           className="w-full h-full object-cover grayscale contrast-150 brightness-90 opacity-60"
                                           referrerPolicy="no-referrer"
                                         />
@@ -3368,17 +3843,14 @@ export default function App() {
                                     </div>
 
                                     <div className="flex-1 space-y-6">
-                                      <div className="flex justify-between items-start">
-                                        <div className="w-full max-w-xs">
-                                          <DetailField label="Cadastro nº:" value={suggestedFicha.number} />
-                                        </div>
+                                      <div className="w-full max-w-xs">
+                                        <DetailField label="Cadastro nº:" value={suggestedFicha.number} />
                                       </div>
-
                                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                        <DetailField label="Nome Completo" value={`${suggestedFicha.name} ${suggestedFicha.surname}`} />
+                                        <DetailField label="Nome Completo" value={`${suggestedFicha.name}${suggestedFicha.surname ? ' ' + suggestedFicha.surname : ''}`} />
                                         <DetailField label="Data Nascimento *" value={new Date(suggestedFicha.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
                                         <DetailField label="Sexo" value={suggestedFicha.gender} />
-                                        <DetailField label="Estado Civil" value={suggestedFicha.maritalStatus} />
+                                        <DetailField label="Estado Civil" value={suggestedFicha.maritalStatus || suggestedFicha.civilStatus} />
                                       </div>
                                     </div>
                                   </div>
@@ -3387,10 +3859,10 @@ export default function App() {
                                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Documento Identificação</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                                       <DetailField label="NIF" value={suggestedFicha.nif || ''} readOnly={true} />
-                                      <DetailField label="Tipo Documento" value="CNI" />
+                                      <DetailField label="Tipo Documento" value={suggestedFicha.docType || 'CNI'} />
                                       <DetailField label="Número Documento" value={suggestedFicha.docNumber || suggestedFicha.number || '---'} />
-                                      <DetailField label="Data Emissão" value="15/10/2020" icon={Calendar} />
-                                      <DetailField label="Data Validade" value="15/10/2025" icon={Calendar} />
+                                      <DetailField label="Data Emissão" value={suggestedFicha.docIssueDate || '15/10/2020'} icon={Calendar} />
+                                      <DetailField label="Data Validade" value={suggestedFicha.docExpiryDate || '15/10/2025'} icon={Calendar} />
                                     </div>
                                   </div>
                                 </div>
@@ -3403,124 +3875,202 @@ export default function App() {
                   )}
                 </AnimatePresence>
 
-                <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
-                  <div className="border-b-2 border-slate-900 pb-2 mb-6">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Dados Biográficos</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <DetailField label="Nome Completo" value={selectedAnalysisCertificate.biographic.fullName} />
-                    <DetailField label="Data Nascimento *" value={selectedAnalysisCertificate.biographic.birthDate} icon={Calendar} />
-                    <DetailField label="Sexo" value={selectedAnalysisCertificate.biographic.gender} />
-                    <DetailField label="Estado Civil" value={selectedAnalysisCertificate.biographic.civilStatus} />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <DetailField label="Naturalidade" value={selectedAnalysisCertificate.biographic.birthPlace} />
-                    <DetailField label="Nacionalidade" value={selectedAnalysisCertificate.biographic.nationality} />
-                    <DetailField label="Nome Pai" value={selectedAnalysisCertificate.biographic.fatherName} />
-                    <DetailField label="Nome Mãe" value={selectedAnalysisCertificate.biographic.motherName} />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <DetailField label="NIF" value={selectedAnalysisCertificate.biographic.nif || '---'} />
-                    <DetailField label="Tipo Documento" value={selectedAnalysisCertificate.biographic.docType} />
-                    <DetailField label="Número Documento" value={selectedAnalysisCertificate.biographic.docNumber} />
-                  </div>
-
-                  <div className="space-y-4 pt-4">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-                      <DetailField label="Ilha" value={selectedAnalysisCertificate.address.island} />
-                      <DetailField label="Conselho" value={selectedAnalysisCertificate.address.council} />
-                      <DetailField label="Freguesia" value={selectedAnalysisCertificate.address.parish} />
-                      <DetailField label="Localidade" value={selectedAnalysisCertificate.address.locality} />
-                      <DetailField label="Ponto de Referencia" value={selectedAnalysisCertificate.address.reference} icon={MapPin} />
+                {/* Devolução Warning Banner */}
+                {selectedAnalysisCertificate.returnReason && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-4 bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 shadow-sm"
+                  >
+                    <div className="p-2 bg-amber-100 rounded-xl flex-shrink-0">
+                      <AlertTriangle size={20} className="text-amber-600" />
                     </div>
-                  </div>
-
-                  <div className="space-y-4 pt-4">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <DetailField label="Telemovel" value={selectedAnalysisCertificate.contact.mobile} />
-                      <DetailField label="Email" value={selectedAnalysisCertificate.contact.email} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-amber-900 leading-relaxed">
+                        <span className="font-black">Motivo Devolução:</span> {selectedAnalysisCertificate.returnReason}
+                      </p>
+                      <p className="text-[10px] text-amber-500 font-black uppercase tracking-wider mt-2">
+                        {selectedAnalysisCertificate.returnedAt} · {selectedAnalysisCertificate.returnedBy}
+                      </p>
                     </div>
-                  </div>
+                  </motion.div>
+                )}
 
-                  <div className="pt-4">
-                    <DetailField label="Ficha de Antecedente" value={selectedAnalysisCertificate.reason} />
-                  </div>
-                </div>
-
-                <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
-                  <div className="border-b-2 border-slate-900 pb-2 mb-6">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Anexos</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <Button variant="outline" icon={Plus} className="text-xs py-2">Adicionar Anexo</Button>
-                    <div className="space-y-2">
-                      {selectedAnalysisCertificate.attachments.map((file: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border-2 border-slate-100 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <FileText size={18} className="text-slate-400" />
-                            <span className="text-xs font-bold text-slate-900">{file.name}</span>
+                {/* Dados Biográficos Accordion */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => toggleSection('analysisBiographic')}
+                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><User size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Dados Biográficos</span>
+                    </div>
+                    {expandedSections.analysisBiographic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.analysisBiographic && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8 mt-1">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <DetailField label="Nome Completo" value={selectedAnalysisCertificate.biographic.fullName} />
+                            <DetailField label="Data Nascimento *" value={selectedAnalysisCertificate.biographic.birthDate} icon={Calendar} />
+                            <DetailField label="Sexo" value={selectedAnalysisCertificate.biographic.gender} />
+                            <DetailField label="Estado Civil" value={selectedAnalysisCertificate.biographic.civilStatus} />
                           </div>
-                          <button className="text-slate-400 hover:text-red-600 transition-colors">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
-                  <div className="border-b-2 border-slate-900 pb-2 mb-4 flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Observações</h3>
-                    <button className="text-blue-600 text-[10px] font-black uppercase tracking-widest hover:underline">Novo +</button>
-                  </div>
-                  <div className="space-y-4">
-                    {selectedAnalysisCertificate.observations.map((obs: any, idx: number) => (
-                      <div key={idx} className="p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                            <ImageIcon size={20} className="text-slate-400" />
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <DetailField label="Naturalidade" value={selectedAnalysisCertificate.biographic.birthPlace} />
+                            <DetailField label="Nacionalidade" value={selectedAnalysisCertificate.biographic.nationality} />
+                            <DetailField label="Nome Pai" value={selectedAnalysisCertificate.biographic.fatherName} />
+                            <DetailField label="Nome Mãe" value={selectedAnalysisCertificate.biographic.motherName} />
                           </div>
-                          <div>
-                            <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{obs.user}</p>
-                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{obs.date}</p>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <DetailField label="NIF" value={selectedAnalysisCertificate.biographic.nif || '---'} />
+                            <DetailField label="Tipo Documento" value={selectedAnalysisCertificate.biographic.docType} />
+                            <DetailField label="Número Documento" value={selectedAnalysisCertificate.biographic.docNumber} />
+                          </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                              <DetailField label="Ilha" value={selectedAnalysisCertificate.address.island} />
+                              <DetailField label="Conselho" value={selectedAnalysisCertificate.address.council} />
+                              <DetailField label="Freguesia" value={selectedAnalysisCertificate.address.parish} />
+                              <DetailField label="Localidade" value={selectedAnalysisCertificate.address.locality} />
+                              <DetailField label="Ponto de Referencia" value={selectedAnalysisCertificate.address.reference} icon={MapPin} />
+                            </div>
+                          </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <DetailField label="Telemovel" value={selectedAnalysisCertificate.contact.mobile} />
+                              <DetailField label="Email" value={selectedAnalysisCertificate.contact.email} />
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t border-slate-100">
+                            <DetailField label="Finalidade" value={selectedAnalysisCertificate.reason} />
                           </div>
                         </div>
-                        <p className="text-xs text-slate-600 leading-relaxed font-medium">{obs.text}</p>
-                      </div>
-                    ))}
-                  </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                  <div className="p-4 bg-slate-50 border-b-2 border-slate-100 flex items-center justify-between">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Historico do pedido</h3>
-                    <button className="p-1 hover:bg-slate-200 rounded transition-colors"><ChevronDown size={16} /></button>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Data</th>
-                          <th className="px-6 py-4">Fase</th>
-                          <th className="px-6 py-4">Estado</th>
-                          <th className="px-6 py-4">Utente</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {selectedAnalysisCertificate.history.map((h: any, idx: number) => (
-                          <tr key={idx} className="bg-white">
-                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                {/* Anexos Accordion */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => toggleSection('analysisAnexos')}
+                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><Paperclip size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Anexos</span>
+                      <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{selectedAnalysisCertificate.attachments.length}</span>
+                    </div>
+                    {expandedSections.analysisAnexos ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.analysisAnexos && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-3 mt-1">
+                          <Button variant="outline" icon={Plus} className="text-xs py-2">Adicionar Anexo</Button>
+                          <div className="space-y-2">
+                            {selectedAnalysisCertificate.attachments.map((file: any, idx: number) => (
+                              <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border-2 border-slate-100 rounded-xl">
+                                <div className="flex items-center gap-3">
+                                  <FileText size={18} className="text-slate-400" />
+                                  <span className="text-xs font-bold text-slate-900">{file.name}</span>
+                                </div>
+                                <button className="text-slate-400 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Observações Accordion */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => toggleSection('analysisObservations')}
+                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><MessageSquare size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Observações</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button onClick={(e) => { e.stopPropagation(); }} className="text-blue-600 text-[10px] font-black uppercase tracking-widest hover:underline">Novo +</button>
+                      {expandedSections.analysisObservations ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </div>
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.analysisObservations && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-4 mt-1">
+                          {selectedAnalysisCertificate.observations.map((obs: any, idx: number) => (
+                            <div key={idx} className="p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl space-y-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
+                                  <ImageIcon size={20} className="text-slate-400" />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{obs.user}</p>
+                                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{obs.date}</p>
+                                </div>
+                              </div>
+                              <p className="text-xs text-slate-600 leading-relaxed font-medium">{obs.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Histórico do Pedido Accordion */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => toggleSection('analysisHistory')}
+                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Histórico do Pedido</span>
+                    </div>
+                    {expandedSections.analysisHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.analysisHistory && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mt-1">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                                  <th className="px-6 py-4">Data</th>
+                                  <th className="px-6 py-4">Fase</th>
+                                  <th className="px-6 py-4">Estado</th>
+                                  <th className="px-6 py-4">Utente</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {selectedAnalysisCertificate.history.map((h: any, idx: number) => (
+                                  <tr key={idx} className="bg-white">
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Modelo de Certificado Accordion */}
@@ -3569,26 +4119,57 @@ export default function App() {
                             </div>
 
                             {/* Document Body */}
-                            <div className="space-y-6 text-justify leading-relaxed text-sm">
-                              <p className="font-bold">ROBERTO CARLOS CENTEIO LIMA, Subintendente da Polícia Nacional e Diretor da Direção Central de Investigação Criminal da Polícia Nacional---------------------------------------</p>
-                              
-                              <p>
-                                <span className="font-bold">CERTIFICA</span>, que compulsados os ficheiros existentes no arquivo desta Direção, verifica-se que respeitante ao (à) cidadão (ã) Cabo-verdiano senhor (a) <span className="font-bold uppercase underline">{associatedPerson?.name} {associatedPerson?.surname}</span>, {associatedPerson?.maritalStatus || 'solteiro'}, nascido (a) em <span className="font-bold">{new Date(associatedPerson?.birthDate).toLocaleDateString('pt-BR')}</span>, filho (a) de <span className="font-bold">---</span>, natural de <span className="font-bold">Cabo Verde</span> e residente em <span className="font-bold">---</span>, portador de CNI Nº <span className="font-bold">9884565</span> emitido pelo (a) <span className="font-bold">---</span> em <span className="font-bold">15/10/2020</span>.
-                              </p>
+                            {(() => {
+                              const activeMotivos = (associatedPerson?.registrationReasons || []).filter((r: any) => r.status === 'Ativo' || r.status === 'Aguardando Reabilitação');
+                              return (
+                                <div className="space-y-6 text-justify leading-relaxed text-sm">
+                                  <p className="font-bold">ROBERTO CARLOS CENTEIO LIMA, Subintendente da Polícia Nacional e Diretor da Direção Central de Investigação Criminal da Polícia Nacional---------------------------------------</p>
 
-                              <div className="border-y-2 border-slate-900 py-2 text-center">
-                                <p className="font-black tracking-[0.5em] uppercase">Nada Consta--------------------------------------------------------------------------------</p>
-                              </div>
+                                  <p>
+                                    <span className="font-bold">CERTIFICA</span>, que compulsados os ficheiros existentes no arquivo desta Direção, verifica-se que respeitante ao (à) cidadão (ã) Cabo-verdiano senhor (a) <span className="font-bold uppercase underline">{associatedPerson?.name} {associatedPerson?.surname}</span>, {associatedPerson?.maritalStatus || 'solteiro'}, nascido (a) em <span className="font-bold">{new Date(associatedPerson?.birthDate).toLocaleDateString('pt-BR')}</span>, filho (a) de <span className="font-bold">---</span>, natural de <span className="font-bold">Cabo Verde</span> e residente em <span className="font-bold">---</span>, portador de CNI Nº <span className="font-bold">9884565</span> emitido pelo (a) <span className="font-bold">---</span> em <span className="font-bold">15/10/2020</span>.
+                                  </p>
 
-                              <p>Este certificado destina-se a <span className="font-bold uppercase underline">{selectedAnalysisCertificate.reason}</span> e só para esse fim é válido.</p>
-                              
-                              <p>Por ser verdade e haver sido solicitado pelo (a) interessado (a), manda passar o presente certificado, que vai devidamente assinado e autenticado com o carimbo a óleo em uso nesta Direção.</p>
-                            </div>
+                                  {activeMotivos.length === 0 ? (
+                                    <div className="border-y-2 border-slate-900 py-2 text-center">
+                                      <p className="font-black tracking-[0.5em] uppercase">Nada Consta--------------------------------------------------------------------------------</p>
+                                    </div>
+                                  ) : (
+                                    <div className="border-y-2 border-slate-900 py-4 space-y-3">
+                                      <p className="font-black text-xs uppercase tracking-widest text-center mb-3">Consta o(s) seguinte(s) registo(s):</p>
+                                      <table className="w-full text-xs border-collapse">
+                                        <thead>
+                                          <tr className="border-b border-slate-300">
+                                            <th className="text-left py-1 pr-3 font-black uppercase tracking-tighter">Data</th>
+                                            <th className="text-left py-1 pr-3 font-black uppercase tracking-tighter">Motivo</th>
+                                            <th className="text-left py-1 pr-3 font-black uppercase tracking-tighter">Tipo</th>
+                                            <th className="text-left py-1 font-black uppercase tracking-tighter">Estado</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {activeMotivos.map((reg: any) => (
+                                            <tr key={reg.id} className="border-b border-slate-100">
+                                              <td className="py-1.5 pr-3 font-medium">{reg.date}</td>
+                                              <td className="py-1.5 pr-3 font-medium">{reg.reason}</td>
+                                              <td className="py-1.5 pr-3 font-medium">{reg.type}</td>
+                                              <td className="py-1.5 font-bold">{reg.status}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+
+                                  <p>Este certificado destina-se a <span className="font-bold uppercase underline">{selectedAnalysisCertificate.reason}</span> e só para esse fim é válido.</p>
+
+                                  <p>Por ser verdade e haver sido solicitado pelo (a) interessado (a), manda passar o presente certificado, que vai devidamente assinado e autenticado com o carimbo a óleo em uso nesta Direção.</p>
+                                </div>
+                              );
+                            })()}
 
                             {/* Document Footer */}
                             <div className="pt-12 flex flex-col items-center text-center space-y-8">
                               <p className="text-xs font-bold">Direção Central de Investigação Criminal, {new Date().toLocaleDateString('pt-BR')}</p>
-                              
+
                               <div className="space-y-1">
                                 <p className="text-xs font-bold">O Diretor,</p>
                                 <div className="pt-8">
@@ -3606,31 +4187,33 @@ export default function App() {
 
                 <div className="flex justify-between pt-8 border-t border-slate-100">
                   <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_analysis')}>Voltar</Button>
-                  <Button 
-                    variant="primary" 
-                    icon={Check} 
+                  <Button
+                    variant="primary"
+                    icon={Check}
                     className="bg-emerald-600 hover:bg-emerald-700"
                     onClick={() => {
-                      if (!associatedPerson) {
-                        setErrorMessage('Deve associar uma ficha de cadastro antes de concluir.');
+                      if (!certAnalysisHasSearched) {
+                        setErrorMessage('Deve pesquisar pelo menos uma vez na associação de cadastro antes de concluir.');
                         setShowErrorModal(true);
                         return;
                       }
-                      // Move to decision
-                      const newDecisionCert = {
-                        ...selectedAnalysisCertificate,
-                        associatedPerson: associatedPerson,
-                        status: 'Para Decisão',
-                        history: [
-                          ...selectedAnalysisCertificate.history,
-                          { date: new Date().toLocaleDateString('pt-BR'), phase: 'Decisão', status: 'Para Decisão', user: user?.name || 'Sistema' }
-                        ]
-                      };
-                      setMockDecisionCertificates([...mockDecisionCertificates, newDecisionCert]);
-                      setMockAnalysisCertificates(mockAnalysisCertificates.filter(c => c.id !== selectedAnalysisCertificate.id));
-                      setSuccessMessage('Pedido enviado para Decisão com sucesso.');
-                      setShowSuccessModal(true);
-                      setCurrentView('certificate_analysis');
+                      setPendingConcluirAction(() => () => {
+                        const newDecisionCert = {
+                          ...selectedAnalysisCertificate,
+                          associatedPerson: associatedPerson || null,
+                          status: 'Para Decisão',
+                          history: [
+                            ...selectedAnalysisCertificate.history,
+                            { date: new Date().toLocaleDateString('pt-BR'), phase: 'Decisão', status: 'Para Decisão', user: user?.name || 'Sistema' }
+                          ]
+                        };
+                        setMockDecisionCertificates([...mockDecisionCertificates, newDecisionCert]);
+                        setMockAnalysisCertificates(mockAnalysisCertificates.filter(c => c.id !== selectedAnalysisCertificate.id));
+                        setSuccessMessage('Pedido enviado para Decisão com sucesso.');
+                        setShowSuccessModal(true);
+                        setCurrentView('certificate_analysis');
+                      });
+                      setShowConfirmConcluir(true);
                     }}
                   >
                     Concluir
@@ -3718,320 +4301,205 @@ export default function App() {
                 </div>
               </motion.div>
             ) : currentView === 'certificate_decision_detail' && selectedDecisionCertificate ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="space-y-8 pb-12"
+                className="space-y-6 pb-12"
               >
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Decisão de Certificado de Cadastro</h2>
                 </div>
 
-                {/* Sugestão de Vínculo ou Cadastro Associado */}
-                <AnimatePresence mode="wait">
-                  {associatedPerson ? (
-                    <motion.div 
-                      key="associated"
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="space-y-4 mb-8"
+                {/* Cadastro Associado ou botão associar */}
+                {associatedPerson ? (
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => toggleSection('associated')}
+                      className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
                     >
-                      <button 
-                        onClick={() => toggleSection('associated')}
-                        className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-slate-900 text-white rounded-lg">
-                            <Fingerprint size={18} />
-                          </div>
-                          <span className="uppercase tracking-widest text-xs">Cadastro Associado</span>
-                        </div>
-                        {expandedSections.associated ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                      </button>
-
-                      <AnimatePresence>
-                        {expandedSections.associated && (
-                          <motion.div 
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 space-y-8 shadow-sm mt-2 relative">
-                              <div className="flex flex-col md:flex-row gap-8">
-                                {/* Profile Picture */}
-                                <div className="flex-shrink-0">
-                                  <div className="w-32 h-40 border-2 border-slate-900 rounded overflow-hidden shadow-md bg-slate-100 relative">
-                                    <img 
-                                      src="https://images.unsplash.com/photo-1520341280432-4749d4d7bcf9?q=80&w=300&h=400&auto=format&fit=crop" 
-                                      alt="Perfil" 
-                                      className="w-full h-full object-cover grayscale contrast-150 brightness-90"
-                                      referrerPolicy="no-referrer"
-                                    />
-                                    <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-[8px] text-white text-center py-0.5 font-mono">
-                                      PN-CV-0001-2024-SIDE
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="flex-1 space-y-6">
-                                  <div className="flex justify-between items-start">
-                                    <div className="w-full max-w-xs">
-                                      <DetailField label="Cadastro nº:" value={associatedPerson.number} />
-                                    </div>
-                                    <div className="flex gap-3">
-                                      <button 
-                                        onClick={() => {
-                                          setHideNewCadastroInAssociate(false);
-                                          setShowAssociateModal(true);
-                                        }}
-                                        className="px-4 py-2 bg-blue-700 text-white font-bold rounded-xl hover:bg-blue-800 transition-all text-xs border border-blue-900 shadow-sm flex items-center gap-2"
-                                      >
-                                        <Search size={14} />
-                                        Alterar Vínculo
-                                      </button>
-                                      <button 
-                                        onClick={() => {
-                                          setHideNewCadastroInAssociate(true);
-                                          setIsNewRegistration(true);
-                                        }}
-                                        className="px-4 py-2 bg-blue-400 text-white font-bold rounded-xl hover:bg-blue-500 transition-all text-xs border border-blue-400 shadow-sm flex items-center gap-2"
-                                      >
-                                        <UserPlus size={14} />
-                                        Novo Cadastro
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                    <DetailField label="Nome Completo" value={`${associatedPerson.name} ${associatedPerson.surname}`} />
-                                    <DetailField label="Data Nascimento *" value={new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
-                                    <DetailField label="Sexo" value={associatedPerson.gender} />
-                                    <DetailField label="Estado Civil" value={associatedPerson.maritalStatus} />
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="space-y-4 pt-4 border-t border-slate-100">
-                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Documento Identificação</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-                                  <DetailField label="NIF" value={associatedPerson.nif || ''} readOnly={false} onChange={(val) => setAssociatedPerson({...associatedPerson, nif: val})} />
-                                  <DetailField label="Tipo Documento" value="CNI" />
-                                  <DetailField label="Número Documento" value={associatedPerson.docNumber || associatedPerson.number || '---'} />
-                                  <DetailField label="Data Emissão" value="15/10/2020" icon={Calendar} />
-                                  <DetailField label="Data Validade" value="15/10/2025" icon={Calendar} />
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {/* Motivo do Cadastro Accordion */}
-                      {associatedPerson.registrationReasons && (
-                        <div className="mt-4">
-                          <button 
-                            onClick={() => toggleSection('associatedMotivo')}
-                            className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-slate-900 text-white rounded-lg"><HelpCircle size={18} /></div>
-                              <span className="uppercase tracking-widest text-xs">Motivos do Cadastro ASSOCIADO</span>
-                            </div>
-                            {expandedSections.associatedMotivo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                          </button>
-                          
-                          <AnimatePresence>
-                            {expandedSections.associatedMotivo && (
-                              <motion.div 
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6 mt-2">
-                                  <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
-                                    <table className="w-full text-left border-collapse">
-                                      <thead>
-                                        <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                          <th className="px-6 py-4">Data</th>
-                                          <th className="px-6 py-4">Motivo</th>
-                                          <th className="px-6 py-4">Nº Ref</th>
-                                          <th className="px-6 py-4">Destino</th>
-                                          <th className="px-6 py-4">Medidas</th>
-                                          <th className="px-6 py-4">Tipo</th>
-                                          <th className="px-6 py-4">Estado</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-slate-50">
-                                        {(associatedPerson.registrationReasons || []).map((reg: any) => (
-                                          <tr key={reg.id} className="hover:bg-slate-50 transition-colors group">
-                                            <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.date}</td>
-                                            <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.reason}</td>
-                                            <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.refNo}</td>
-                                            <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.destination}</td>
-                                            <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.measures}</td>
-                                            <td className="px-6 py-4 text-xs">
-                                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${
-                                                reg.type === 'Criminal' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
-                                              }`}>
-                                                {reg.type}
-                                              </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-xs">
-                                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${
-                                                reg.status === 'Reabilitado' ? 'bg-emerald-50 text-emerald-600' : 
-                                                reg.status === 'Ativo' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
-                                              }`}>
-                                                {reg.status}
-                                              </span>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      )}
-                    </motion.div>
-                  ) : (
-                    <motion.div 
-                      key="not-associated"
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="space-y-4 mb-8"
-                    >
-                      {/* Banner Area */}
-                      <div className={`${suggestedFicha ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'} border-2 rounded-2xl p-6 shadow-sm mb-4`}>
-                        <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-                          <div className="flex items-center gap-4">
-                            <div className={`p-3 ${suggestedFicha ? 'bg-blue-600 shadow-blue-200' : 'bg-slate-400 shadow-slate-200'} text-white rounded-xl shadow-lg`}>
-                              {suggestedFicha ? <ShieldCheck size={24} /> : <Search size={24} />}
-                            </div>
-                            <div>
-                              <h4 className={`text-sm font-black ${suggestedFicha ? 'text-blue-900' : 'text-slate-900'} uppercase tracking-wider`}>
-                                {suggestedFicha ? 'Possível Correspondência Encontrada' : 'Nenhuma Correspondência Encontrada'}
-                              </h4>
-                              <p className={`text-xs ${suggestedFicha ? 'text-blue-700' : 'text-slate-500'} font-medium italic`}>
-                                {suggestedFicha 
-                                  ? <>Dados biográficos coincidem com o cadastro <strong>{suggestedFicha.number}</strong></>
-                                  : 'Não foi encontrada nenhuma correspondência automática para este pedido.'}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-3">
-                            {suggestedFicha && (
-                              <button 
-                                onClick={() => {
-                                  setAssociatedPerson(suggestedFicha);
-                                  setSuggestedFicha(null);
-                                }}
-                                className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-xs shadow-lg shadow-blue-200 flex items-center gap-2"
-                              >
-                                <CheckCircle size={14} />
-                                Aceitar Match
-                              </button>
-                            )}
-                            <button 
-                              onClick={() => {
-                                setHideNewCadastroInAssociate(false);
-                                setShowAssociateModal(true);
-                              }}
-                              className="px-4 py-2.5 bg-white text-slate-600 border border-slate-200 font-bold rounded-xl hover:bg-slate-50 transition-all text-xs flex items-center gap-2"
-                            >
-                              <Search size={14} />
-                              Associar Cadastro
-                            </button>
-                          </div>
-                        </div>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-slate-900 text-white rounded-lg"><Fingerprint size={18} /></div>
+                        <span className="uppercase tracking-widest text-xs">Cadastro Associado</span>
                       </div>
-
-                      {suggestedFicha && (
-                        <>
-                          <button 
-                            onClick={() => toggleSection('associated')}
-                            className="w-full bg-white border-2 border-blue-200 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-blue-600 text-white rounded-lg">
-                                <Fingerprint size={18} />
-                              </div>
-                              <span className="uppercase tracking-widest text-xs">Sugestão de Cadastro (Match)</span>
-                            </div>
-                            {expandedSections.associated ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                          </button>
-
-                          <AnimatePresence>
-                            {expandedSections.associated && (
-                              <motion.div 
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="bg-white border-2 border-blue-100 shadow-blue-50 rounded-2xl p-8 space-y-8 shadow-sm mt-2 relative">
-                                  <div className="absolute top-4 right-8">
-                                    <span className="text-[9px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-full uppercase tracking-tighter">Dados em Revisão</span>
-                                  </div>
-                                  
-                                  <div className="flex flex-col md:flex-row gap-8">
-                                    <div className="flex-shrink-0">
-                                      <div className="w-32 h-40 border-2 border-slate-900 rounded overflow-hidden shadow-md bg-slate-100 relative">
-                                        <img 
-                                          src="https://images.unsplash.com/photo-1520341280432-4749d4d7bcf9?q=80&w=300&h=400&auto=format&fit=crop" 
-                                          alt="Perfil" 
-                                          className="w-full h-full object-cover grayscale contrast-150 brightness-90 opacity-60"
-                                          referrerPolicy="no-referrer"
-                                        />
-                                        <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-[8px] text-white text-center py-0.5 font-mono">
-                                          PN-CV-0001-2024-SIDE
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex-1 space-y-6">
-                                      <div className="flex justify-between items-start">
-                                        <div className="w-full max-w-xs">
-                                          <DetailField label="Cadastro nº:" value={suggestedFicha.number} />
-                                        </div>
-                                      </div>
-
-                                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                        <DetailField label="Nome Completo" value={`${suggestedFicha.name} ${suggestedFicha.surname}`} />
-                                        <DetailField label="Data Nascimento *" value={new Date(suggestedFicha.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
-                                        <DetailField label="Sexo" value={suggestedFicha.gender} />
-                                        <DetailField label="Estado Civil" value={suggestedFicha.maritalStatus} />
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-4 pt-4 border-t border-slate-100">
-                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Documento Identificação</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-                                      <DetailField label="NIF" value={suggestedFicha.nif || ''} readOnly={true} />
-                                      <DetailField label="Tipo Documento" value="CNI" />
-                                      <DetailField label="Número Documento" value={suggestedFicha.docNumber || suggestedFicha.number || '---'} />
-                                      <DetailField label="Data Emissão" value="15/10/2020" icon={Calendar} />
-                                      <DetailField label="Data Validade" value="15/10/2025" icon={Calendar} />
-                                    </div>
-                                  </div>
+                      {expandedSections.associated ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </button>
+                    <AnimatePresence>
+                      {expandedSections.associated && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 space-y-8 shadow-sm mt-1">
+                            <div className="flex flex-col md:flex-row gap-8">
+                              <div className="flex-shrink-0">
+                                <div className="w-32 h-40 border-2 border-slate-900 rounded overflow-hidden shadow-md bg-slate-100 relative">
+                                  <img src={associatedPerson.photo || 'https://randomuser.me/api/portraits/men/32.jpg'} alt="Perfil" className="w-full h-full object-cover grayscale contrast-150 brightness-90" referrerPolicy="no-referrer" />
+                                  <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-[8px] text-white text-center py-0.5 font-mono">PN-CV-0001-2024-SIDE</div>
                                 </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </>
+                              </div>
+                              <div className="flex-1 space-y-6">
+                                <div className="flex justify-between items-start">
+                                  <div className="w-full max-w-xs">
+                                    <DetailField label="Cadastro nº:" value={associatedPerson.number} />
+                                  </div>
+                                  <button
+                                    onClick={() => { setHideNewCadastroInAssociate(true); setShowAssociateModal(true); }}
+                                    className="px-4 py-2 bg-blue-700 text-white font-bold rounded-xl hover:bg-blue-800 transition-all text-xs border border-blue-900 shadow-sm flex items-center gap-2"
+                                  >
+                                    <Search size={14} />
+                                    Alterar Vínculo
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                  <DetailField label="Nome Completo" value={`${associatedPerson.name}${associatedPerson.surname ? ' ' + associatedPerson.surname : ''}`} />
+                                  <DetailField label="Data Nascimento" value={new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
+                                  <DetailField label="Sexo" value={associatedPerson.gender} />
+                                  <DetailField label="Estado Civil" value={associatedPerson.maritalStatus || associatedPerson.civilStatus} />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="space-y-4 pt-4 border-t border-slate-100">
+                              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Documento Identificação</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                                <DetailField label="NIF" value={associatedPerson.nif || ''} readOnly={true} />
+                                <DetailField label="Tipo Documento" value={associatedPerson.docType || 'CNI'} />
+                                <DetailField label="Número Documento" value={associatedPerson.docNumber || associatedPerson.number || '---'} />
+                                <DetailField label="Data Emissão" value={associatedPerson.docIssueDate || '15/10/2020'} icon={Calendar} />
+                                <DetailField label="Data Validade" value={associatedPerson.docExpiryDate || '15/10/2025'} icon={Calendar} />
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
                       )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    </AnimatePresence>
 
-                {/* Modelo de Certificado Accordion */}
-                <div className="space-y-4">
-                  <button 
+                    {/* Motivos */}
+                    {associatedPerson.registrationReasons && (
+                      <div>
+                        <button
+                          onClick={() => toggleSection('associatedMotivo')}
+                          className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-slate-900 text-white rounded-lg"><HelpCircle size={18} /></div>
+                            <span className="uppercase tracking-widest text-xs">Motivos do Cadastro Associado</span>
+                          </div>
+                          {expandedSections.associatedMotivo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                        </button>
+                        <AnimatePresence>
+                          {expandedSections.associatedMotivo && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                              <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm mt-1">
+                                <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
+                                  <table className="w-full text-left border-collapse">
+                                    <thead>
+                                      <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                        <th className="px-6 py-4">Data</th>
+                                        <th className="px-6 py-4">Motivo</th>
+                                        <th className="px-6 py-4">Nº Ref</th>
+                                        <th className="px-6 py-4">Destino</th>
+                                        <th className="px-6 py-4">Medidas</th>
+                                        <th className="px-6 py-4">Tipo</th>
+                                        <th className="px-6 py-4">Estado</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                      {(associatedPerson.registrationReasons || []).filter((reg: any) => reg.status === 'Ativo' || reg.status === 'Aguardando Reabilitação').map((reg: any) => (
+                                        <tr key={reg.id} className="hover:bg-slate-50 transition-colors">
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.date}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.reason}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.refNo}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.destination}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.measures}</td>
+                                          <td className="px-6 py-4 text-xs">
+                                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${reg.type === 'Criminal' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>{reg.type}</span>
+                                          </td>
+                                          <td className="px-6 py-4 text-xs">
+                                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${reg.status === 'Ativo' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>{reg.status}</span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                      {(associatedPerson.registrationReasons || []).filter((reg: any) => reg.status === 'Ativo' || reg.status === 'Aguardando Reabilitação').length === 0 && (
+                                        <tr><td colSpan={7} className="px-6 py-8 text-center text-slate-400 italic text-xs">Nenhum motivo ativo ou aguardando reabilitação.</td></tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => { setHideNewCadastroInAssociate(true); setShowAssociateModal(true); }}
+                      className="px-5 py-2.5 bg-white text-slate-700 border-2 border-slate-200 font-bold rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all text-xs flex items-center gap-2"
+                    >
+                      <Search size={14} />
+                      Associar Cadastro
+                    </button>
+                  </div>
+                )}
+
+                {/* Dados Biográficos */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('analysisBiographic')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><User size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Dados Biográficos</span>
+                    </div>
+                    {expandedSections.analysisBiographic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.analysisBiographic && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8 mt-1">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <DetailField label="Nome Completo" value={selectedDecisionCertificate.biographic.fullName} />
+                            <DetailField label="Data Nascimento" value={selectedDecisionCertificate.biographic.birthDate} icon={Calendar} />
+                            <DetailField label="Sexo" value={selectedDecisionCertificate.biographic.gender} />
+                            <DetailField label="Estado Civil" value={selectedDecisionCertificate.biographic.civilStatus} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <DetailField label="Naturalidade" value={selectedDecisionCertificate.biographic.birthPlace} />
+                            <DetailField label="Nacionalidade" value={selectedDecisionCertificate.biographic.nationality} />
+                            <DetailField label="Nome Pai" value={selectedDecisionCertificate.biographic.fatherName} />
+                            <DetailField label="Nome Mãe" value={selectedDecisionCertificate.biographic.motherName} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <DetailField label="NIF" value={selectedDecisionCertificate.biographic.nif || '---'} />
+                            <DetailField label="Tipo Documento" value={selectedDecisionCertificate.biographic.docType} />
+                            <DetailField label="Número Documento" value={selectedDecisionCertificate.biographic.docNumber} />
+                          </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                              <DetailField label="Ilha" value={selectedDecisionCertificate.address.island} />
+                              <DetailField label="Conselho" value={selectedDecisionCertificate.address.council} />
+                              <DetailField label="Freguesia" value={selectedDecisionCertificate.address.parish} />
+                              <DetailField label="Localidade" value={selectedDecisionCertificate.address.locality} />
+                              <DetailField label="Ponto de Referencia" value={selectedDecisionCertificate.address.reference} icon={MapPin} />
+                            </div>
+                          </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <DetailField label="Telemovel" value={selectedDecisionCertificate.contact.mobile} />
+                              <DetailField label="Email" value={selectedDecisionCertificate.contact.email} />
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t border-slate-100">
+                            <DetailField label="Finalidade" value={selectedDecisionCertificate.reason} />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Modelo de Certificado */}
+                <div className="space-y-2">
+                  <button
                     onClick={() => toggleSection('certificateModel')}
                     className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
                   >
@@ -4041,18 +4509,11 @@ export default function App() {
                     </div>
                     {expandedSections.certificateModel ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </button>
-
                   <AnimatePresence>
                     {expandedSections.certificateModel && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="bg-slate-200 p-8 rounded-2xl flex justify-center">
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-slate-200 p-8 rounded-2xl flex justify-center mt-1">
                           <div className="bg-white w-full max-w-3xl shadow-2xl p-12 space-y-8 font-serif text-slate-800 border border-slate-300">
-                            {/* Document Header */}
                             <div className="flex flex-col items-center text-center space-y-2 border-b-2 border-slate-900 pb-6">
                               <div className="flex items-center gap-4">
                                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200">
@@ -4065,36 +4526,56 @@ export default function App() {
                                 </div>
                               </div>
                             </div>
-
-                            {/* Document Title */}
                             <div className="text-center space-y-2">
                               <div className="inline-block border-2 border-slate-900 px-8 py-2">
                                 <p className="text-sm font-black uppercase tracking-widest">Certificado de Cadastro Policial</p>
                                 <p className="text-xs font-bold">N.º {selectedDecisionCertificate.id}/2024</p>
                               </div>
                             </div>
-
-                            {/* Document Body */}
-                            <div className="space-y-6 text-justify leading-relaxed text-sm">
-                              <p className="font-bold">ROBERTO CARLOS CENTEIO LIMA, Subintendente da Polícia Nacional e Diretor da Direção Central de Investigação Criminal da Polícia Nacional---------------------------------------</p>
-                              
-                              <p>
-                                <span className="font-bold">CERTIFICA</span>, que compulsados os ficheiros existentes no arquivo desta Direção, verifica-se que respeitante ao (à) cidadão (ã) Cabo-verdiano senhor (a) <span className="font-bold uppercase underline">{associatedPerson?.name} {associatedPerson?.surname}</span>, {associatedPerson?.maritalStatus || 'solteiro'}, nascido (a) em <span className="font-bold">{new Date(associatedPerson?.birthDate).toLocaleDateString('pt-BR')}</span>, filho (a) de <span className="font-bold">---</span>, natural de <span className="font-bold">Cabo Verde</span> e residente em <span className="font-bold">---</span>, portador de CNI Nº <span className="font-bold">9884565</span> emitido pelo (a) <span className="font-bold">---</span> em <span className="font-bold">15/10/2020</span>.
-                              </p>
-
-                              <div className="border-y-2 border-slate-900 py-2 text-center">
-                                <p className="font-black tracking-[0.5em] uppercase">Nada Consta--------------------------------------------------------------------------------</p>
-                              </div>
-
-                              <p>Este certificado destina-se a <span className="font-bold uppercase underline">{selectedDecisionCertificate.reason}</span> e só para esse fim é válido.</p>
-                              
-                              <p>Por ser verdade e haver sido solicitado pelo (a) interessado (a), manda passar o presente certificado, que vai devidamente assinado e autenticado com o carimbo a óleo em uso nesta Direção.</p>
-                            </div>
-
-                            {/* Document Footer */}
+                            {(() => {
+                              const activeMotivos = (associatedPerson?.registrationReasons || []).filter((r: any) => r.status === 'Ativo' || r.status === 'Aguardando Reabilitação');
+                              return (
+                                <div className="space-y-6 text-justify leading-relaxed text-sm">
+                                  <p className="font-bold">ROBERTO CARLOS CENTEIO LIMA, Subintendente da Polícia Nacional e Diretor da Direção Central de Investigação Criminal da Polícia Nacional---------------------------------------</p>
+                                  <p>
+                                    <span className="font-bold">CERTIFICA</span>, que compulsados os ficheiros existentes no arquivo desta Direção, verifica-se que respeitante ao (à) cidadão (ã) Cabo-verdiano senhor (a) <span className="font-bold uppercase underline">{associatedPerson?.name}{associatedPerson?.surname ? ' ' + associatedPerson.surname : ''}</span>, {associatedPerson?.maritalStatus || associatedPerson?.civilStatus || 'solteiro'}, nascido (a) em <span className="font-bold">{associatedPerson ? new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR') : '---'}</span>, portador de {associatedPerson?.docType || 'CNI'} Nº <span className="font-bold">{associatedPerson?.docNumber || '---'}</span>.
+                                  </p>
+                                  {activeMotivos.length === 0 ? (
+                                    <div className="border-y-2 border-slate-900 py-2 text-center">
+                                      <p className="font-black tracking-[0.5em] uppercase">Nada Consta--------------------------------------------------------------------------------</p>
+                                    </div>
+                                  ) : (
+                                    <div className="border-y-2 border-slate-900 py-4 space-y-3">
+                                      <p className="font-black text-xs uppercase tracking-widest text-center mb-3">Consta o(s) seguinte(s) registo(s):</p>
+                                      <table className="w-full text-xs border-collapse">
+                                        <thead>
+                                          <tr className="border-b border-slate-300">
+                                            <th className="text-left py-1 pr-3 font-black uppercase tracking-tighter">Data</th>
+                                            <th className="text-left py-1 pr-3 font-black uppercase tracking-tighter">Motivo</th>
+                                            <th className="text-left py-1 pr-3 font-black uppercase tracking-tighter">Tipo</th>
+                                            <th className="text-left py-1 font-black uppercase tracking-tighter">Estado</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {activeMotivos.map((reg: any) => (
+                                            <tr key={reg.id} className="border-b border-slate-100">
+                                              <td className="py-1.5 pr-3 font-medium">{reg.date}</td>
+                                              <td className="py-1.5 pr-3 font-medium">{reg.reason}</td>
+                                              <td className="py-1.5 pr-3 font-medium">{reg.type}</td>
+                                              <td className="py-1.5 font-bold">{reg.status}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                  <p>Este certificado destina-se a <span className="font-bold uppercase underline">{selectedDecisionCertificate.reason}</span> e só para esse fim é válido.</p>
+                                  <p>Por ser verdade e haver sido solicitado pelo (a) interessado (a), manda passar o presente certificado, que vai devidamente assinado e autenticado com o carimbo a óleo em uso nesta Direção.</p>
+                                </div>
+                              );
+                            })()}
                             <div className="pt-12 flex flex-col items-center text-center space-y-8">
                               <p className="text-xs font-bold">Direção Central de Investigação Criminal, {new Date().toLocaleDateString('pt-BR')}</p>
-                              
                               <div className="space-y-1">
                                 <p className="text-xs font-bold">O Diretor,</p>
                                 <div className="pt-8">
@@ -4103,8 +4584,7 @@ export default function App() {
                                 </div>
                               </div>
                             </div>
-
-                            <div className="pt-12 text-center">
+                            <div className="pt-4 text-center">
                               <p className="text-[8px] italic text-slate-400">Este certificado é válido por 90 (dias) a contar da data da sua emissão.</p>
                             </div>
                           </div>
@@ -4114,156 +4594,639 @@ export default function App() {
                   </AnimatePresence>
                 </div>
 
-                <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
-                  <div className="border-b-2 border-slate-900 pb-2 mb-6">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Dados Biográficos</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <DetailField label="Nome Completo" value={selectedDecisionCertificate.biographic.fullName} />
-                    <DetailField label="Data Nascimento *" value={selectedDecisionCertificate.biographic.birthDate} icon={Calendar} />
-                    <DetailField label="Sexo" value={selectedDecisionCertificate.biographic.gender} />
-                    <DetailField label="Estado Civil" value={selectedDecisionCertificate.biographic.civilStatus} />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <DetailField label="Naturalidade" value={selectedDecisionCertificate.biographic.birthPlace} />
-                    <DetailField label="Nacionalidade" value={selectedDecisionCertificate.biographic.nationality} />
-                    <DetailField label="Nome Pai" value={selectedDecisionCertificate.biographic.fatherName} />
-                    <DetailField label="Nome Mãe" value={selectedDecisionCertificate.biographic.motherName} />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <DetailField label="NIF" value={selectedDecisionCertificate.biographic.nif || '---'} />
-                    <DetailField label="Tipo Documento" value={selectedDecisionCertificate.biographic.docType} />
-                    <DetailField label="Número Documento" value={selectedDecisionCertificate.biographic.docNumber} />
-                  </div>
-
-                  <div className="space-y-4 pt-4">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-                      <DetailField label="Ilha" value={selectedDecisionCertificate.address.island} />
-                      <DetailField label="Conselho" value={selectedDecisionCertificate.address.council} />
-                      <DetailField label="Freguesia" value={selectedDecisionCertificate.address.parish} />
-                      <DetailField label="Localidade" value={selectedDecisionCertificate.address.locality} />
-                      <DetailField label="Ponto de Referencia" value={selectedDecisionCertificate.address.reference} icon={MapPin} />
+                {/* Anexos */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('analysisAnexos')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><Paperclip size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Anexos</span>
+                      <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{selectedDecisionCertificate.attachments.length}</span>
                     </div>
-                  </div>
-
-                  <div className="space-y-4 pt-4">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <DetailField label="Telemovel" value={selectedDecisionCertificate.contact.mobile} />
-                      <DetailField label="Email" value={selectedDecisionCertificate.contact.email} />
-                    </div>
-                  </div>
-
-                  <div className="pt-4">
-                    <DetailField label="Ficha de Antecedente" value={selectedDecisionCertificate.reason} />
-                  </div>
+                    {expandedSections.analysisAnexos ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.analysisAnexos && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-2 mt-1">
+                          {selectedDecisionCertificate.attachments.map((file: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 border-2 border-slate-100 rounded-xl">
+                              <FileText size={18} className="text-slate-400" />
+                              <span className="text-xs font-bold text-slate-900">{file.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
-                  <div className="border-b-2 border-slate-900 pb-2 mb-6">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Anexos</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      {selectedDecisionCertificate.attachments.map((file: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border-2 border-slate-100 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <FileText size={18} className="text-slate-400" />
-                            <span className="text-xs font-bold text-slate-900">{file.name}</span>
+                {/* Observações */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('analysisObservations')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><MessageSquare size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Observações</span>
+                    </div>
+                    {expandedSections.analysisObservations ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.analysisObservations && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-4 mt-1">
+                          {selectedDecisionCertificate.observations.map((obs: any, idx: number) => (
+                            <div key={idx} className="p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl space-y-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center"><ImageIcon size={20} className="text-slate-400" /></div>
+                                <div>
+                                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{obs.user}</p>
+                                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{obs.date}</p>
+                                </div>
+                              </div>
+                              <p className="text-xs text-slate-600 leading-relaxed font-medium">{obs.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Histórico */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('analysisHistory')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Histórico do Pedido</span>
+                    </div>
+                    {expandedSections.analysisHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.analysisHistory && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mt-1">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                                  <th className="px-6 py-4">Data</th>
+                                  <th className="px-6 py-4">Fase</th>
+                                  <th className="px-6 py-4">Estado</th>
+                                  <th className="px-6 py-4">Utente</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {selectedDecisionCertificate.history.map((h: any, idx: number) => (
+                                  <tr key={idx} className="bg-white">
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
-                  <div className="border-b-2 border-slate-900 pb-2 mb-4 flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Observações</h3>
-                  </div>
-                  <div className="space-y-4">
-                    {selectedDecisionCertificate.observations.map((obs: any, idx: number) => (
-                      <div key={idx} className="p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                            <ImageIcon size={20} className="text-slate-400" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{obs.user}</p>
-                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{obs.date}</p>
-                          </div>
-                        </div>
-                        <p className="text-xs text-slate-600 leading-relaxed font-medium">{obs.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                  <div className="p-4 bg-slate-50 border-b-2 border-slate-100 flex items-center justify-between">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Historico do pedido</h3>
-                    <button className="p-1 hover:bg-slate-200 rounded transition-colors"><ChevronDown size={16} /></button>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Data</th>
-                          <th className="px-6 py-4">Fase</th>
-                          <th className="px-6 py-4">Estado</th>
-                          <th className="px-6 py-4">Utente</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {selectedDecisionCertificate.history.map((h: any, idx: number) => (
-                          <tr key={idx} className="bg-white">
-                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <div className="flex justify-between pt-8 border-t border-slate-100">
                   <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_decision')}>Voltar</Button>
                   <div className="flex gap-4">
-                    <Button 
-                      variant="outline" 
-                      icon={RotateCcw} 
+                    <Button
+                      variant="outline"
+                      icon={RotateCcw}
                       className="text-red-600 border-red-200 hover:bg-red-50"
                       onClick={() => setShowReturnModal(true)}
                     >
                       Devolver
                     </Button>
-                    <Button 
-                      variant="primary" 
-                      icon={CheckCircle} 
+                    <Button
+                      variant="primary"
+                      icon={CheckCircle}
                       className="bg-emerald-600 hover:bg-emerald-700"
                       onClick={() => {
-                        setSuccessMessage('Pedido Concluído com Sucesso!');
-                        setShowSuccessModal(true);
-                        setMockDecisionCertificates(mockDecisionCertificates.filter(c => c.id !== selectedDecisionCertificate.id));
-                        setCurrentView('certificate_decision');
+                        setPendingConcluirAction(() => () => {
+                          const concludedCert = {
+                            ...selectedDecisionCertificate,
+                            associatedPerson: associatedPerson || null,
+                            status: 'Concluído',
+                            concludedAt: new Date().toLocaleDateString('pt-BR'),
+                            history: [
+                              ...selectedDecisionCertificate.history,
+                              { date: new Date().toLocaleDateString('pt-BR'), phase: 'Decisão', status: 'Concluído', user: user?.name || 'Sistema' }
+                            ]
+                          };
+                          setMockConcludedCertificates(prev => [...prev, concludedCert]);
+                          setSuccessMessage('Despacho concluído e certificado emitido com sucesso!');
+                          setShowSuccessModal(true);
+                          setMockDecisionCertificates(mockDecisionCertificates.filter(c => c.id !== selectedDecisionCertificate.id));
+                          setCurrentView('certificate_decision');
+                        });
+                        setShowConfirmConcluir(true);
                       }}
                     >
-                      Concluir Pedido
+                      Concluir e Emitir Certificado
                     </Button>
                   </div>
                 </div>
               </motion.div>
+            ) : currentView === 'certificate_history' ? (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Histórico de Certificado de Cadastro</h2>
+                </div>
+
+                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                  <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Todos os Pedidos</h3>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">
+                      Total : {(mockAnalysisCertificates.length + mockDecisionCertificates.length + mockConcludedCertificates.length).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                          <th className="px-6 py-4">Número Pedido</th>
+                          <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Data Nascimento</th>
+                          <th className="px-6 py-4">Data Pedido</th>
+                          <th className="px-6 py-4">Fase</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {[
+                          ...mockAnalysisCertificates.map(c => ({ ...c, _fase: 'Análise', _faseColor: 'bg-blue-50 text-blue-600' })),
+                          ...mockDecisionCertificates.map(c => ({ ...c, _fase: 'Decisão', _faseColor: 'bg-amber-50 text-amber-600' })),
+                          ...mockConcludedCertificates.map(c => ({ ...c, _fase: 'Concluído', _faseColor: 'bg-emerald-50 text-emerald-600' })),
+                        ].length > 0 ? [
+                          ...mockAnalysisCertificates.map(c => ({ ...c, _fase: 'Análise', _faseColor: 'bg-blue-50 text-blue-600' })),
+                          ...mockDecisionCertificates.map(c => ({ ...c, _fase: 'Decisão', _faseColor: 'bg-amber-50 text-amber-600' })),
+                          ...mockConcludedCertificates.map(c => ({ ...c, _fase: 'Concluído', _faseColor: 'bg-emerald-50 text-emerald-600' })),
+                        ].map((cert) => (
+                          <tr
+                            key={cert.id + cert._fase}
+                            onClick={() => {
+                              setSelectedHistoryCertificate(cert);
+                              setAssociatedPerson(cert.associatedPerson || null);
+                              setCurrentView('certificate_history_detail');
+                            }}
+                            className="hover:bg-blue-50 cursor-pointer transition-colors group"
+                          >
+                            <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{cert.id}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${cert._faseColor}`}>{cert._fase}</span>
+                            </td>
+                          </tr>
+                        )) : (
+                          <tr>
+                            <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhum pedido encontrado.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex justify-start">
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar ao Início</Button>
+                </div>
+              </motion.div>
+
+            ) : currentView === 'certificate_history_detail' && selectedHistoryCertificate ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6 pb-12"
+              >
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Detalhe do Pedido</h2>
+                  <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                    selectedHistoryCertificate._fase === 'Concluído' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                    selectedHistoryCertificate._fase === 'Decisão' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
+                    'bg-blue-50 text-blue-600 border border-blue-200'
+                  }`}>{selectedHistoryCertificate._fase}</span>
+                </div>
+
+                {/* Devolução Warning */}
+                {selectedHistoryCertificate.returnReason && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-4 bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 shadow-sm"
+                  >
+                    <div className="p-2 bg-amber-100 rounded-xl flex-shrink-0">
+                      <AlertTriangle size={20} className="text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-amber-900 leading-relaxed">
+                        <span className="font-black">Motivo Devolução:</span> {selectedHistoryCertificate.returnReason}
+                      </p>
+                      <p className="text-[10px] text-amber-500 font-black uppercase tracking-wider mt-2">
+                        {selectedHistoryCertificate.returnedAt} · {selectedHistoryCertificate.returnedBy}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Cadastro Associado */}
+                {associatedPerson && (
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => toggleSection('associated')}
+                      className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-slate-900 text-white rounded-lg"><Fingerprint size={18} /></div>
+                        <span className="uppercase tracking-widest text-xs">Cadastro Associado</span>
+                      </div>
+                      {expandedSections.associated ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </button>
+                    <AnimatePresence>
+                      {expandedSections.associated && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 space-y-8 shadow-sm mt-1">
+                            <div className="flex flex-col md:flex-row gap-8">
+                              <div className="flex-shrink-0">
+                                <div className="w-32 h-40 border-2 border-slate-900 rounded overflow-hidden shadow-md bg-slate-100 relative">
+                                  <img src={associatedPerson.photo || 'https://randomuser.me/api/portraits/men/32.jpg'} alt="Perfil" className="w-full h-full object-cover grayscale contrast-150 brightness-90" referrerPolicy="no-referrer" />
+                                  <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-[8px] text-white text-center py-0.5 font-mono">PN-CV-0001-2024-SIDE</div>
+                                </div>
+                              </div>
+                              <div className="flex-1 space-y-6">
+                                <div className="w-full max-w-xs">
+                                  <DetailField label="Cadastro nº:" value={associatedPerson.number} />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                  <DetailField label="Nome Completo" value={`${associatedPerson.name}${associatedPerson.surname ? ' ' + associatedPerson.surname : ''}`} />
+                                  <DetailField label="Data Nascimento" value={new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
+                                  <DetailField label="Sexo" value={associatedPerson.gender} />
+                                  <DetailField label="Estado Civil" value={associatedPerson.maritalStatus || associatedPerson.civilStatus} />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="space-y-4 pt-4 border-t border-slate-100">
+                              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Documento Identificação</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                                <DetailField label="NIF" value={associatedPerson.nif || ''} />
+                                <DetailField label="Tipo Documento" value={associatedPerson.docType || 'CNI'} />
+                                <DetailField label="Número Documento" value={associatedPerson.docNumber || associatedPerson.number || '---'} />
+                                <DetailField label="Data Emissão" value={associatedPerson.docIssueDate || '15/10/2020'} icon={Calendar} />
+                                <DetailField label="Data Validade" value={associatedPerson.docExpiryDate || '15/10/2025'} icon={Calendar} />
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {associatedPerson.registrationReasons && (
+                      <div>
+                        <button
+                          onClick={() => toggleSection('associatedMotivo')}
+                          className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-slate-900 text-white rounded-lg"><HelpCircle size={18} /></div>
+                            <span className="uppercase tracking-widest text-xs">Motivos do Cadastro Associado</span>
+                          </div>
+                          {expandedSections.associatedMotivo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                        </button>
+                        <AnimatePresence>
+                          {expandedSections.associatedMotivo && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                              <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm mt-1">
+                                <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
+                                  <table className="w-full text-left border-collapse">
+                                    <thead>
+                                      <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                        <th className="px-6 py-4">Data</th>
+                                        <th className="px-6 py-4">Motivo</th>
+                                        <th className="px-6 py-4">Nº Ref</th>
+                                        <th className="px-6 py-4">Destino</th>
+                                        <th className="px-6 py-4">Medidas</th>
+                                        <th className="px-6 py-4">Tipo</th>
+                                        <th className="px-6 py-4">Estado</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                      {(associatedPerson.registrationReasons || []).filter((reg: any) => reg.status === 'Ativo' || reg.status === 'Aguardando Reabilitação').map((reg: any) => (
+                                        <tr key={reg.id} className="hover:bg-slate-50 transition-colors">
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.date}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.reason}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.refNo}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.destination}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.measures}</td>
+                                          <td className="px-6 py-4 text-xs">
+                                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${reg.type === 'Criminal' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>{reg.type}</span>
+                                          </td>
+                                          <td className="px-6 py-4 text-xs">
+                                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${reg.status === 'Ativo' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>{reg.status}</span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                      {(associatedPerson.registrationReasons || []).filter((reg: any) => reg.status === 'Ativo' || reg.status === 'Aguardando Reabilitação').length === 0 && (
+                                        <tr><td colSpan={7} className="px-6 py-8 text-center text-slate-400 italic text-xs">Nenhum motivo ativo ou aguardando reabilitação.</td></tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Dados Biográficos */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('analysisBiographic')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><User size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Dados Biográficos</span>
+                    </div>
+                    {expandedSections.analysisBiographic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.analysisBiographic && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8 mt-1">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <DetailField label="Nome Completo" value={selectedHistoryCertificate.biographic.fullName} />
+                            <DetailField label="Data Nascimento" value={selectedHistoryCertificate.biographic.birthDate} icon={Calendar} />
+                            <DetailField label="Sexo" value={selectedHistoryCertificate.biographic.gender} />
+                            <DetailField label="Estado Civil" value={selectedHistoryCertificate.biographic.civilStatus} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <DetailField label="Naturalidade" value={selectedHistoryCertificate.biographic.birthPlace} />
+                            <DetailField label="Nacionalidade" value={selectedHistoryCertificate.biographic.nationality} />
+                            <DetailField label="Nome Pai" value={selectedHistoryCertificate.biographic.fatherName} />
+                            <DetailField label="Nome Mãe" value={selectedHistoryCertificate.biographic.motherName} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <DetailField label="NIF" value={selectedHistoryCertificate.biographic.nif || '---'} />
+                            <DetailField label="Tipo Documento" value={selectedHistoryCertificate.biographic.docType} />
+                            <DetailField label="Número Documento" value={selectedHistoryCertificate.biographic.docNumber} />
+                          </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                              <DetailField label="Ilha" value={selectedHistoryCertificate.address.island} />
+                              <DetailField label="Conselho" value={selectedHistoryCertificate.address.council} />
+                              <DetailField label="Freguesia" value={selectedHistoryCertificate.address.parish} />
+                              <DetailField label="Localidade" value={selectedHistoryCertificate.address.locality} />
+                              <DetailField label="Ponto de Referencia" value={selectedHistoryCertificate.address.reference} icon={MapPin} />
+                            </div>
+                          </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <DetailField label="Telemovel" value={selectedHistoryCertificate.contact.mobile} />
+                              <DetailField label="Email" value={selectedHistoryCertificate.contact.email} />
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t border-slate-100">
+                            <DetailField label="Finalidade" value={selectedHistoryCertificate.reason} />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Modelo de Certificado */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => toggleSection('certificateModel')}
+                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><FileText size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Modelo de Certificado de Cadastro</span>
+                    </div>
+                    {expandedSections.certificateModel ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.certificateModel && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-slate-200 p-8 rounded-2xl flex justify-center mt-1">
+                          <div className="bg-white w-full max-w-3xl shadow-2xl p-12 space-y-8 font-serif text-slate-800 border border-slate-300">
+                            <div className="flex flex-col items-center text-center space-y-2 border-b-2 border-slate-900 pb-6">
+                              <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200">
+                                  <Shield size={32} className="text-slate-400" />
+                                </div>
+                                <div className="text-left">
+                                  <p className="text-xs font-bold uppercase tracking-tighter">Ministério da Administração Interna</p>
+                                  <p className="text-[10px] font-bold uppercase tracking-tighter">Direção Nacional da Polícia Nacional</p>
+                                  <p className="text-[10px] font-bold uppercase tracking-tighter">Direção Central de Investigação Criminal</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-center space-y-2">
+                              <div className="inline-block border-2 border-slate-900 px-8 py-2">
+                                <p className="text-sm font-black uppercase tracking-widest">Certificado de Cadastro Policial</p>
+                                <p className="text-xs font-bold">N.º {selectedHistoryCertificate.id}/2024</p>
+                              </div>
+                            </div>
+                            {(() => {
+                              const activeMotivos = (associatedPerson?.registrationReasons || []).filter((r: any) => r.status === 'Ativo' || r.status === 'Aguardando Reabilitação');
+                              return (
+                                <div className="space-y-6 text-justify leading-relaxed text-sm">
+                                  <p className="font-bold">ROBERTO CARLOS CENTEIO LIMA, Subintendente da Polícia Nacional e Diretor da Direção Central de Investigação Criminal da Polícia Nacional---------------------------------------</p>
+                                  <p>
+                                    <span className="font-bold">CERTIFICA</span>, que compulsados os ficheiros existentes no arquivo desta Direção, verifica-se que respeitante ao (à) cidadão (ã) Cabo-verdiano senhor (a) <span className="font-bold uppercase underline">{associatedPerson?.name}{associatedPerson?.surname ? ' ' + associatedPerson.surname : ''}</span>, {associatedPerson?.maritalStatus || associatedPerson?.civilStatus || 'solteiro'}, nascido (a) em <span className="font-bold">{associatedPerson ? new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR') : '---'}</span>, portador de {associatedPerson?.docType || 'CNI'} Nº <span className="font-bold">{associatedPerson?.docNumber || '---'}</span>.
+                                  </p>
+                                  {activeMotivos.length === 0 ? (
+                                    <div className="border-y-2 border-slate-900 py-2 text-center">
+                                      <p className="font-black tracking-[0.5em] uppercase">Nada Consta--------------------------------------------------------------------------------</p>
+                                    </div>
+                                  ) : (
+                                    <div className="border-y-2 border-slate-900 py-4 space-y-3">
+                                      <p className="font-black text-xs uppercase tracking-widest text-center mb-3">Consta o(s) seguinte(s) registo(s):</p>
+                                      <table className="w-full text-xs border-collapse">
+                                        <thead>
+                                          <tr className="border-b border-slate-300">
+                                            <th className="text-left py-1 pr-3 font-black uppercase tracking-tighter">Data</th>
+                                            <th className="text-left py-1 pr-3 font-black uppercase tracking-tighter">Motivo</th>
+                                            <th className="text-left py-1 pr-3 font-black uppercase tracking-tighter">Tipo</th>
+                                            <th className="text-left py-1 font-black uppercase tracking-tighter">Estado</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {activeMotivos.map((reg: any) => (
+                                            <tr key={reg.id} className="border-b border-slate-100">
+                                              <td className="py-1.5 pr-3 font-medium">{reg.date}</td>
+                                              <td className="py-1.5 pr-3 font-medium">{reg.reason}</td>
+                                              <td className="py-1.5 pr-3 font-medium">{reg.type}</td>
+                                              <td className="py-1.5 font-bold">{reg.status}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                  <p>Este certificado destina-se a <span className="font-bold uppercase underline">{selectedHistoryCertificate.reason}</span> e só para esse fim é válido.</p>
+                                  <p>Por ser verdade e haver sido solicitado pelo (a) interessado (a), manda passar o presente certificado, que vai devidamente assinado e autenticado com o carimbo a óleo em uso nesta Direção.</p>
+                                </div>
+                              );
+                            })()}
+                            <div className="pt-12 flex flex-col items-center text-center space-y-8">
+                              <p className="text-xs font-bold">Direção Central de Investigação Criminal, {new Date().toLocaleDateString('pt-BR')}</p>
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold">O Diretor,</p>
+                                <div className="pt-8">
+                                  <p className="text-xs font-bold">/Roberto Carlos Centeio Lima/</p>
+                                  <p className="text-[10px] font-bold">Subintendente da PN</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="pt-4 text-center">
+                              <p className="text-[8px] italic text-slate-400">Este certificado é válido por 90 (dias) a contar da data da sua emissão.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Anexos */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('analysisAnexos')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><Paperclip size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Anexos</span>
+                      <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{selectedHistoryCertificate.attachments.length}</span>
+                    </div>
+                    {expandedSections.analysisAnexos ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.analysisAnexos && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-2 mt-1">
+                          {selectedHistoryCertificate.attachments.map((file: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 border-2 border-slate-100 rounded-xl">
+                              <FileText size={18} className="text-slate-400" />
+                              <span className="text-xs font-bold text-slate-900">{file.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Observações */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('analysisObservations')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><MessageSquare size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Observações</span>
+                    </div>
+                    {expandedSections.analysisObservations ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.analysisObservations && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-4 mt-1">
+                          {selectedHistoryCertificate.observations.map((obs: any, idx: number) => (
+                            <div key={idx} className="p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl space-y-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center"><ImageIcon size={20} className="text-slate-400" /></div>
+                                <div>
+                                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{obs.user}</p>
+                                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{obs.date}</p>
+                                </div>
+                              </div>
+                              <p className="text-xs text-slate-600 leading-relaxed font-medium">{obs.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Histórico */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('analysisHistory')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Histórico do Pedido</span>
+                    </div>
+                    {expandedSections.analysisHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.analysisHistory && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mt-1">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                                  <th className="px-6 py-4">Data</th>
+                                  <th className="px-6 py-4">Fase</th>
+                                  <th className="px-6 py-4">Estado</th>
+                                  <th className="px-6 py-4">Utente</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {selectedHistoryCertificate.history.map((h: any, idx: number) => (
+                                  <tr key={idx} className="bg-white">
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="flex justify-start pt-8 border-t border-slate-100">
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_history')}>Voltar</Button>
+                </div>
+              </motion.div>
+
             ) : currentView === 'ficha_list' ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 className="space-y-8"
               >
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Gestão de Fichas</h2>
+                  <Button variant="secondary" icon={UserPlus} onClick={() => {
+                    setNewFichaData(emptyNewFicha());
+                    setNewFichaChars([]); setNewFichaNewChar({ name: '', value: '', observation: '' });
+                    setNewFichaAddresses([]); setNewFichaNewAddress({ type: 'Residência', island: '', county: '', parish: '', locality: '', zone: '', reference: '' });
+                    setNewFichaContacts([]); setNewFichaNewContact({ type: 'Telemovel', info: '' });
+                    setNewFichaNicknames([]); setNewFichaNewNickname('');
+                    setNewFichaSocials([]); setNewFichaNewSocial({ type: 'Facebook', link: '' });
+                    setNewFichaReasons([]); setNewFichaNewReason({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' });
+                    setNewFichaObservations([]); setNewFichaNewObs('');
+                    setNewFichaAttachments([]); setNewFichaNewAttach({ name: '', type: 'Documento' });
+                    setNewFichaExpanded({ biographic: true, complementary: false, outras: false, motivo: false, biometric: false, observations: false, attachments: false });
+                    setCurrentView('ficha_new');
+                  }}>Nova Ficha</Button>
                 </div>
 
                 <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
@@ -4329,6 +5292,565 @@ export default function App() {
                   <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar ao Início</Button>
                 </div>
               </motion.div>
+            ) : currentView === 'ficha_new' ? (
+              (() => {
+                const nfAccordion = (key: string, label: string, icon: any, badge?: number) => {
+                  const Icon = icon;
+                  return (
+                    <button onClick={() => toggleNewFicha(key)} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-slate-900 text-white rounded-lg"><Icon size={18} /></div>
+                        <span className="uppercase tracking-widest text-xs">{label}</span>
+                        {badge !== undefined && badge > 0 && <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">{badge}</span>}
+                      </div>
+                      {newFichaExpanded[key] ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </button>
+                  );
+                };
+                const today = new Date().toISOString().slice(0,10);
+                const saveHandler = () => {
+                  if (!newFichaData.name) return;
+                  const newId = fichas.length + 1;
+                  const newNum = String(newId).padStart(6, '0');
+                  const newFicha: any = {
+                    id: newId, number: newNum,
+                    name: newFichaData.name, birthDate: newFichaData.birthDate,
+                    island: newFichaAddresses[0]?.island || newFichaData.birthPlace || '',
+                    birthPlace: newFichaData.birthPlace, gender: newFichaData.gender,
+                    civilStatus: newFichaData.civilStatus, nationality: newFichaData.nationality,
+                    fatherName: newFichaData.fatherName, motherName: newFichaData.motherName,
+                    nif: newFichaData.nif, profession: newFichaData.profession,
+                    docType: newFichaData.docType, docNumber: newFichaData.docNumber,
+                    docIssueDate: newFichaData.docIssueDate, docExpiryDate: newFichaData.docExpiryDate,
+                    docIssueLocation: newFichaData.docIssueLocation, photo: newFichaData.photo,
+                    addresses: newFichaAddresses,
+                    contacts: newFichaContacts,
+                    nicknames: newFichaNicknames.map((v, i) => ({ id: i+1, createdAt: today, validFrom: today, validTo: null, user: user?.name || 'Admin', value: v })),
+                    socialNetworks: newFichaSocials,
+                    complementaryGroups: newFichaChars.length > 0 ? [{ id: 1, createdAt: today, validFrom: today, validTo: null, user: user?.name || 'Admin', otherNotes: '', characteristics: newFichaChars }] : [],
+                    registrationReasons: newFichaReasons,
+                    observations: newFichaObservations,
+                    attachments: newFichaAttachments,
+                    photoHistory: [],
+                  };
+                  setFichas([...fichas, newFicha]);
+                  setSuccessMessage(`Ficha N.º ${newNum} criada com sucesso.`);
+                  setShowSuccessModal(true);
+                  setCurrentView('ficha_list');
+                };
+                return (
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 pb-12">
+                    {/* Header */}
+                    <div className="border-b-2 border-slate-100 pb-4 mb-4">
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Nova Ficha de Cadastro</h2>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Preencha os dados do indivíduo</p>
+                    </div>
+
+                    {/* ── Accordion: Dados Biográficos ── */}
+                    <div className="space-y-3">
+                      {nfAccordion('biographic', 'Dados Biográficos', User)}
+                      <AnimatePresence>
+                        {newFichaExpanded.biographic && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
+                              {/* Document search */}
+                              <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-6 space-y-4">
+                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Pré-preencher a partir de documento</p>
+                                <div className="flex flex-col md:flex-row gap-4 items-end">
+                                  <div className="w-full md:w-32 space-y-2">
+                                    <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Tipo Doc</label>
+                                    <select value={bioSearchDocType} onChange={(e) => setBioSearchDocType(e.target.value)} className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all">
+                                      {['CNI','Passaporte','TRE','BI'].map(o => <option key={o}>{o}</option>)}
+                                    </select>
+                                  </div>
+                                  <div className="flex-1 space-y-2">
+                                    <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">N.º Documento</label>
+                                    <input type="text" value={bioSearchDocNumber} onChange={(e) => setBioSearchDocNumber(e.target.value)} placeholder="Número do documento..." className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
+                                  </div>
+                                  <div className="flex-1 space-y-2">
+                                    <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Nome</label>
+                                    <input type="text" value={bioSearchName} onChange={(e) => setBioSearchName(e.target.value)} placeholder="Nome da pessoa..." className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
+                                  </div>
+                                  <Button variant="secondary" icon={Search} onClick={() => { setBioSearchTarget('ficha'); handleBioSearch(); }}>Pesquisar</Button>
+                                </div>
+                              </div>
+
+                              {/* Dados pessoais */}
+                              <div className="space-y-4">
+                                <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Pessoais</h3>
+                                <div className="flex flex-col md:flex-row gap-8 items-start">
+                                  {newFichaData.photo && (
+                                    <div className="w-28 h-36 rounded-2xl border-4 border-white shadow-xl overflow-hidden shrink-0 bg-slate-100">
+                                      <img src={newFichaData.photo} alt="Foto" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-6">
+                                    <div className="md:col-span-2"><DetailField label="Nome Completo *" value={newFichaData.name} readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, name: v})} /></div>
+                                    <DetailField label="Data Nascimento" value={newFichaData.birthDate} type="date" readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, birthDate: v})} icon={Calendar} />
+                                    <DetailField label="Sexo" value={newFichaData.gender} type="select" options={['','Masculino','Feminino']} readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, gender: v})} />
+                                    <DetailField label="Estado Civil" value={newFichaData.civilStatus} type="select" options={['','Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União de Facto']} readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, civilStatus: v})} />
+                                    <DetailField label="Naturalidade" value={newFichaData.birthPlace} readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, birthPlace: v})} />
+                                    <DetailField label="Nacionalidade" value={newFichaData.nationality} type="select" options={['','Cabo-verdiana','Portuguesa','Angolana','Senegalesa','Guineense','Outra']} readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, nationality: v})} />
+                                    <DetailField label="Nome do Pai" value={newFichaData.fatherName} readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, fatherName: v})} />
+                                    <DetailField label="Nome da Mãe" value={newFichaData.motherName} readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, motherName: v})} />
+                                    <DetailField label="Profissão" value={newFichaData.profession} readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, profession: v})} />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Documento identificação */}
+                              <div className="space-y-4">
+                                <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento de Identificação</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                  <DetailField label="NIF" value={newFichaData.nif} readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, nif: v})} />
+                                  <DetailField label="Tipo Documento" value={newFichaData.docType} type="select" options={['CNI','Passaporte','TRE','BI']} readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, docType: v})} />
+                                  <DetailField label="Número Documento" value={newFichaData.docNumber} readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, docNumber: v})} />
+                                  <DetailField label="Data Emissão" value={newFichaData.docIssueDate} type="date" readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, docIssueDate: v})} icon={Calendar} />
+                                  <DetailField label="Data Validade" value={newFichaData.docExpiryDate} type="date" readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, docExpiryDate: v})} icon={Calendar} />
+                                  <DetailField label="Local de Emissão" value={newFichaData.docIssueLocation} readOnly={false} onChange={(v) => setNewFichaData({...newFichaData, docIssueLocation: v})} />
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* ── Accordion: Sinais Complementares ── */}
+                    <div className="space-y-3">
+                      {nfAccordion('complementary', 'Sinais Complementares', Fingerprint, savedCharacteristics.length)}
+                      <AnimatePresence>
+                        {newFichaExpanded.complementary && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm mt-2">
+                              {savedCharacteristics.length > 0 ? (
+                                <div className="space-y-4">
+                                  <div className="flex justify-end">
+                                    <button
+                                      onClick={() => { setTempCharacteristics([...savedCharacteristics]); setShowComplementaryModal(true); }}
+                                      className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                    >
+                                      <Edit size={18} />
+                                    </button>
+                                  </div>
+                                  <div className="overflow-x-auto border border-slate-900">
+                                    <table className="w-full text-left border-collapse">
+                                      <thead>
+                                        <tr className="bg-slate-200 text-[11px] font-bold text-slate-900 border-b border-slate-900">
+                                          <th className="px-4 py-2 border-r border-slate-900">Característica</th>
+                                          <th className="px-4 py-2 border-r border-slate-900">Valor</th>
+                                          <th className="px-4 py-2">Observação</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {savedCharacteristics.map((char: any, idx: number) => (
+                                          <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                                            <td className="px-4 py-2 text-xs border-r border-slate-900">{char.name}</td>
+                                            <td className="px-4 py-2 text-xs border-r border-slate-900">{char.type}</td>
+                                            <td className="px-4 py-2 text-xs">{char.observation}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex justify-end">
+                                  <button
+                                    onClick={() => setShowComplementaryModal(true)}
+                                    className="px-4 py-2 bg-blue-700 text-white font-bold rounded hover:bg-blue-800 transition-colors text-xs border border-blue-900 shadow-sm"
+                                  >
+                                    Adicionar Sinais Complementares +
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* ── Accordion: Outras Informações ── */}
+                    <div className="space-y-3">
+                      {nfAccordion('outras', 'Outras Informações', Info, newFichaAddresses.length + newFichaContacts.length + newFichaNicknames.length + newFichaSocials.length)}
+                      <AnimatePresence>
+                        {newFichaExpanded.outras && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-10">
+
+                              {/* Moradas */}
+                              <div className="space-y-4">
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Moradas</h4>
+                                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo</label>
+                                      <select value={newFichaNewAddress.type} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, type: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                        {['Residência','Trabalho','Outro'].map(o => <option key={o}>{o}</option>)}
+                                      </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ilha</label>
+                                      <select value={newFichaNewAddress.island} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, island: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                        <option value="">Selecione...</option>
+                                        {['Santiago','São Vicente','Sal','Boa Vista','Fogo','Santo Antão','Maio','Brava','São Nicolau'].map(o => <option key={o}>{o}</option>)}
+                                      </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Conselho</label>
+                                      <input type="text" value={newFichaNewAddress.county} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, county: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Freguesia</label>
+                                      <input type="text" value={newFichaNewAddress.parish} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, parish: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localidade</label>
+                                      <input type="text" value={newFichaNewAddress.locality} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, locality: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zona</label>
+                                      <input type="text" value={newFichaNewAddress.zone} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, zone: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                    </div>
+                                    <div className="md:col-span-2 space-y-1">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ponto de Referência</label>
+                                      <input type="text" value={newFichaNewAddress.reference} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, reference: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-end">
+                                    <Button variant="primary" icon={Plus} onClick={() => {
+                                      if (!newFichaNewAddress.island) return;
+                                      setNewFichaAddresses([...newFichaAddresses, { ...newFichaNewAddress, id: Date.now(), createdAt: today, validFrom: today, validTo: null, user: user?.name || 'Admin' }]);
+                                      setNewFichaNewAddress({ type: 'Residência', island: '', county: '', parish: '', locality: '', zone: '', reference: '' });
+                                    }}>Adicionar Morada</Button>
+                                  </div>
+                                </div>
+                                {newFichaAddresses.length > 0 && (
+                                  <div className="space-y-2">
+                                    {newFichaAddresses.map((a, i) => (
+                                      <div key={i} className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
+                                        <div className="flex items-center gap-3 flex-1">
+                                          <span className="text-[10px] font-black bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full uppercase">{a.type}</span>
+                                          <MapPin size={14} className="text-slate-400" />
+                                          <span className="text-sm font-bold text-slate-900">{[a.locality, a.parish, a.county, a.island].filter(Boolean).join(', ')}</span>
+                                          {a.reference && <span className="text-xs text-slate-400">— {a.reference}</span>}
+                                        </div>
+                                        <button onClick={() => setNewFichaAddresses(newFichaAddresses.filter((_,j)=>j!==i))} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Contactos */}
+                              <div className="space-y-4">
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</h4>
+                                <div className="flex gap-4 items-end">
+                                  <div className="w-40 space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo</label>
+                                    <select value={newFichaNewContact.type} onChange={(e) => setNewFichaNewContact({...newFichaNewContact, type: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                      {['Telemovel','Email','Telefone fixo','WhatsApp','Outro'].map(o => <option key={o}>{o}</option>)}
+                                    </select>
+                                  </div>
+                                  <div className="flex-1 space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto</label>
+                                    <input type="text" value={newFichaNewContact.info} onChange={(e) => setNewFichaNewContact({...newFichaNewContact, info: e.target.value})} placeholder="Número ou email..." className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                  </div>
+                                  <Button variant="primary" icon={Plus} onClick={() => {
+                                    if (!newFichaNewContact.info) return;
+                                    setNewFichaContacts([...newFichaContacts, { ...newFichaNewContact, id: Date.now(), validFrom: today, validTo: null, user: user?.name || 'Admin' }]);
+                                    setNewFichaNewContact({ type: newFichaNewContact.type, info: '' });
+                                  }}>Adicionar</Button>
+                                </div>
+                                {newFichaContacts.length > 0 && (
+                                  <div className="space-y-2">
+                                    {newFichaContacts.map((c, i) => (
+                                      <div key={i} className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase w-28">{c.type}</span>
+                                        <span className="text-sm font-bold text-slate-900 flex-1">{c.info}</span>
+                                        <button onClick={() => setNewFichaContacts(newFichaContacts.filter((_,j)=>j!==i))} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Alcunhas */}
+                              <div className="space-y-4">
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Alcunhas</h4>
+                                <div className="flex gap-4 items-end">
+                                  <div className="flex-1 space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alcunha</label>
+                                    <input type="text" value={newFichaNewNickname} onChange={(e) => setNewFichaNewNickname(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && newFichaNewNickname) { setNewFichaNicknames([...newFichaNicknames, newFichaNewNickname]); setNewFichaNewNickname(''); } }} placeholder="Ex: Manxedo..." className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                  </div>
+                                  <Button variant="primary" icon={Plus} onClick={() => { if (!newFichaNewNickname) return; setNewFichaNicknames([...newFichaNicknames, newFichaNewNickname]); setNewFichaNewNickname(''); }}>Adicionar</Button>
+                                </div>
+                                {newFichaNicknames.length > 0 && (
+                                  <div className="flex flex-wrap gap-2">
+                                    {newFichaNicknames.map((n, i) => (
+                                      <span key={i} className="flex items-center gap-2 bg-slate-100 text-slate-800 text-xs font-black px-3 py-1.5 rounded-full">
+                                        {n}<button onClick={() => setNewFichaNicknames(newFichaNicknames.filter((_,j)=>j!==i))} className="text-slate-400 hover:text-red-600 transition-colors"><X size={12} /></button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Redes Sociais */}
+                              <div className="space-y-4">
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Redes Sociais</h4>
+                                <div className="flex gap-4 items-end">
+                                  <div className="w-40 space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Plataforma</label>
+                                    <select value={newFichaNewSocial.type} onChange={(e) => setNewFichaNewSocial({...newFichaNewSocial, type: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                      {['Facebook','Instagram','TikTok','Twitter/X','Snapchat','YouTube','Outra'].map(o => <option key={o}>{o}</option>)}
+                                    </select>
+                                  </div>
+                                  <div className="flex-1 space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Link / Username</label>
+                                    <input type="text" value={newFichaNewSocial.link} onChange={(e) => setNewFichaNewSocial({...newFichaNewSocial, link: e.target.value})} placeholder="Ex: facebook.com/nome ou @username" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                  </div>
+                                  <Button variant="primary" icon={Plus} onClick={() => {
+                                    if (!newFichaNewSocial.link) return;
+                                    setNewFichaSocials([...newFichaSocials, { ...newFichaNewSocial, id: Date.now(), validFrom: today, validTo: null, user: user?.name || 'Admin' }]);
+                                    setNewFichaNewSocial({ type: newFichaNewSocial.type, link: '' });
+                                  }}>Adicionar</Button>
+                                </div>
+                                {newFichaSocials.length > 0 && (
+                                  <div className="space-y-2">
+                                    {newFichaSocials.map((s, i) => (
+                                      <div key={i} className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase w-28">{s.type}</span>
+                                        <span className="text-sm font-bold text-slate-900 flex-1">{s.link}</span>
+                                        <button onClick={() => setNewFichaSocials(newFichaSocials.filter((_,j)=>j!==i))} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* ── Accordion: Motivo de Cadastro ── */}
+                    <div className="space-y-3">
+                      {nfAccordion('motivo', 'Motivo de Cadastro', ClipboardList, newFichaReasons.length)}
+                      <AnimatePresence>
+                        {newFichaExpanded.motivo && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
+                              <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                  <div className="md:col-span-2 space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo *</label>
+                                    <input type="text" value={newFichaNewReason.reason} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, reason: e.target.value})} placeholder="Descreva o motivo..." className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo</label>
+                                    <select value={newFichaNewReason.type} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, type: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                      <option value="Criminal">Criminal</option>
+                                      <option value="Policial">Policial</option>
+                                    </select>
+                                  </div>
+                                  <DetailField label="Data" value={newFichaNewReason.date} type="date" readOnly={false} icon={Calendar} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, date: v})} />
+                                  <DetailField label="N.º Referência" value={newFichaNewReason.refNo} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, refNo: v})} />
+                                  <DetailField label="Destino" value={newFichaNewReason.destination} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, destination: v})} />
+                                  <div className="md:col-span-3">
+                                    <DetailField label="Medidas Aplicadas" value={newFichaNewReason.measures} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, measures: v})} />
+                                  </div>
+                                </div>
+                                <div className="flex justify-end">
+                                  <Button variant="primary" icon={Plus} onClick={() => {
+                                    if (!newFichaNewReason.reason) return;
+                                    setNewFichaReasons([...newFichaReasons, { ...newFichaNewReason, id: Date.now(), status: 'Ativo' }]);
+                                    setNewFichaNewReason({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' });
+                                  }}>Adicionar Motivo</Button>
+                                </div>
+                              </div>
+                              {newFichaReasons.length > 0 ? (
+                                <div className="space-y-3">
+                                  {newFichaReasons.map((r, i) => (
+                                    <div key={i} className="flex items-start justify-between bg-white border-2 border-slate-100 rounded-2xl p-5 shadow-sm">
+                                      <div className="space-y-1 flex-1">
+                                        <div className="flex items-center gap-3">
+                                          <span className="text-sm font-black text-slate-900">{r.reason}</span>
+                                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${r.type === 'Criminal' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>{r.type}</span>
+                                        </div>
+                                        {r.date && <p className="text-xs text-slate-500">Data: <span className="font-bold">{r.date}</span></p>}
+                                        {r.destination && <p className="text-xs text-slate-500">Destino: <span className="font-bold">{r.destination}</span></p>}
+                                        {r.measures && <p className="text-xs text-slate-500">Medidas: <span className="font-bold">{r.measures}</span></p>}
+                                      </div>
+                                      <button onClick={() => setNewFichaReasons(newFichaReasons.filter((_,j)=>j!==i))} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all ml-4"><Trash2 size={14} /></button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-2xl">
+                                  <ClipboardList size={32} className="mx-auto text-slate-300 mb-3" /><p className="text-sm font-bold text-slate-400">Nenhum motivo adicionado</p>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* ── Accordion: Dados Biométricos ── */}
+                    <div className="space-y-3">
+                      {nfAccordion('biometric', 'Dados Biométricos', Camera)}
+                      <AnimatePresence>
+                        {newFichaExpanded.biometric && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
+                              {/* Impressões Digitais */}
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Impressões Digitais</h4>
+                                  <Button variant="outline" icon={Fingerprint}>Scan Fingerprint</Button>
+                                </div>
+                              </div>
+                              {/* Fotografias */}
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fotografias de Registo</h4>
+                                  <button
+                                    onClick={() => { setTempPhotos([...savedPhotos]); setShowPhotoModal(true); }}
+                                    className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
+                                  >
+                                    <Camera size={14} />
+                                    Adicionar Fotografia +
+                                  </button>
+                                </div>
+                                {savedPhotos.length > 0 && (
+                                  <div className="bg-slate-50 border-2 border-slate-900 p-8 rounded-sm">
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12">
+                                      {savedPhotos.map((photo, idx) => (
+                                        <div key={idx} className="flex flex-col items-center space-y-4">
+                                          <div className="w-full aspect-[3/4] bg-white shadow-lg overflow-hidden border border-slate-200">
+                                            <img src={photo.url} alt={photo.title} className="w-full h-full object-cover" />
+                                          </div>
+                                          <p className="text-sm font-bold text-slate-900">{photo.title}</p>
+                                          <button
+                                            onClick={() => setSavedPhotos(savedPhotos.filter((_, i) => i !== idx))}
+                                            className="text-red-500 hover:text-red-700 transition-colors p-1"
+                                          >
+                                            <Trash2 size={16} />
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* ── Accordion: Observações ── */}
+                    <div className="space-y-3">
+                      {nfAccordion('observations', 'Observações', MessageSquare, newFichaObservations.length)}
+                      <AnimatePresence>
+                        {newFichaExpanded.observations && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
+                              <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nova Observação</label>
+                                <textarea value={newFichaNewObs} onChange={(e) => setNewFichaNewObs(e.target.value)} rows={3} placeholder="Escreva uma observação..." className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-medium text-slate-900 outline-none focus:border-slate-900 resize-none transition-all" />
+                                <div className="flex justify-end">
+                                  <Button variant="primary" icon={Plus} onClick={() => {
+                                    if (!newFichaNewObs.trim()) return;
+                                    setNewFichaObservations([...newFichaObservations, { content: newFichaNewObs.trim(), author: user?.name || 'Admin', date: today }]);
+                                    setNewFichaNewObs('');
+                                  }}>Adicionar Observação</Button>
+                                </div>
+                              </div>
+                              {newFichaObservations.length > 0 && (
+                                <div className="space-y-4">
+                                  {newFichaObservations.map((o, i) => (
+                                    <div key={i} className="flex items-start gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                      <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black text-sm shrink-0">
+                                        {o.author.charAt(0).toUpperCase()}
+                                      </div>
+                                      <div className="flex-1 space-y-1">
+                                        <div className="flex items-center gap-3">
+                                          <p className="font-black text-slate-900 text-xs uppercase tracking-widest">{o.author}</p>
+                                          <span className="text-[10px] font-bold text-slate-400">{o.date}</span>
+                                        </div>
+                                        <p className="text-sm text-slate-600 leading-relaxed font-medium italic">"{o.content}"</p>
+                                      </div>
+                                      <button onClick={() => setNewFichaObservations(newFichaObservations.filter((_,j)=>j!==i))} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* ── Accordion: Anexos ── */}
+                    <div className="space-y-3">
+                      {nfAccordion('attachments', 'Anexos', Paperclip, savedAttachments.length)}
+                      <AnimatePresence>
+                        {newFichaExpanded.attachments && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm mt-2 space-y-6">
+                              <div className="flex justify-end">
+                                <button
+                                  onClick={() => setShowAttachmentModal(true)}
+                                  className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
+                                >
+                                  <Plus size={16} />
+                                  Adicionar Anexo
+                                </button>
+                              </div>
+                              {savedAttachments.length > 0 ? (
+                                <div className="space-y-2">
+                                  {savedAttachments.map((att, idx) => {
+                                    const isImg = att.type === 'Imagem';
+                                    return (
+                                      <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 group hover:border-slate-200 transition-all">
+                                        <div className={`p-3 rounded-xl flex-shrink-0 ${isImg ? 'bg-blue-100 text-blue-600' : att.type === 'Relatório' ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'}`}>
+                                          {isImg ? <ImageIcon size={20} /> : <FileText size={20} />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-black text-slate-900 truncate">{att.title}</p>
+                                          <p className="text-[10px] text-slate-400 mt-1"><span className="font-bold">{att.type}</span> · {att.date}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar"><Eye size={16} /></button>
+                                          <button onClick={() => setSavedAttachments(savedAttachments.filter((_, i) => i !== idx))} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Eliminar"><Trash2 size={16} /></button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                                  <Paperclip size={28} className="mx-auto text-slate-200 mb-2" />
+                                  <p className="text-slate-400 text-sm italic">Nenhum anexo associado</p>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Bottom save bar */}
+                    <div className="sticky bottom-0 bg-white border-t-2 border-slate-100 px-0 py-4 flex justify-between items-center">
+                      <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('ficha_list')}>Cancelar</Button>
+                      <Button variant="success" icon={CheckCircle} onClick={saveHandler}>Gravar Ficha</Button>
+                    </div>
+                  </motion.div>
+                );
+              })()
+
             ) : currentView === 'ficha_detail' && selectedFicha ? (
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
@@ -4337,10 +5859,14 @@ export default function App() {
               >
                 <div className="flex justify-between items-center border-b-2 border-slate-100 pb-4">
                   <div className="space-y-1">
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Ficha de Identificação</h2>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Ficha de Cadastro</h2>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registro Individual N.º {selectedFicha.number}</p>
                   </div>
-                  <Button variant="success" icon={FileText} onClick={() => setShowPdfModal(true)}>Exportar PDF</Button>
+                  <Button variant="success" icon={FileText} onClick={() => {
+                    const reasons = selectedFicha.registrationReasons || [];
+                    setExportOptions({ photo: true, sinalComplementar: true, outrasInfo: false, motivoIds: reasons.map((r: any) => r.id) });
+                    setShowExportSelectModal(true);
+                  }}>Exportar PDF</Button>
                 </div>
 
                 {/* Accordion: Dados Biográficos */}
@@ -4597,7 +6123,7 @@ export default function App() {
                                       <select 
                                         value={newAddress.type}
                                         onChange={(e) => setNewAddress({...newAddress, type: e.target.value})}
-                                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                       >
                                         <option value="Residência">Residência</option>
                                         <option value="Trabalho">Trabalho</option>
@@ -4609,7 +6135,7 @@ export default function App() {
                                       <select 
                                         value={newAddress.island}
                                         onChange={(e) => setNewAddress({...newAddress, island: e.target.value})}
-                                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                       >
                                         <option value="">Selecione...</option>
                                         <option value="Santiago">Santiago</option>
@@ -4628,7 +6154,7 @@ export default function App() {
                                       <select 
                                         value={newAddress.council}
                                         onChange={(e) => setNewAddress({...newAddress, council: e.target.value})}
-                                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                       >
                                         <option value="">Selecione...</option>
                                         <option value="Praia">Praia</option>
@@ -4642,7 +6168,7 @@ export default function App() {
                                       <select 
                                         value={newAddress.parish}
                                         onChange={(e) => setNewAddress({...newAddress, parish: e.target.value})}
-                                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                       >
                                         <option value="">Selecione...</option>
                                         <option value="Nossa Senhora da Graça">Nossa Senhora da Graça</option>
@@ -4655,7 +6181,7 @@ export default function App() {
                                       <select 
                                         value={newAddress.locality}
                                         onChange={(e) => setNewAddress({...newAddress, locality: e.target.value})}
-                                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                       >
                                         <option value="">Selecione...</option>
                                         <option value="Achada Santo António">Achada Santo António</option>
@@ -4670,7 +6196,7 @@ export default function App() {
                                         type="text" 
                                         value={newAddress.reference}
                                         onChange={(e) => setNewAddress({...newAddress, reference: e.target.value})}
-                                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                       />
                                     </div>
                                   </div>
@@ -4829,7 +6355,7 @@ export default function App() {
                                       <select 
                                         value={newContact.type}
                                         onChange={(e) => setNewContact({...newContact, type: e.target.value})}
-                                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                       >
                                         <option value="Telemóvel">Telemóvel</option>
                                         <option value="Telefone">Telefone</option>
@@ -4842,7 +6368,7 @@ export default function App() {
                                         type="text" 
                                         value={newContact.info}
                                         onChange={(e) => setNewContact({...newContact, info: e.target.value})}
-                                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                       />
                                     </div>
                                   </div>
@@ -4978,7 +6504,7 @@ export default function App() {
                                       <select 
                                         value={newSocial.type}
                                         onChange={(e) => setNewSocial({...newSocial, type: e.target.value})}
-                                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                       >
                                         <option value="Facebook">Facebook</option>
                                         <option value="Instagram">Instagram</option>
@@ -4994,7 +6520,7 @@ export default function App() {
                                         type="text" 
                                         value={newSocial.link}
                                         onChange={(e) => setNewSocial({...newSocial, link: e.target.value})}
-                                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                       />
                                     </div>
                                   </div>
@@ -5131,7 +6657,7 @@ export default function App() {
                                         type="text" 
                                         value={newNickname.value}
                                         onChange={(e) => setNewNickname({...newNickname, value: e.target.value})}
-                                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                       />
                                     </div>
                                   </div>
@@ -5301,33 +6827,48 @@ export default function App() {
                                     </td>
                                     <td className="px-6 py-4 text-xs">
                                       <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${
-                                        reg.status === 'Reabilitado' ? 'bg-emerald-50 text-emerald-600' : 
-                                        reg.status === 'Aguardando Reabilitação' ? 'bg-blue-50 text-blue-600' :
-                                        'bg-amber-50 text-amber-600'
-                                      }`}>
-                                        {reg.status}
-                                      </span>
+                                          reg.status === 'Reabilitado' ? 'bg-emerald-50 text-emerald-600' :
+                                          reg.status === 'Aguardando Reabilitação' ? 'bg-blue-50 text-blue-600' :
+                                          'bg-amber-50 text-amber-600'
+                                        }`}>
+                                          {reg.status}
+                                        </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                       <div className="flex justify-end gap-3">
+                                        {reg.rejectedRehabilitation && (
+                                          <button
+                                            onClick={() => {
+                                              setSelectedRejectionDetails(reg.rejectedRehabilitation);
+                                              setShowRejectionReasonModal(true);
+                                            }}
+                                            className="p-2 text-red-400 hover:text-red-600 hover:bg-white rounded-lg transition-all"
+                                            title="Ver motivo da recusa"
+                                          >
+                                            <Info size={16} />
+                                          </button>
+                                        )}
                                         {reg.status === 'Ativo' && (
-                                          <button 
+                                          <button
                                             onClick={() => {
                                               setSelectedReasonForRehab(reg);
                                               setShowRehabilitationModal(true);
                                             }}
                                             className="p-2 text-emerald-400 hover:text-emerald-600 hover:bg-white rounded-lg transition-all"
+                                            title="Pedir Reabilitação"
                                           >
                                             <ShieldCheck size={16} />
                                           </button>
                                         )}
                                         {reg.rehabilitationDetails && (
-                                          <button 
+                                          <button
                                             onClick={() => {
                                               setSelectedReasonForRehab(reg);
+                                              setRehabDetailsViewOnly(true);
                                               setShowRehabilitationDetailsModal(true);
                                             }}
                                             className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all"
+                                            title="Ver detalhes da reabilitação"
                                           >
                                             <Search size={16} />
                                           </button>
@@ -5398,7 +6939,7 @@ export default function App() {
                               ].map((photo) => (
                                 <div key={photo.label} className="flex flex-col items-center gap-3">
                                   <div className="w-full aspect-[3/4] bg-white border-2 border-slate-50 rounded-2xl overflow-hidden shadow-sm group relative cursor-pointer">
-                                    <img src={`https://picsum.photos/seed/${photo.seed}/300/400`} alt={photo.label} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                    <img src={getPortraitUrl(photo.seed)} alt={photo.label} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                     <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                       <Search className="text-white" size={24} />
                                     </div>
@@ -5499,15 +7040,87 @@ export default function App() {
                   </AnimatePresence>
                 </div>
 
+                {/* Accordion: Anexos */}
+                <div className="space-y-4">
+                  <button
+                    onClick={() => toggleSection('attachments')}
+                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><Paperclip size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Anexos</span>
+                      {(selectedFicha.attachments?.length ?? 0) > 0 && (
+                        <span className="px-2 py-0.5 bg-slate-900 text-white rounded-full text-[10px] font-black">{selectedFicha.attachments.length}</span>
+                      )}
+                    </div>
+                    {expandedSections.attachments ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+
+                  <AnimatePresence>
+                    {expandedSections.attachments && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
+                          <div className="flex justify-end">
+                            <Button variant="outline" icon={Upload}>Carregar Anexo</Button>
+                          </div>
+
+                          {(!selectedFicha.attachments || selectedFicha.attachments.length === 0) ? (
+                            <div className="text-center py-12 text-slate-400">
+                              <Paperclip size={32} className="mx-auto mb-3 opacity-30" />
+                              <p className="text-xs font-bold uppercase tracking-widest">Sem anexos</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {selectedFicha.attachments.map((att: any) => {
+                                const isPdf = att.type === 'PDF';
+                                const isImg = att.type === 'Imagem';
+                                const sizeKb = Math.round(att.size / 1024);
+                                const sizeLabel = sizeKb >= 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${sizeKb} KB`;
+                                return (
+                                  <div key={att.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 group hover:border-slate-200 transition-all">
+                                    <div className={`p-3 rounded-xl flex-shrink-0 ${isPdf ? 'bg-red-100 text-red-600' : isImg ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-600'}`}>
+                                      {isImg ? <ImageIcon size={20} /> : <FileText size={20} />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-black text-slate-900 truncate">{att.name}</p>
+                                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{att.description}</p>
+                                      <p className="text-[10px] text-slate-400 mt-1">
+                                        <span className="font-bold">{att.type}</span> · {sizeLabel} · Carregado por <span className="font-bold">{att.uploadedBy}</span> em {att.uploadedAt}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                                        <Download size={16} />
+                                      </button>
+                                      <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 {/* Accordion: Registos Associados */}
                 <div className="space-y-4">
-                  <button 
+                  <button
                     onClick={() => toggleSection('registos_associados')}
-                    className="w-full bg-white border-2 border-slate-900 py-2 px-4 flex items-center justify-between font-bold text-slate-800 hover:bg-slate-50 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
                   >
-                    <div className="flex items-center gap-2">
-                      <History size={20} className="text-blue-600" />
-                      <span>Registos Associados</span>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Registos Associados</span>
                     </div>
                     {expandedSections.registos_associados ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </button>
@@ -5520,8 +7133,8 @@ export default function App() {
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden"
                       >
-                        <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
-                          <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm">
+                          <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
                             <table className="w-full text-left border-collapse">
                               <thead>
                                 <tr className="bg-slate-50 text-[11px] font-bold text-slate-900 uppercase border-b border-slate-200">
@@ -5548,13 +7161,9 @@ export default function App() {
                 </div>
 
                 <div className="flex justify-start pt-4">
-                  <button 
-                    onClick={() => setCurrentView('ficha_list')}
-                    className="flex items-center gap-2 px-8 py-2 bg-blue-100 text-blue-700 font-bold rounded hover:bg-blue-200 transition-colors text-sm border border-blue-300"
-                  >
-                    <ArrowLeft size={18} />
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('ficha_list')}>
                     Voltar para Lista
-                  </button>
+                  </Button>
                 </div>
               </motion.div>
             ) : currentView === 'person_detail' && selectedPerson ? (
@@ -5617,7 +7226,7 @@ export default function App() {
                                 <div className="flex-shrink-0">
                                   <div className="w-32 h-40 border-2 border-slate-900 rounded overflow-hidden shadow-md bg-slate-100 relative">
                                     <img 
-                                      src="https://images.unsplash.com/photo-1520341280432-4749d4d7bcf9?q=80&w=300&h=400&auto=format&fit=crop" 
+                                      src="https://randomuser.me/api/portraits/men/32.jpg" 
                                       alt="Perfil" 
                                       className="w-full h-full object-cover grayscale contrast-150 brightness-90"
                                       referrerPolicy="no-referrer"
@@ -5673,7 +7282,7 @@ export default function App() {
                               </div>
 
                               <div className="space-y-4">
-                                <h3 className="font-bold text-slate-800 border-l-4 border-blue-600 pl-3">Documento Identificação</h3>
+                                <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Identificação</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
                                   <DetailField label="NIF" value={associatedPerson.nif || ''} readOnly={false} onChange={(val) => setAssociatedPerson({...associatedPerson, nif: val})} />
                                   <DetailField label="Tipo Documento" value="CNI" type="select" options={['CNI', 'Passaporte', 'BI']} />
@@ -5772,7 +7381,7 @@ export default function App() {
                                     <div className="flex-shrink-0">
                                       <div className="w-32 h-40 border-2 border-slate-900 rounded overflow-hidden shadow-md bg-slate-100 relative">
                                         <img 
-                                          src="https://images.unsplash.com/photo-1520341280432-4749d4d7bcf9?q=80&w=300&h=400&auto=format&fit=crop" 
+                                          src="https://randomuser.me/api/portraits/men/32.jpg" 
                                           alt="Perfil" 
                                           className="w-full h-full object-cover grayscale contrast-150 brightness-90 opacity-60"
                                           referrerPolicy="no-referrer"
@@ -5819,9 +7428,33 @@ export default function App() {
                   ) : null}
                 </AnimatePresence>
 
+                {/* Botão Associar Ficha (modo novo cadastro) */}
+                <AnimatePresence>
+                  {isNewRegistration && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="flex justify-end"
+                    >
+                      <button
+                        onClick={() => {
+                          setIsNewRegistration(false);
+                          setHideNewCadastroInAssociate(false);
+                          setShowAssociateModal(true);
+                        }}
+                        className="px-4 py-2 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all text-xs flex items-center gap-2 shadow-sm"
+                      >
+                        <Search size={14} />
+                        Associar Ficha Existente
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Dados Biográficos Accordion */}
                 <div className="space-y-4">
-                  <button 
+                  <button
                     onClick={() => toggleSection('biographic')}
                     className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
                   >
@@ -5855,7 +7488,7 @@ export default function App() {
 
                         {/* Documento Identificação */}
                         <div className="space-y-4 mt-8">
-                          <h3 className="font-bold text-slate-800 border-l-4 border-blue-600 pl-3">Documento Identificação</h3>
+                          <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Identificação</h3>
                           <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
                             <DetailField label="NIF" value={selectedPerson.nif || ''} readOnly={false} onChange={(val) => setSelectedPerson({...selectedPerson, nif: val})} />
                             <DetailField label="Tipo Documento" value={selectedPerson.doc_type} type="select" options={['CNI', 'Passaporte', 'BI']} />
@@ -5868,7 +7501,7 @@ export default function App() {
 
                         {/* Contacto */}
                         <div className="space-y-4 mt-8">
-                          <h3 className="font-bold text-slate-800 border-l-4 border-blue-600 pl-3">Contacto</h3>
+                          <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contacto</h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <DetailField label="Telemovel" value={selectedPerson.phone} />
                             <DetailField label="Email" value={selectedPerson.email} />
@@ -5877,7 +7510,7 @@ export default function App() {
 
                         {/* Residencia */}
                         <div className="space-y-4 mt-8">
-                          <h3 className="font-bold text-slate-800 border-l-4 border-blue-600 pl-3">Residencia</h3>
+                          <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Residencia</h3>
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <DetailField label="Ilha" value={selectedPerson.island} type="select" options={['Santiago', 'São Vicente', 'Sal', 'Fogo', 'Santo Antão']} />
                             <DetailField label="Concelho" value={selectedPerson.municipality} type="select" options={['Praia', 'Mindelo', 'Espargos', 'São Filipe', 'Porto Novo']} />
@@ -6106,7 +7739,7 @@ export default function App() {
                                           <select 
                                             value={newAddress.type}
                                             onChange={(e) => setNewAddress({...newAddress, type: e.target.value})}
-                                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                           >
                                             <option value="Residência">Residência</option>
                                             <option value="Trabalho">Trabalho</option>
@@ -6118,7 +7751,7 @@ export default function App() {
                                           <select 
                                             value={newAddress.island}
                                             onChange={(e) => setNewAddress({...newAddress, island: e.target.value})}
-                                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                           >
                                             <option value="">Selecione...</option>
                                             <option value="Santiago">Santiago</option>
@@ -6137,7 +7770,7 @@ export default function App() {
                                           <select 
                                             value={newAddress.council}
                                             onChange={(e) => setNewAddress({...newAddress, council: e.target.value})}
-                                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                           >
                                             <option value="">Selecione...</option>
                                             <option value="Praia">Praia</option>
@@ -6151,7 +7784,7 @@ export default function App() {
                                           <select 
                                             value={newAddress.parish}
                                             onChange={(e) => setNewAddress({...newAddress, parish: e.target.value})}
-                                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                           >
                                             <option value="">Selecione...</option>
                                             <option value="Nossa Senhora da Graça">Nossa Senhora da Graça</option>
@@ -6164,7 +7797,7 @@ export default function App() {
                                           <select 
                                             value={newAddress.locality}
                                             onChange={(e) => setNewAddress({...newAddress, locality: e.target.value})}
-                                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                           >
                                             <option value="">Selecione...</option>
                                             <option value="Achada Santo António">Achada Santo António</option>
@@ -6179,7 +7812,7 @@ export default function App() {
                                             type="text" 
                                             value={newAddress.reference}
                                             onChange={(e) => setNewAddress({...newAddress, reference: e.target.value})}
-                                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                           />
                                         </div>
                                       </div>
@@ -6272,7 +7905,7 @@ export default function App() {
                                           <select 
                                             value={newContact.type}
                                             onChange={(e) => setNewContact({...newContact, type: e.target.value})}
-                                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                           >
                                             <option value="Telemóvel">Telemóvel</option>
                                             <option value="Telefone">Telefone</option>
@@ -6286,7 +7919,7 @@ export default function App() {
                                             value={newContact.info}
                                             onChange={(e) => setNewContact({...newContact, info: e.target.value})}
                                             placeholder="Ex: 999 99 99 ou email@exemplo.com"
-                                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                           />
                                         </div>
                                       </div>
@@ -6369,7 +8002,7 @@ export default function App() {
                                             type="text" 
                                             value={newNickname.value}
                                             onChange={(e) => setNewNickname({value: e.target.value})}
-                                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                           />
                                         </div>
                                         <div className="flex justify-end">
@@ -6442,7 +8075,7 @@ export default function App() {
                                             <select 
                                               value={newSocial.type}
                                               onChange={(e) => setNewSocial({...newSocial, type: e.target.value})}
-                                              className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                             >
                                               <option value="Facebook">Facebook</option>
                                               <option value="Instagram">Instagram</option>
@@ -6456,7 +8089,7 @@ export default function App() {
                                               type="text" 
                                               value={newSocial.link}
                                               onChange={(e) => setNewSocial({...newSocial, link: e.target.value})}
-                                              className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                                              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                                             />
                                           </div>
                                         </div>
@@ -6691,32 +8324,33 @@ export default function App() {
                             </button>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {savedAttachments.length > 0 ? (
-                              savedAttachments.map((att, idx) => (
-                                <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-lg group relative">
-                                  <div className="w-12 h-12 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-400">
-                                    {att.type === 'Imagem' ? <ImageIcon size={24} /> : <FileText size={24} />}
+                          {savedAttachments.length > 0 ? (
+                            <div className="space-y-2">
+                              {savedAttachments.map((att, idx) => {
+                                const isImg = att.type === 'Imagem';
+                                return (
+                                  <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 group hover:border-slate-200 transition-all">
+                                    <div className={`p-3 rounded-xl flex-shrink-0 ${isImg ? 'bg-blue-100 text-blue-600' : att.type === 'Relatório' ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'}`}>
+                                      {isImg ? <ImageIcon size={20} /> : <FileText size={20} />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-black text-slate-900 truncate">{att.title}</p>
+                                      <p className="text-[10px] text-slate-400 mt-1"><span className="font-bold">{att.type}</span> · {att.date}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar"><Eye size={16} /></button>
+                                      <button onClick={() => setSavedAttachments(savedAttachments.filter((_, i) => i !== idx))} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Eliminar"><Trash2 size={16} /></button>
+                                    </div>
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-bold text-slate-800 truncate">{att.title}</p>
-                                    <p className="text-[10px] text-slate-500 uppercase font-bold">{att.type} • {att.date}</p>
-                                  </div>
-                                  <button 
-                                    onClick={() => setSavedAttachments(savedAttachments.filter((_, i) => i !== idx))}
-                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="col-span-full py-12 text-center border-2 border-dashed border-slate-100 rounded-xl">
-                                <Paperclip size={32} className="mx-auto text-slate-200 mb-2" />
-                                <p className="text-slate-400 text-sm italic">Nenhum anexo associado</p>
-                              </div>
-                            )}
-                          </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                              <Paperclip size={28} className="mx-auto text-slate-200 mb-2" />
+                              <p className="text-slate-400 text-sm italic">Nenhum anexo associado</p>
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -6831,6 +8465,9 @@ export default function App() {
                       const returnedCert = {
                         ...selectedDecisionCertificate,
                         status: 'Devolvido',
+                        returnReason: returnReason.trim(),
+                        returnedBy: user?.name || 'Sistema',
+                        returnedAt: new Date().toLocaleDateString('pt-BR'),
                         history: [
                           ...selectedDecisionCertificate.history,
                           { date: new Date().toLocaleDateString('pt-BR'), phase: 'Analise', status: 'Devolvido', user: user?.name || 'Sistema' }
@@ -6888,7 +8525,7 @@ export default function App() {
                       <label className="text-[10px] font-bold text-slate-500 uppercase">Numero Cadastro</label>
                       <input 
                         type="text" 
-                        className="w-full px-3 py-2 border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                         value={associateSearchFilters.number}
                         onChange={(e) => setAssociateSearchFilters({...associateSearchFilters, number: e.target.value})}
                       />
@@ -6897,7 +8534,7 @@ export default function App() {
                       <label className="text-[10px] font-bold text-slate-500 uppercase">Nome</label>
                       <input 
                         type="text" 
-                        className="w-full px-3 py-2 border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                         value={associateSearchFilters.name}
                         onChange={(e) => setAssociateSearchFilters({...associateSearchFilters, name: e.target.value})}
                       />
@@ -6906,7 +8543,7 @@ export default function App() {
                       <label className="text-[10px] font-bold text-slate-500 uppercase">Apelido</label>
                       <input 
                         type="text" 
-                        className="w-full px-3 py-2 border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                         value={associateSearchFilters.surname}
                         onChange={(e) => setAssociateSearchFilters({...associateSearchFilters, surname: e.target.value})}
                       />
@@ -6916,7 +8553,7 @@ export default function App() {
                       <div className="relative">
                         <input 
                           type="date" 
-                          className="w-full px-3 py-2 border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                           value={associateSearchFilters.birthDate}
                           onChange={(e) => setAssociateSearchFilters({...associateSearchFilters, birthDate: e.target.value})}
                         />
@@ -6926,7 +8563,7 @@ export default function App() {
                       <label className="text-[10px] font-bold text-slate-500 uppercase">Número Documento</label>
                       <input 
                         type="text" 
-                        className="w-full px-3 py-2 border border-slate-300 rounded text-sm outline-none focus:border-blue-500"
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                         value={associateSearchFilters.docNumber}
                         onChange={(e) => setAssociateSearchFilters({...associateSearchFilters, docNumber: e.target.value})}
                       />
@@ -6950,13 +8587,21 @@ export default function App() {
                     >
                       Limpar
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
-                        // Mock search logic for demonstration
-                        setAssociateResults([
-                          { id: 99, number: '006', name: 'Bruno', surname: 'Mascarenhas', birthDate: '2000-12-15', gender: 'Masculino', maritalStatus: 'Solteira' }
-                        ]);
+                        const f = associateSearchFilters;
+                        const results = fichas.filter(ficha => {
+                          const fullName = `${ficha.name}${ficha.surname ? ' ' + ficha.surname : ''}`.toLowerCase();
+                          if (f.number && !ficha.number.includes(f.number)) return false;
+                          if (f.name && !fullName.includes(f.name.toLowerCase())) return false;
+                          if (f.surname && ficha.surname && !ficha.surname.toLowerCase().includes(f.surname.toLowerCase())) return false;
+                          if (f.birthDate && ficha.birthDate !== f.birthDate) return false;
+                          if (f.docNumber && ficha.docNumber && !ficha.docNumber.toLowerCase().includes(f.docNumber.toLowerCase())) return false;
+                          return true;
+                        });
+                        setAssociateResults(results);
                         setHasSearchedAssociate(true);
+                        setCertAnalysisHasSearched(true);
                       }}
                       className="px-6 py-2 bg-slate-800 text-white font-bold rounded hover:bg-slate-900 transition-colors text-xs shadow-sm"
                     >
@@ -7030,39 +8675,47 @@ export default function App() {
         {/* Confirmation Modal (Associate) */}
         <AnimatePresence>
           {showConfirmAssociate && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="bg-white rounded-lg shadow-2xl p-8 max-w-sm w-full text-center space-y-6 border border-slate-200"
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border-2 border-slate-100 overflow-hidden"
               >
-                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto">
-                  <Fingerprint size={32} />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-slate-800">Confirmar Associação</h3>
-                  <p className="text-sm text-slate-500">Deseja associar este cadastro à ocorrência atual?</p>
-                </div>
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => setShowConfirmAssociate(false)}
-                    className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded hover:bg-slate-200 transition-colors text-sm border border-slate-300"
+                <div className="bg-blue-600 px-6 py-8 flex flex-col items-center gap-3">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.1, type: 'spring', stiffness: 400, damping: 20 }}
+                    className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"
                   >
-                    Cancelar
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setAssociatedPerson(personToAssociate);
-                      setIsNewRegistration(false);
-                      setShowConfirmAssociate(false);
-                      setShowAssociateModal(false);
-                      setExpandedSections(prev => ({ ...prev, associated: true }));
-                    }}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 transition-colors text-sm shadow-md"
-                  >
-                    Confirmar
-                  </button>
+                    <Fingerprint size={32} className="text-white" />
+                  </motion.div>
+                  <h3 className="text-base font-black text-white uppercase tracking-widest">Confirmar Associação</h3>
+                </div>
+                <div className="px-6 py-6 text-center space-y-6">
+                  <p className="text-sm font-bold text-slate-600">Deseja associar este cadastro ao pedido atual?</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowConfirmAssociate(false)}
+                      className="flex-1 py-3 border-2 border-slate-200 text-slate-700 font-black text-xs uppercase tracking-widest rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAssociatedPerson(personToAssociate);
+                        setIsNewRegistration(false);
+                        setShowConfirmAssociate(false);
+                        setShowAssociateModal(false);
+                        setExpandedSections(prev => ({ ...prev, associated: true }));
+                      }}
+                      className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all"
+                    >
+                      Confirmar
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             </div>
@@ -7072,39 +8725,100 @@ export default function App() {
         {/* Confirmation Modal (New Registration) */}
         <AnimatePresence>
           {showConfirmNew && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="bg-white rounded-lg shadow-2xl p-8 max-w-sm w-full text-center space-y-6 border border-slate-200"
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border-2 border-slate-100 overflow-hidden"
               >
-                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto">
-                  <Plus size={32} />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-slate-800">Novo Cadastro</h3>
-                  <p className="text-sm text-slate-500">Deseja iniciar um novo cadastro manual para esta ocorrência?</p>
-                </div>
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => setShowConfirmNew(false)}
-                    className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded hover:bg-slate-200 transition-colors text-sm border border-slate-300"
+                <div className="bg-slate-900 px-6 py-8 flex flex-col items-center gap-3">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.1, type: 'spring', stiffness: 400, damping: 20 }}
+                    className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center"
                   >
-                    Cancelar
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setIsNewRegistration(true);
-                      setAssociatedPerson(null);
-                      setShowConfirmNew(false);
-                      setShowAssociateModal(false);
-                      setExpandedSections(prev => ({ ...prev, biographic: true, complementary: true, biometric: true }));
-                    }}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 transition-colors text-sm shadow-md"
+                    <UserPlus size={32} className="text-white" />
+                  </motion.div>
+                  <h3 className="text-base font-black text-white uppercase tracking-widest">Novo Cadastro</h3>
+                </div>
+                <div className="px-6 py-6 text-center space-y-6">
+                  <p className="text-sm font-bold text-slate-600">Deseja iniciar um novo cadastro manual para esta ocorrência?</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowConfirmNew(false)}
+                      className="flex-1 py-3 border-2 border-slate-200 text-slate-700 font-black text-xs uppercase tracking-widest rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsNewRegistration(true);
+                        setAssociatedPerson(null);
+                        setShowConfirmNew(false);
+                        setShowAssociateModal(false);
+                        setExpandedSections(prev => ({ ...prev, biographic: true, complementary: true, biometric: true }));
+                      }}
+                      className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all"
+                    >
+                      Confirmar
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Confirmation Modal (Concluir Análise) */}
+        <AnimatePresence>
+          {showConfirmConcluir && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border-2 border-slate-100 overflow-hidden"
+              >
+                <div className="bg-amber-500 px-6 py-8 flex flex-col items-center gap-3">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.1, type: 'spring', stiffness: 400, damping: 20 }}
+                    className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"
                   >
-                    Confirmar
-                  </button>
+                    <FileCheck size={32} className="text-white" />
+                  </motion.div>
+                  <h3 className="text-base font-black text-white uppercase tracking-widest">Concluir Análise</h3>
+                </div>
+                <div className="px-6 py-6 text-center space-y-6">
+                  <p className="text-sm font-bold text-slate-600">
+                    {associatedPerson
+                      ? <>Tem a certeza que deseja enviar este pedido para <span className="text-slate-900">Decisão</span>? O cadastro <span className="text-slate-900 font-black">{associatedPerson.number}</span> ficará associado.</>
+                      : <>Tem a certeza que deseja enviar este pedido para <span className="text-slate-900">Decisão</span> sem cadastro associado?</>
+                    }
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setShowConfirmConcluir(false); setPendingConcluirAction(null); }}
+                      className="flex-1 py-3 border-2 border-slate-200 text-slate-700 font-black text-xs uppercase tracking-widest rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowConfirmConcluir(false);
+                        if (pendingConcluirAction) pendingConcluirAction();
+                        setPendingConcluirAction(null);
+                      }}
+                      className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all"
+                    >
+                      Confirmar
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             </div>
@@ -7315,18 +9029,18 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border-2 border-slate-100"
             >
-              <div className="bg-slate-900 p-4 text-white flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <MapPin size={18} className="text-blue-400" />
-                  <h3 className="font-bold">Detalhes do Endereço</h3>
+              <div className="bg-slate-900 p-5 text-white flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/10 rounded-lg"><MapPin size={16} /></div>
+                  <h3 className="font-black text-sm uppercase tracking-widest">Detalhes do Endereço</h3>
                 </div>
-                <button onClick={() => setShowAddressDetailsModal(false)} className="text-slate-400 hover:text-white transition-colors">
+                <button onClick={() => setShowAddressDetailsModal(false)} className="text-slate-400 hover:text-white transition-colors p-1">
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-6 space-y-6">
+              <div className="p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Tipo</p>
@@ -7370,13 +9084,8 @@ export default function App() {
                   )}
                 </div>
               </div>
-              <div className="bg-slate-50 p-4 border-t border-slate-200 flex justify-end">
-                <button 
-                  onClick={() => setShowAddressDetailsModal(false)}
-                  className="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300 transition-colors text-sm"
-                >
-                  Fechar
-                </button>
+              <div className="bg-slate-50 p-6 border-t border-slate-100 flex justify-end">
+                <Button variant="outline" onClick={() => setShowAddressDetailsModal(false)}>Fechar</Button>
               </div>
             </motion.div>
           </div>
@@ -7497,83 +9206,163 @@ export default function App() {
         {/* Detalhes da Solicitação de Reabilitação Modal */}
       <AnimatePresence>
         {showRehabilitationDetailsModal && selectedReasonForRehab?.rehabilitationDetails && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-            <motion.div 
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white border-4 border-slate-900 w-full max-w-lg shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] overflow-hidden"
+              className="bg-white rounded-2xl w-full max-w-lg shadow-2xl border-2 border-slate-100 overflow-hidden"
             >
-              <div className="p-6 border-b-4 border-slate-900 bg-blue-600 flex items-center justify-between">
-                <div className="flex items-center gap-3 text-white">
-                  <Info size={24} />
-                  <h2 className="text-xl font-bold">Detalhes da Reabilitação</h2>
+              {/* Header */}
+              <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/10 rounded-lg"><RotateCcw size={18} className="text-white" /></div>
+                  <div>
+                    <h2 className="text-sm font-black text-white uppercase tracking-widest">Solicitação de Reabilitação</h2>
+                    <p className="text-[10px] text-slate-400 font-medium mt-0.5">Ficha N.º {selectedFicha?.number} — {selectedFicha?.name}</p>
+                  </div>
                 </div>
-                <button 
-                  onClick={() => setShowRehabilitationDetailsModal(false)}
-                  className="p-2 hover:bg-blue-700 rounded-full text-white transition-colors"
-                >
-                  <X size={24} />
+                <button onClick={() => {
+                  setShowRehabilitationDetailsModal(false);
+                  setRehabDetailsViewOnly(false);
+                  if (!rehabDetailsViewOnly) {
+                    setPendingRehabAction({ ficha: selectedFicha, reg: selectedReasonForRehab });
+                    setRejectReason('');
+                    setShowRejectConfirmModal(true);
+                  }
+                }} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all" title={rehabDetailsViewOnly ? 'Fechar' : 'Recusar'}>
+                  <X size={18} />
                 </button>
               </div>
 
-              <div className="p-8 space-y-6">
-                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 border-2 border-slate-200 rounded-lg">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Número Ficha</p>
-                    <p className="text-sm font-bold text-blue-600">{selectedFicha?.number}</p>
+              {/* Body */}
+              <div className="p-6 space-y-5">
+                {/* Meta */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitado em</p>
+                    <p className="text-sm font-black text-slate-900">{selectedReasonForRehab.rehabilitationDetails.requestedAt}</p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Nome do Indivíduo</p>
-                    <p className="text-sm font-bold text-slate-800">{selectedFicha?.name}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 border-2 border-slate-200 rounded-lg">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Solicitado em</p>
-                    <p className="text-sm font-bold text-slate-800">{selectedReasonForRehab.rehabilitationDetails.requestedAt}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Solicitado por</p>
-                    <p className="text-sm font-bold text-slate-800">{selectedReasonForRehab.rehabilitationDetails.requestedBy}</p>
+                  <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitado por</p>
+                    <p className="text-sm font-black text-slate-900">{selectedReasonForRehab.rehabilitationDetails.requestedBy}</p>
                   </div>
                 </div>
 
+                {/* Accepted info (if Reabilitado) */}
+                {selectedReasonForRehab.rehabilitationDetails.acceptedAt && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-emerald-50 rounded-xl p-4 border-2 border-emerald-100 space-y-1">
+                      <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Aceite em</p>
+                      <p className="text-sm font-black text-emerald-700">{selectedReasonForRehab.rehabilitationDetails.acceptedAt}</p>
+                    </div>
+                    <div className="bg-emerald-50 rounded-xl p-4 border-2 border-emerald-100 space-y-1">
+                      <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Aceite por</p>
+                      <p className="text-sm font-black text-emerald-700">{selectedReasonForRehab.rehabilitationDetails.acceptedBy}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Motivo */}
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Motivo da Solicitação</p>
-                  <div className="p-4 bg-white border-2 border-slate-900 rounded-lg text-sm text-slate-700 leading-relaxed shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)]">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo da Solicitação</p>
+                  <div className="bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm text-slate-700 leading-relaxed font-medium">
                     {selectedReasonForRehab.rehabilitationDetails.reason}
                   </div>
                 </div>
 
-                {selectedReasonForRehab.rehabilitationDetails.attachments.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Anexos ({selectedReasonForRehab.rehabilitationDetails.attachments.length})</p>
+                {/* Anexos */}
+                {selectedReasonForRehab.rehabilitationDetails.attachments?.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Anexos ({selectedReasonForRehab.rehabilitationDetails.attachments.length})
+                    </p>
                     <div className="space-y-2">
                       {selectedReasonForRehab.rehabilitationDetails.attachments.map((file: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div key={idx} className="flex items-center justify-between px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl group hover:border-slate-200 transition-all">
                           <div className="flex items-center gap-3">
-                            <Paperclip size={14} className="text-blue-600" />
+                            <Paperclip size={14} className="text-slate-400" />
                             <span className="text-xs font-bold text-slate-700">{file.name}</span>
                           </div>
-                          <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar">
-                            <Eye size={16} />
+                          <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar">
+                            <Eye size={15} />
                           </button>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
+              </div>
 
-                <div className="flex justify-end pt-4">
-                  <button 
-                    onClick={() => setShowRehabilitationDetailsModal(false)}
-                    className="px-8 py-2.5 bg-slate-900 text-white font-bold border-2 border-slate-900 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-[0px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
-                  >
-                    FECHAR
-                  </button>
+              {/* Footer */}
+              <div className="px-6 py-4 border-t-2 border-slate-100 flex items-center justify-between gap-3">
+                <Button variant="outline" onClick={() => { setShowRehabilitationDetailsModal(false); setRehabDetailsViewOnly(false); }}>Fechar</Button>
+                {!rehabDetailsViewOnly && (
+                  <div className="flex gap-3">
+                    <Button variant="danger" icon={X} onClick={() => {
+                      setPendingRehabAction({ ficha: selectedFicha, reg: selectedReasonForRehab });
+                      setRejectReason('');
+                      setShowRejectConfirmModal(true);
+                    }}>Recusar</Button>
+                    <Button variant="success" icon={CheckCircle} onClick={() => {
+                      setPendingRehabAction({ ficha: selectedFicha, reg: selectedReasonForRehab });
+                      setShowApproveConfirmModal(true);
+                    }}>Aceitar</Button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Reject Confirmation Modal */}
+      <AnimatePresence>
+        {showRejectConfirmModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl w-full max-w-md shadow-2xl border-2 border-slate-100 overflow-hidden"
+            >
+              <div className="bg-red-600 px-6 py-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/10 rounded-lg"><X size={18} className="text-white" /></div>
+                  <h2 className="text-sm font-black text-white uppercase tracking-widest">Recusar Reabilitação</h2>
                 </div>
+                <button onClick={() => setShowRejectConfirmModal(false)} className="p-2 text-red-200 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-6 space-y-5">
+                <p className="text-sm text-slate-600 font-medium">Tem a certeza que deseja recusar esta solicitação de reabilitação? Esta ação não pode ser revertida.</p>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
+                    Motivo da Recusa <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="Descreva o motivo pelo qual a reabilitação está a ser recusada..."
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-medium text-slate-900 outline-none focus:border-red-400 resize-none transition-colors"
+                  />
+                  {rejectReason.trim() === '' && (
+                    <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest">Campo obrigatório</p>
+                  )}
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t-2 border-slate-100 flex gap-3 justify-end">
+                <Button variant="outline" onClick={() => setShowRejectConfirmModal(false)}>Cancelar</Button>
+                <button
+                  onClick={handleRejectRehabilitation}
+                  disabled={!rejectReason.trim()}
+                  className={`px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all ${rejectReason.trim() ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                >
+                  <X size={14} />
+                  Confirmar Recusa
+                </button>
               </div>
             </motion.div>
           </div>
@@ -7583,30 +9372,77 @@ export default function App() {
       {/* Approve Confirmation Modal */}
       <AnimatePresence>
         {showApproveConfirmModal && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white border-4 border-slate-900 rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl"
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border-2 border-slate-100 overflow-hidden"
             >
-              <div className="p-10 text-center space-y-4">
-                <h3 className="text-xl font-bold text-slate-900 uppercase tracking-widest">Alerta</h3>
-                <p className="text-xl font-bold text-slate-900">Deseja Realmente Reabilitar o Cadastro?</p>
+              <div className="bg-emerald-600 px-6 py-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/10 rounded-lg"><CheckCircle size={18} className="text-white" /></div>
+                  <h2 className="text-sm font-black text-white uppercase tracking-widest">Confirmar Aceitação</h2>
+                </div>
+                <button onClick={() => setShowApproveConfirmModal(false)} className="p-2 text-emerald-200 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                  <X size={18} />
+                </button>
               </div>
-              <div className="flex border-t-4 border-slate-900">
-                <button 
-                  onClick={() => setShowApproveConfirmModal(false)}
-                  className="flex-1 py-5 bg-[#A5C9F3] hover:bg-[#8AB8ED] text-slate-900 font-black uppercase tracking-widest border-r-4 border-slate-900 transition-colors"
-                >
-                  Não
+              <div className="p-6 space-y-2">
+                <p className="text-sm font-black text-slate-900">Aceitar reabilitação?</p>
+                <p className="text-sm text-slate-500 font-medium">O cadastro será marcado como reabilitado. Esta ação não pode ser revertida.</p>
+              </div>
+              <div className="px-6 py-4 border-t-2 border-slate-100 flex gap-3 justify-end">
+                <Button variant="outline" onClick={() => setShowApproveConfirmModal(false)}>Cancelar</Button>
+                <Button variant="success" icon={CheckCircle} onClick={handleApproveRehabilitation}>Confirmar</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Rejection Reason Modal */}
+      <AnimatePresence>
+        {showRejectionReasonModal && selectedRejectionDetails && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl w-full max-w-md shadow-2xl border-2 border-slate-100 overflow-hidden"
+            >
+              <div className="bg-red-600 px-6 py-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/10 rounded-lg"><Info size={18} className="text-white" /></div>
+                  <div>
+                    <h2 className="text-sm font-black text-white uppercase tracking-widest">Reabilitação Recusada</h2>
+                    <p className="text-[10px] text-red-200 font-medium mt-0.5">Motivo da recusa da solicitação</p>
+                  </div>
+                </div>
+                <button onClick={() => { setShowRejectionReasonModal(false); setSelectedRejectionDetails(null); }} className="p-2 text-red-200 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                  <X size={18} />
                 </button>
-                <button 
-                  onClick={handleApproveRehabilitation}
-                  className="flex-1 py-5 bg-[#A5C9F3] hover:bg-[#8AB8ED] text-slate-900 font-black uppercase tracking-widest transition-colors"
-                >
-                  Sim
-                </button>
+              </div>
+              <div className="p-6 space-y-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recusado em</p>
+                    <p className="text-sm font-black text-slate-900">{selectedRejectionDetails.rejectedAt}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recusado por</p>
+                    <p className="text-sm font-black text-slate-900">{selectedRejectionDetails.rejectedBy}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo da Recusa</p>
+                  <div className="bg-red-50 border-2 border-red-100 rounded-xl p-4 text-sm text-red-700 leading-relaxed font-medium">
+                    {selectedRejectionDetails.reason}
+                  </div>
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t-2 border-slate-100 flex justify-end">
+                <Button variant="outline" onClick={() => { setShowRejectionReasonModal(false); setSelectedRejectionDetails(null); }}>Fechar</Button>
               </div>
             </motion.div>
           </div>
@@ -7616,27 +9452,34 @@ export default function App() {
       {/* Success Modal */}
       <AnimatePresence>
         {showSuccessModal && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[210] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="bg-white border-4 border-emerald-500 rounded-2xl p-8 max-w-sm w-full text-center space-y-6 shadow-2xl"
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[210] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border-2 border-slate-100 overflow-hidden"
             >
-              <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-                <ShieldCheck size={48} />
+              <div className="bg-emerald-600 px-6 py-8 flex flex-col items-center gap-3">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.1, type: 'spring', stiffness: 400, damping: 20 }}
+                  className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"
+                >
+                  <CheckCircle size={36} className="text-white" />
+                </motion.div>
+                <h3 className="text-lg font-black text-white uppercase tracking-widest">Operação Concluída</h3>
               </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Sucesso!</h3>
-                <p className="text-slate-600 font-bold">{successMessage}</p>
+              <div className="px-6 py-6 text-center space-y-6">
+                <p className="text-sm font-bold text-slate-600">{successMessage}</p>
+                <button
+                  onClick={() => setShowSuccessModal(false)}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all"
+                >
+                  OK
+                </button>
               </div>
-              <Button 
-                variant="primary" 
-                className="w-full bg-emerald-600 hover:bg-emerald-700 border-emerald-700"
-                onClick={() => setShowSuccessModal(false)}
-              >
-                OK
-              </Button>
             </motion.div>
           </div>
         )}
@@ -7645,27 +9488,34 @@ export default function App() {
       {/* Error Modal */}
       <AnimatePresence>
         {showErrorModal && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[210] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="bg-white border-4 border-red-500 rounded-2xl p-8 max-w-sm w-full text-center space-y-6 shadow-2xl"
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[210] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border-2 border-slate-100 overflow-hidden"
             >
-              <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
-                <FileWarning size={48} />
+              <div className="bg-red-600 px-6 py-8 flex flex-col items-center gap-3">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.1, type: 'spring', stiffness: 400, damping: 20 }}
+                  className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"
+                >
+                  <FileWarning size={32} className="text-white" />
+                </motion.div>
+                <h3 className="text-base font-black text-white uppercase tracking-widest">Atenção</h3>
               </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Erro!</h3>
-                <p className="text-slate-600 font-bold">{errorMessage}</p>
+              <div className="px-6 py-6 text-center space-y-6">
+                <p className="text-sm font-bold text-slate-600">{errorMessage}</p>
+                <button
+                  onClick={() => setShowErrorModal(false)}
+                  className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all"
+                >
+                  Entendido
+                </button>
               </div>
-              <Button 
-                variant="primary" 
-                className="w-full bg-red-600 hover:bg-red-700 border-red-700"
-                onClick={() => setShowErrorModal(false)}
-              >
-                Entendido
-              </Button>
             </motion.div>
           </div>
         )}
@@ -7718,11 +9568,11 @@ export default function App() {
                   {selectedPhotoGroup.photos.map((photo: any, idx: number) => (
                     <div key={idx} className="flex flex-col items-center gap-3">
                       <div className="w-full aspect-[3/4] bg-white border-2 border-slate-200 rounded-xl overflow-hidden shadow-md hover:border-slate-900 transition-all group">
-                        <img 
-                          src={`https://picsum.photos/seed/${photo.seed}/300/400`} 
-                          alt={photo.label} 
-                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" 
-                          referrerPolicy="no-referrer" 
+                        <img
+                          src={getPortraitUrl(photo.seed)}
+                          alt={photo.label}
+                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                          referrerPolicy="no-referrer"
                         />
                       </div>
                       <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{photo.label}</p>
@@ -7744,11 +9594,92 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Modal de Seleção de Exportação */}
+      <AnimatePresence>
+        {showExportSelectModal && selectedFicha && (
+          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white border-2 border-slate-200 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
+            >
+              <div className="bg-slate-900 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-emerald-500 p-2 rounded-lg"><FileText size={18} className="text-white" /></div>
+                  <div>
+                    <h3 className="text-white font-black text-sm uppercase tracking-widest">Exportar Ficha de Cadastro</h3>
+                    <p className="text-slate-400 text-[10px]">Selecione o conteúdo a incluir no PDF</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowExportSelectModal(false)} className="p-2 text-slate-400 hover:text-white rounded-full transition-all"><X size={20} /></button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Secções gerais */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Secções a incluir</p>
+                  {[
+                    { key: 'photo', label: 'Fotografia de Perfil', desc: 'Foto frontal do cadastrado' },
+                    { key: 'sinalComplementar', label: 'Sinais Complementares', desc: 'Características físicas, tatuagens, cicatrizes' },
+                    { key: 'outrasInfo', label: 'Outras Informações', desc: 'Moradas, contactos, alcunhas, redes sociais' },
+                  ].map(({ key, label, desc }) => (
+                    <label key={key} className="flex items-center gap-4 p-4 border-2 border-slate-100 rounded-xl hover:border-slate-300 cursor-pointer transition-all group">
+                      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${exportOptions[key as keyof typeof exportOptions] ? 'bg-slate-900 border-slate-900' : 'border-slate-300'}`}>
+                        {exportOptions[key as keyof typeof exportOptions] && <Check size={12} className="text-white" />}
+                      </div>
+                      <input type="checkbox" className="sr-only" checked={!!exportOptions[key as keyof typeof exportOptions]}
+                        onChange={(e) => setExportOptions(prev => ({ ...prev, [key]: e.target.checked }))} />
+                      <div>
+                        <p className="text-sm font-black text-slate-900">{label}</p>
+                        <p className="text-[10px] text-slate-400 font-medium">{desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Motivos de Cadastro */}
+                {(selectedFicha.registrationReasons || []).length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivos de Cadastro a incluir</p>
+                    {(selectedFicha.registrationReasons || []).map((r: any) => (
+                      <label key={r.id} className="flex items-center gap-4 p-4 border-2 border-slate-100 rounded-xl hover:border-slate-300 cursor-pointer transition-all">
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${exportOptions.motivoIds.includes(r.id) ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                          {exportOptions.motivoIds.includes(r.id) && <Check size={12} className="text-white" />}
+                        </div>
+                        <input type="checkbox" className="sr-only" checked={exportOptions.motivoIds.includes(r.id)}
+                          onChange={(e) => setExportOptions(prev => ({
+                            ...prev,
+                            motivoIds: e.target.checked ? [...prev.motivoIds, r.id] : prev.motivoIds.filter(id => id !== r.id)
+                          }))} />
+                        <div className="flex-1">
+                          <p className="text-sm font-black text-slate-900">{r.reason}</p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${r.type === 'Criminal' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>{r.type}</span>
+                            <span className="text-[10px] text-slate-400">{r.date}</span>
+                            <span className="text-[10px] text-slate-500 font-bold">{r.status}</span>
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 pb-6 flex items-center justify-end gap-3">
+                <Button variant="outline" onClick={() => setShowExportSelectModal(false)}>Cancelar</Button>
+                <Button variant="success" icon={FileText} onClick={() => { setShowExportSelectModal(false); setShowPdfModal(true); }}>Gerar PDF</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Modal de Exportação PDF */}
       <AnimatePresence>
         {showPdfModal && selectedFicha && (
           <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[150] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
@@ -7757,15 +9688,17 @@ export default function App() {
               {/* PDF Toolbar */}
               <div className="bg-slate-900 px-6 py-4 flex items-center justify-between border-b border-slate-700">
                 <div className="flex items-center gap-4">
-                  <div className="bg-red-500 p-2 rounded">
-                    <FileText size={20} className="text-white" />
-                  </div>
+                  <div className="bg-red-500 p-2 rounded"><FileText size={20} className="text-white" /></div>
                   <div>
                     <h3 className="text-white font-bold text-sm">Ficha_Cadastro_{selectedFicha.number}.pdf</h3>
-                    <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold">Documento de Identificação Policial</p>
+                    <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold">Documento de Cadastro Policial</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  <button onClick={() => { setShowPdfModal(false); setShowExportSelectModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-slate-300 hover:text-white hover:bg-slate-600 rounded-lg transition-all text-xs font-bold border border-slate-600">
+                    <ArrowLeft size={16} />
+                    Alterar Seleção
+                  </button>
                   <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-all text-xs font-bold border border-slate-700">
                     <Printer size={16} />
                     Imprimir
@@ -7775,16 +9708,13 @@ export default function App() {
                     Download
                   </button>
                   <div className="w-px h-6 bg-slate-700 mx-2" />
-                  <button 
-                    onClick={() => setShowPdfModal(false)}
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all"
-                  >
+                  <button onClick={() => setShowPdfModal(false)} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all">
                     <X size={24} />
                   </button>
                 </div>
               </div>
 
-              {/* PDF Content Area (Simulated) */}
+              {/* PDF Content Area */}
               <div className="flex-1 bg-slate-700 overflow-y-auto p-12 flex justify-center custom-scrollbar">
                 <div className="bg-white w-[210mm] min-h-[297mm] shadow-2xl p-[20mm] text-slate-900 font-serif relative overflow-hidden">
                   {/* Watermark */}
@@ -7800,89 +9730,178 @@ export default function App() {
                       <h3 className="text-md font-bold text-slate-800">Polícia Nacional - Direção Central de Investigação</h3>
                     </div>
                     <div className="w-24 h-24 border-2 border-slate-900 flex items-center justify-center bg-slate-50">
-                      <img src="/logo.png" alt="Logo" className="w-16 h-16 opacity-20" />
+                      <Shield size={40} className="text-slate-200" />
                     </div>
                   </div>
 
                   {/* Document Title */}
-                  <div className="text-center mb-12">
-                    <h2 className="text-3xl font-black uppercase underline decoration-4 underline-offset-8">Ficha de Identificação Individual</h2>
-                    <p className="mt-4 text-slate-500 font-sans text-sm">N.º de Registo: <span className="font-bold text-slate-900">{selectedFicha.number}</span> | Data de Emissão: {new Date().toLocaleDateString()}</p>
+                  <div className="text-center mb-10">
+                    <h2 className="text-3xl font-black uppercase underline decoration-4 underline-offset-8">Ficha de Cadastro Individual</h2>
+                    <p className="mt-4 text-slate-500 font-sans text-sm">N.º de Registo: <span className="font-bold text-slate-900">{selectedFicha.number}</span> | Data de Emissão: {new Date().toLocaleDateString('pt-PT')}</p>
                   </div>
 
-                  {/* Main Content Grid */}
-                  <div className="grid grid-cols-3 gap-8 mb-12">
-                    {/* Photo */}
-                    <div className="col-span-1">
-                      <div className="w-full aspect-[3/4] border-4 border-slate-900 bg-slate-100 flex items-center justify-center overflow-hidden">
-                        <img 
-                          src={`https://picsum.photos/seed/frontal/400/533`} 
-                          alt="Frontal" 
-                          className="w-full h-full object-cover grayscale" 
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                      <p className="text-center mt-2 text-[10px] uppercase font-bold font-sans text-slate-400 tracking-widest">Fotografia Frontal</p>
-                    </div>
-
-                    {/* Basic Info */}
-                    <div className="col-span-2 space-y-6 font-sans">
-                      <div className="grid grid-cols-1 gap-4">
-                        <div className="border-b border-slate-200 pb-1">
-                          <p className="text-[9px] font-bold text-slate-400 uppercase">Nome Completo</p>
-                          <p className="text-lg font-bold text-slate-900">{selectedFicha.name}</p>
+                  {/* Main Content Grid — foto + dados básicos */}
+                  <div className={`grid gap-8 mb-10 ${exportOptions.photo ? 'grid-cols-3' : 'grid-cols-1'}`}>
+                    {exportOptions.photo && (
+                      <div className="col-span-1">
+                        <div className="w-full aspect-[3/4] border-4 border-slate-900 bg-slate-100 overflow-hidden">
+                          <img src={getPortraitUrl(selectedFicha?.number || 'frontal')} alt="Frontal" className="w-full h-full object-cover grayscale" referrerPolicy="no-referrer" />
                         </div>
+                        <p className="text-center mt-2 text-[10px] uppercase font-bold font-sans text-slate-400 tracking-widest">Fotografia Frontal</p>
+                      </div>
+                    )}
+                    <div className={`${exportOptions.photo ? 'col-span-2' : 'col-span-1'} space-y-4 font-sans`}>
+                      <div className="border-b border-slate-200 pb-2">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">Nome Completo</p>
+                        <p className="text-lg font-bold text-slate-900">{selectedFicha.name}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="border-b border-slate-200 pb-1">
+                        <div className="border-b border-slate-200 pb-2">
                           <p className="text-[9px] font-bold text-slate-400 uppercase">Data de Nascimento</p>
-                          <p className="text-sm font-bold text-slate-900">{selectedFicha.birthDate}</p>
+                          <p className="text-sm font-bold text-slate-900">{selectedFicha.birthDate || '—'}</p>
                         </div>
-                        <div className="border-b border-slate-200 pb-1">
+                        <div className="border-b border-slate-200 pb-2">
                           <p className="text-[9px] font-bold text-slate-400 uppercase">Naturalidade</p>
-                          <p className="text-sm font-bold text-slate-900">{selectedFicha.island}</p>
+                          <p className="text-sm font-bold text-slate-900">{selectedFicha.birthPlace || selectedFicha.island || '—'}</p>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="border-b border-slate-200 pb-1">
-                          <p className="text-[9px] font-bold text-slate-400 uppercase">Documento (CNI)</p>
-                          <p className="text-sm font-bold text-slate-900">9884565</p>
+                        <div className="border-b border-slate-200 pb-2">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase">Género</p>
+                          <p className="text-sm font-bold text-slate-900">{selectedFicha.gender || '—'}</p>
                         </div>
-                        <div className="border-b border-slate-200 pb-1">
+                        <div className="border-b border-slate-200 pb-2">
                           <p className="text-[9px] font-bold text-slate-400 uppercase">Estado Civil</p>
-                          <p className="text-sm font-bold text-slate-900">Solteiro</p>
+                          <p className="text-sm font-bold text-slate-900">{selectedFicha.civilStatus || '—'}</p>
+                        </div>
+                        <div className="border-b border-slate-200 pb-2">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase">Nacionalidade</p>
+                          <p className="text-sm font-bold text-slate-900">{selectedFicha.nationality || '—'}</p>
+                        </div>
+                        <div className="border-b border-slate-200 pb-2">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase">N.º Documento</p>
+                          <p className="text-sm font-bold text-slate-900">{selectedFicha.docNumber || selectedFicha.number || '—'}</p>
                         </div>
                       </div>
+                      {(selectedFicha.fatherName || selectedFicha.motherName) && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="border-b border-slate-200 pb-2">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">Filiação — Pai</p>
+                            <p className="text-sm font-bold text-slate-900">{selectedFicha.fatherName || '—'}</p>
+                          </div>
+                          <div className="border-b border-slate-200 pb-2">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">Filiação — Mãe</p>
+                            <p className="text-sm font-bold text-slate-900">{selectedFicha.motherName || '—'}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Characteristics */}
-                  <div className="space-y-4 mb-12 font-sans">
-                    <h3 className="text-sm font-black uppercase bg-slate-900 text-white px-3 py-1 inline-block">Sinais e Características</h3>
-                    <div className="grid grid-cols-2 gap-x-12 gap-y-4 border-t-2 border-slate-900 pt-4">
-                      {[
-                        { label: 'Altura', value: '1.85 m' },
-                        { label: 'Constituição', value: 'Atlético' },
-                        { label: 'Cabelo', value: 'Preto, Curto' },
-                        { label: 'Olhos', value: 'Castanhos' },
-                        { label: 'Pele', value: 'Morena' },
-                        { label: 'Tatuagens', value: 'Braço Direito (Tribal)' }
-                      ].map((item, i) => (
-                        <div key={i} className="flex justify-between items-end border-b border-slate-100 pb-1">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase">{item.label}</span>
-                          <span className="text-xs font-bold text-slate-900">{item.value}</span>
+                  {/* Sinais Complementares */}
+                  {exportOptions.sinalComplementar && (() => {
+                    const grupo = (selectedFicha.complementaryGroups || []).find((g: any) => !g.validTo) || (selectedFicha.complementaryGroups || [])[0];
+                    if (!grupo) return null;
+                    return (
+                      <div className="space-y-3 mb-10 font-sans">
+                        <h3 className="text-sm font-black uppercase bg-slate-900 text-white px-3 py-1.5 inline-block">Sinais Complementares</h3>
+                        <div className="grid grid-cols-2 gap-x-12 gap-y-3 border-t-2 border-slate-900 pt-4">
+                          {(grupo.characteristics || []).map((c: any, i: number) => (
+                            <div key={i} className="flex justify-between items-end border-b border-slate-100 pb-1">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase">{c.name}</span>
+                              <span className="text-xs font-bold text-slate-900">{c.value}{c.observation ? ` (${c.observation})` : ''}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                        {grupo.otherNotes && (
+                          <p className="text-xs text-slate-500 italic mt-2">Notas: {grupo.otherNotes}</p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Outras Informações */}
+                  {exportOptions.outrasInfo && (
+                    <div className="space-y-6 mb-10 font-sans">
+                      <h3 className="text-sm font-black uppercase bg-slate-900 text-white px-3 py-1.5 inline-block">Outras Informações</h3>
+
+                      {(selectedFicha.addresses || []).length > 0 && (
+                        <div className="border-t-2 border-slate-900 pt-4 space-y-2">
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Moradas</p>
+                          {(selectedFicha.addresses || []).map((a: any, i: number) => (
+                            <div key={i} className="text-xs text-slate-800 border-b border-slate-100 pb-1">
+                              <span className="font-bold">{a.type}:</span> {[a.locality, a.parish, a.council, a.island].filter(Boolean).join(', ')}
+                              {a.reference ? ` — Ref: ${a.reference}` : ''}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {(selectedFicha.contacts || []).length > 0 && (
+                        <div className="border-t border-slate-200 pt-4 space-y-2">
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Contactos</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(selectedFicha.contacts || []).map((c: any, i: number) => (
+                              <div key={i} className="text-xs text-slate-800">
+                                <span className="font-bold">{c.type}:</span> {c.info}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {(selectedFicha.nicknames || []).length > 0 && (
+                        <div className="border-t border-slate-200 pt-4 space-y-2">
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Alcunhas</p>
+                          <p className="text-xs text-slate-800">{(selectedFicha.nicknames || []).map((n: any) => n.value).join(', ')}</p>
+                        </div>
+                      )}
+
+                      {(selectedFicha.socialNetworks || []).length > 0 && (
+                        <div className="border-t border-slate-200 pt-4 space-y-2">
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Redes Sociais</p>
+                          {(selectedFicha.socialNetworks || []).map((s: any, i: number) => (
+                            <div key={i} className="text-xs text-slate-800">
+                              <span className="font-bold">{s.type}:</span> {s.link}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  )}
+
+                  {/* Motivos de Cadastro */}
+                  {exportOptions.motivoIds.length > 0 && (
+                    <div className="space-y-3 mb-10 font-sans">
+                      <h3 className="text-sm font-black uppercase bg-slate-900 text-white px-3 py-1.5 inline-block">Motivos de Cadastro</h3>
+                      <div className="border-t-2 border-slate-900 pt-4 space-y-3">
+                        {(selectedFicha.registrationReasons || [])
+                          .filter((r: any) => exportOptions.motivoIds.includes(r.id))
+                          .map((r: any, i: number) => (
+                            <div key={i} className="border border-slate-200 rounded p-3 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-black text-slate-900">{r.reason}</span>
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${r.type === 'Criminal' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>{r.type}</span>
+                              </div>
+                              <div className="flex gap-4 text-[10px] text-slate-500">
+                                <span>Data: <span className="font-bold text-slate-700">{r.date}</span></span>
+                                {r.refNo && r.refNo !== '---' && <span>Ref: <span className="font-bold text-slate-700">{r.refNo}</span></span>}
+                                <span>Estado: <span className="font-bold text-slate-700">{r.status}</span></span>
+                              </div>
+                              {r.destination && r.destination !== '---' && (
+                                <p className="text-[10px] text-slate-500">Destino: <span className="font-bold text-slate-700">{r.destination}</span></p>
+                              )}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Footer / Signatures */}
-                  <div className="mt-auto pt-24 grid grid-cols-2 gap-24 font-sans">
-                    <div className="text-center space-y-12">
+                  <div className="mt-auto pt-16 grid grid-cols-2 gap-24 font-sans">
+                    <div className="text-center space-y-10">
                       <div className="w-full h-px bg-slate-300" />
                       <p className="text-[10px] font-bold uppercase text-slate-400">Assinatura do Funcionário</p>
                     </div>
-                    <div className="text-center space-y-12">
+                    <div className="text-center space-y-10">
                       <div className="w-full h-px bg-slate-300" />
                       <p className="text-[10px] font-bold uppercase text-slate-400">Selo Branco / Autenticação</p>
                     </div>
@@ -8520,74 +10539,167 @@ export default function App() {
 
         {showLevantamentoModal && (
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg border-2 border-slate-100 overflow-hidden"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border-2 border-slate-100 overflow-hidden"
             >
-              <div className="p-6 bg-slate-50 border-b-2 border-slate-100 flex items-center justify-between">
+              {/* Header */}
+              <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-600 text-white rounded-lg"><Check size={18} /></div>
-                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Realizar Levantamento</h3>
+                  <div className="p-2 bg-white/10 rounded-lg"><Check size={18} className="text-white" /></div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Realizar Levantamento</h3>
                 </div>
-                <button onClick={() => setShowLevantamentoModal(false)} className="text-slate-400 hover:text-slate-900 transition-colors">
-                  <X size={20} />
+                <button onClick={() => { setShowLevantamentoModal(false); setLevantamentoIsOwner(null); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); }}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                  <X size={18} />
                 </button>
               </div>
 
-              <div className="p-8 space-y-6">
-                <div className="grid grid-cols-1 gap-6">
-                  <DetailField 
-                    label="Nome" 
-                    value={levantamentoData.nome} 
-                    readOnly={false}
-                    onChange={(val) => setLevantamentoData({...levantamentoData, nome: val})}
-                  />
-                  <DetailField 
-                    label="Apelido" 
-                    value={levantamentoData.apelido} 
-                    readOnly={false}
-                    onChange={(val) => setLevantamentoData({...levantamentoData, apelido: val})}
-                  />
-                  <DetailField 
-                    label="Data Nascimento" 
-                    value={levantamentoData.dataNascimento} 
-                    type="date"
-                    readOnly={false}
-                    icon={Calendar}
-                    onChange={(val) => setLevantamentoData({...levantamentoData, dataNascimento: val})}
-                  />
+              <div className="p-6 space-y-6">
+                {/* Dados do documento (sempre visível) */}
+                <div className="bg-slate-50 border-2 border-slate-100 rounded-xl p-4 space-y-3">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Documento a Levantar</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Titular</p>
+                      <p className="text-sm font-black text-slate-900">{registeredDoc?.document?.fullName || '---'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Nº Documento</p>
+                      <p className="text-sm font-black text-slate-900">{registeredDoc?.document?.number || '---'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Tipo</p>
+                      <p className="text-sm font-black text-slate-900">{registeredDoc?.document?.type || '---'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Data Nascimento</p>
+                      <p className="text-sm font-black text-slate-900">{registeredDoc?.document?.birthDate || '---'}</p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex gap-4 pt-4">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => setShowLevantamentoModal(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    variant="primary" 
-                    className="flex-1 bg-green-600 hover:bg-green-700 border-green-600"
-                    icon={Check}
-                    onClick={() => {
-                      setRegisteredDoc({
-                        ...registeredDoc,
-                        levantamento: {
-                          ...levantamentoData,
-                          registadoPor: user?.name || 'Agente PN - 001',
-                          dataLevantamento: new Date().toLocaleDateString('pt-BR')
-                        }
-                      });
-                      setShowLevantamentoModal(false);
-                      setSuccessMessage('Levantamento realizado com sucesso');
-                      setShowSuccessModal(true);
-                    }}
-                  >
-                    Concluir Levantamento
-                  </Button>
+                {/* Pergunta: quem levanta? */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Quem está a realizar o levantamento?</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => { setLevantamentoIsOwner(true); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); }}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${
+                        levantamentoIsOwner === true
+                          ? 'border-emerald-500 bg-emerald-50'
+                          : 'border-slate-100 bg-slate-50 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${levantamentoIsOwner === true ? 'border-emerald-500' : 'border-slate-300'}`}>
+                          {levantamentoIsOwner === true && <div className="w-2 h-2 rounded-full bg-emerald-500" />}
+                        </div>
+                        <span className="text-xs font-black text-slate-900">O Próprio Titular</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-medium pl-6">O dono do documento</p>
+                    </button>
+                    <button
+                      onClick={() => setLevantamentoIsOwner(false)}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${
+                        levantamentoIsOwner === false
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-slate-100 bg-slate-50 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${levantamentoIsOwner === false ? 'border-blue-500' : 'border-slate-300'}`}>
+                          {levantamentoIsOwner === false && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+                        </div>
+                        <span className="text-xs font-black text-slate-900">Outra Pessoa</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-medium pl-6">Terceiro autorizado</p>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Campos para outra pessoa */}
+                {levantamentoIsOwner === false && (
+                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-blue-500 pl-3">Dados do Coletor</p>
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome Completo <span className="text-red-500">*</span></label>
+                        <input type="text" value={levantamentoOtherPerson.fullName}
+                          onChange={(e) => setLevantamentoOtherPerson({...levantamentoOtherPerson, fullName: e.target.value})}
+                          placeholder="Nome completo do coletor"
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data de Nascimento <span className="text-red-500">*</span></label>
+                        <input type="date" value={levantamentoOtherPerson.birthDate}
+                          onChange={(e) => setLevantamentoOtherPerson({...levantamentoOtherPerson, birthDate: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo Documento <span className="text-red-500">*</span></label>
+                          <select value={levantamentoOtherPerson.docType}
+                            onChange={(e) => setLevantamentoOtherPerson({...levantamentoOtherPerson, docType: e.target.value})}
+                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all">
+                            <option value="CNI">CNI</option>
+                            <option value="BI">BI</option>
+                            <option value="Passaporte">Passaporte</option>
+                            <option value="TRE">TRE</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Documento <span className="text-red-500">*</span></label>
+                          <input type="text" value={levantamentoOtherPerson.docNumber}
+                            onChange={(e) => setLevantamentoOtherPerson({...levantamentoOtherPerson, docNumber: e.target.value})}
+                            placeholder="Nº de identificação"
+                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t-2 border-slate-100 flex gap-3 justify-between">
+                <Button variant="outline" onClick={() => { setShowLevantamentoModal(false); setLevantamentoIsOwner(null); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); }}>
+                  Cancelar
+                </Button>
+                {(() => {
+                  const otherPersonValid = levantamentoOtherPerson.fullName.trim() && levantamentoOtherPerson.birthDate && levantamentoOtherPerson.docNumber.trim();
+                  const canSubmit = levantamentoIsOwner === true || (levantamentoIsOwner === false && otherPersonValid);
+                  return (
+                    <button
+                      disabled={!canSubmit}
+                      onClick={() => {
+                        setRegisteredDoc({
+                          ...registeredDoc,
+                          levantamento: {
+                            isOwner: levantamentoIsOwner,
+                            nome: levantamentoIsOwner ? registeredDoc?.document?.fullName : levantamentoOtherPerson.fullName,
+                            dataNascimento: levantamentoIsOwner ? registeredDoc?.document?.birthDate : levantamentoOtherPerson.birthDate,
+                            docType: levantamentoIsOwner ? registeredDoc?.document?.type : levantamentoOtherPerson.docType,
+                            docNumber: levantamentoIsOwner ? registeredDoc?.document?.number : levantamentoOtherPerson.docNumber,
+                            registadoPor: user?.name || 'Administrador do Sistema',
+                            dataLevantamento: new Date().toLocaleDateString('pt-BR')
+                          }
+                        });
+                        setShowLevantamentoModal(false);
+                        setLevantamentoIsOwner(null);
+                        setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' });
+                        setSuccessMessage('Levantamento realizado com sucesso.');
+                        setShowSuccessModal(true);
+                      }}
+                      className={`px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all ${
+                        canSubmit ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <Check size={14} /> Concluir Levantamento
+                    </button>
+                  );
+                })()}
               </div>
             </motion.div>
           </div>
