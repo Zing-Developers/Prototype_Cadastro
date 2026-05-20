@@ -197,17 +197,17 @@ export default function App() {
   const [persons, setPersons] = useState<any[]>([
     {
       id: 1,
-      process_number: '0001', occurrence_number: 'OC-2023-001', unit: 'ESF', full_name: 'Bruno Fonseca', birth_date: '2010-05-15', gender: 'Masculino', marital_status: 'Solteiro', 
+      process_number: '0001', occurrence_number: 'OC-2023-001', unit: 'ESF', full_name: 'Bruno Fonseca', birth_date: '2010-05-15', gender: 'Masculino', marital_status: 'Solteiro', received_date: '2023-03-19',
       naturality: 'Cabo Verde', nationality: 'Cabo Verde', father_name: 'António Fonseca', mother_name: 'Maria Fonseca', profession: 'Estudante', 
       doc_type: 'BI', doc_number: '001234567LA041', doc_issue_date: '2020-01-01', doc_expiry_date: '2030-01-01', doc_issue_location: 'Praia',
       phone: '9884565', email: 'bruno@email.cv', island: 'Santiago', municipality: 'Praia', parish: 'N.S. Da Graça', locality: 'Cidade Da Praia', zone: 'Txadinha', reference_point: 'Perto da Escola',
-      nif: '200123456', status: 'Por Registar', sent_by: 'Agente Mascarenha', sent_date: '2023-03-20', sent_unit: 'ESF Praia', completed_by: null, completed_date: null, completed_unit: null,
+      nif: '200123456', status: 'Por Registar', sent_by: 'Mascarenha', sent_date: '2023-03-20', sent_unit: 'ESF Praia', completed_by: null, completed_date: null, completed_unit: null,
       records: [
         {id: 1, person_id: 1, date: '2023-05-12', reason: 'Furto qualificado em residência', ref_note: 'REF-2023-045', destination: 'Ministério Público', measures: 'Termo de Identidade e Residência', type: 'Criminal'}
       ],
       observations: [
-        {id: 1, person_id: 1, author: 'Agente Mascarenha', date: '2023-03-20', content: 'O indivíduo demonstrou comportamento cooperativo durante a abordagem inicial, mas apresentou resistência ao ser informado sobre a detenção.'},
-        {id: 2, person_id: 1, author: 'Inspetor Tavares', date: '2024-10-11', content: 'Evidências coletadas no local confirmam a participação direta do suspeito no evento reportado. Relatório detalhado anexo ao processo físico.'}
+        {id: 1, person_id: 1, author: 'Mascarenha', date: '2023-03-20', content: 'O indivíduo demonstrou comportamento cooperativo durante a abordagem inicial, mas apresentou resistência ao ser informado sobre a detenção.'},
+        {id: 2, person_id: 1, author: 'Tavares', date: '2024-10-11', content: 'Evidências coletadas no local confirmam a participação direta do suspeito no evento reportado. Relatório detalhado anexo ao processo físico.'}
       ]
     }
   ]);
@@ -290,7 +290,7 @@ export default function App() {
               { name: 'comprovativo_residencia.pdf', size: 1024 * 120 }
             ],
             requestedAt: '29/04/2025',
-            requestedBy: 'Agente Bruno Fonseca'
+            requestedBy: 'Bruno Fonseca'
           }
         },
         { id: 2, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: '---', destination: '---', measures: '---', type: 'Policial', status: 'Ativo' },
@@ -309,7 +309,7 @@ export default function App() {
               { name: 'declaracao_bom_comportamento.pdf', size: 1024 * 210 }
             ],
             requestedAt: '10/07/2025',
-            requestedBy: 'Agente Mónica Tavares',
+            requestedBy: 'Mónica Tavares',
             acceptedAt: '18/07/2025',
             acceptedBy: 'Superintendente Carlos Mendes'
           }
@@ -405,6 +405,10 @@ export default function App() {
   const [showAddressDetailsModal, setShowAddressDetailsModal] = useState(false);
   const [selectedAddressDetails, setSelectedAddressDetails] = useState<any>(null);
   
+  // Add Motivo in Ficha State
+  const [showAddMotivoInFicha, setShowAddMotivoInFicha] = useState(false);
+  const [newMotivoInFicha, setNewMotivoInFicha] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' });
+
   // Rehabilitation Modal State
   const [showRehabilitationModal, setShowRehabilitationModal] = useState(false);
   const [showRehabilitationDetailsModal, setShowRehabilitationDetailsModal] = useState(false);
@@ -791,7 +795,7 @@ export default function App() {
         { name: 'foto_frente_bi.jpg', type: 'Imagem' },
         { name: 'auto_ocorrencia.pdf', type: 'PDF' }
       ],
-      registeredBy: 'Agente PN - 001',
+      registeredBy: 'Carlos Mendes',
       registeredAt: '2024-03-01'
     },
     {
@@ -827,7 +831,7 @@ export default function App() {
         observations: 'Passaporte com sinais de uso intenso.'
       },
       attachments: [],
-      registeredBy: 'Agente PN - 042',
+      registeredBy: 'Paulo Lopes',
       registeredAt: '2024-07-10'
     },
     {
@@ -865,7 +869,7 @@ export default function App() {
       attachments: [
         { name: 'cni_frente.jpg', type: 'Imagem' }
       ],
-      registeredBy: 'Agente PN - 017',
+      registeredBy: 'Maria Santos',
       registeredAt: '2025-01-22'
     }
   ]);
@@ -1096,6 +1100,7 @@ export default function App() {
     occurrence_number: '',
     registration_number: '',
     unit: '',
+    received_date: '',
     name: '',
     surname: '',
     birth_date: '',
@@ -1451,15 +1456,18 @@ export default function App() {
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header */}
         <header className="bg-white border-b border-slate-100 px-8 py-4 flex items-center justify-between shadow-[0_1px_2px_rgba(0,0,0,0.02)] z-10">
-          <div className="flex items-center gap-4">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="flex items-center gap-4 hover:opacity-80 transition-opacity"
+          >
             <div className="p-2.5 bg-slate-900 rounded-xl text-white shadow-lg shadow-slate-200">
               <ShieldCheck size={24} />
             </div>
-            <div>
+            <div className="text-left">
               <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">SIC Policial</h2>
               <p className="text-[10px] text-slate-400 uppercase font-black tracking-[0.2em]">Sistema Integrado de Cadastro</p>
             </div>
-          </div>
+          </button>
           
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-4">
@@ -1615,7 +1623,7 @@ export default function App() {
                     {/* Linha 1 — Dados do Processo */}
                     <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-300 pl-3 mb-4">Dados do Processo</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-end">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</label>
                         <input
@@ -1647,6 +1655,15 @@ export default function App() {
                           <option value="ESF">ESF</option>
                           <option value="DP">DP</option>
                         </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Receção</label>
+                        <input
+                          type="date"
+                          value={searchFilters.received_date}
+                          onChange={(e) => setSearchFilters({...searchFilters, received_date: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
+                        />
                       </div>
                     </div>
                     </div>
@@ -1809,6 +1826,7 @@ export default function App() {
                           <th className="px-6 py-4">Nº Ocorrência</th>
                           <th className="px-6 py-4">Nº Registo</th>
                           <th className="px-6 py-4">Unidade</th>
+                          <th className="px-6 py-4">Data Receção</th>
                           <th className="px-6 py-4">Nome</th>
                           <th className="px-6 py-4">Apelido</th>
                           <th className="px-6 py-4">Data Nascimento</th>
@@ -1826,6 +1844,7 @@ export default function App() {
                               <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{p.occurrence_number || '---'}</td>
                               <td className="px-6 py-4 text-sm font-bold text-slate-700">{p.process_number || '---'}</td>
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.unit || '---'}</td>
+                              <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.received_date ? new Date(p.received_date).toLocaleDateString('pt-BR') : '---'}</td>
                               <td className="px-6 py-4 text-sm font-bold text-slate-900">{p.full_name ? p.full_name.split(' ')[0] : '---'}</td>
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.full_name ? p.full_name.split(' ').slice(1).join(' ') || '---' : '---'}</td>
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : '---'}</td>
@@ -1834,7 +1853,7 @@ export default function App() {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={7} className="px-6 py-12 text-center text-slate-400 italic font-medium">Nenhum registro encontrado na base de dados</td>
+                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic font-medium">Nenhum registro encontrado na base de dados</td>
                           </tr>
                         )}
                       </tbody>
@@ -2663,7 +2682,7 @@ export default function App() {
                             setRegisteredDoc({
                               ...docData, 
                               id: '002',
-                              registeredBy: user?.name || 'Agente PN - 001',
+                              registeredBy: user?.name || 'Carlos Mendes',
                               registeredAt: new Date().toLocaleDateString('pt-BR')
                             });
                             setSuccessMessage('Cadastro Documento Perdido com Sucesso');
@@ -2693,7 +2712,7 @@ export default function App() {
                     <History size={14} className="text-slate-400 shrink-0" />
                     <div className="text-right">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registado por</p>
-                      <p className="text-xs font-black text-slate-900">{registeredDoc.registeredBy || 'Agente PN - 001'} <span className="font-medium text-slate-400">•</span> {registeredDoc.registeredAt || new Date().toLocaleDateString('pt-BR')}</p>
+                      <p className="text-xs font-black text-slate-900">{registeredDoc.registeredBy || 'Carlos Mendes'} <span className="font-medium text-slate-400">•</span> {registeredDoc.registeredAt || new Date().toLocaleDateString('pt-BR')}</p>
                     </div>
                   </div>
                 </div>
@@ -3709,7 +3728,7 @@ export default function App() {
                                         <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                                           <th className="px-6 py-4">Data</th>
                                           <th className="px-6 py-4">Motivo</th>
-                                          <th className="px-6 py-4">Nº Ref</th>
+                                          <th className="px-6 py-4">Nº SIG</th>
                                           <th className="px-6 py-4">Destino</th>
                                           <th className="px-6 py-4">Medidas</th>
                                           <th className="px-6 py-4">Tipo</th>
@@ -3752,51 +3771,19 @@ export default function App() {
                       animate={{ opacity: 1, y: 0 }}
                       className="space-y-4 mb-8"
                     >
-                      {/* Banner Area */}
-                      <div className={`${suggestedFicha ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'} border-2 rounded-2xl p-6 shadow-sm mb-4`}>
-                        <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-                          <div className="flex items-center gap-4">
-                            <div className={`p-3 ${suggestedFicha ? 'bg-blue-600 shadow-blue-200' : 'bg-slate-400 shadow-slate-200'} text-white rounded-xl shadow-lg`}>
-                              {suggestedFicha ? <ShieldCheck size={24} /> : <Search size={24} />}
-                            </div>
-                            <div>
-                              <h4 className={`text-sm font-black ${suggestedFicha ? 'text-blue-900' : 'text-slate-900'} uppercase tracking-wider`}>
-                                {suggestedFicha ? 'Possível Correspondência Encontrada' : 'Nenhuma Correspondência Encontrada'}
-                              </h4>
-                              <p className={`text-xs ${suggestedFicha ? 'text-blue-700' : 'text-slate-500'} font-medium italic`}>
-                                {suggestedFicha
-                                  ? <>Dados biográficos coincidem com o cadastro <strong>{suggestedFicha.number}</strong></>
-                                  : 'Não foi encontrada nenhuma correspondência automática para este pedido.'}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-3">
-                            {suggestedFicha && (
-                              <button
-                                onClick={() => {
-                                  setAssociatedPerson(suggestedFicha);
-                                  setSuggestedFicha(null);
-                                  setCertAnalysisHasSearched(true);
-                                }}
-                                className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-xs shadow-lg shadow-blue-200 flex items-center gap-2"
-                              >
-                                <CheckCircle size={14} />
-                                Aceitar Match
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                setHideNewCadastroInAssociate(true);
-                                setCertAnalysisHasSearched(true);
-                                setShowAssociateModal(true);
-                              }}
-                              className="px-4 py-2.5 bg-white text-slate-600 border border-slate-200 font-bold rounded-xl hover:bg-slate-50 transition-all text-xs flex items-center gap-2"
-                            >
-                              <Search size={14} />
-                              Associar Cadastro
-                            </button>
-                          </div>
-                        </div>
+                      {/* Associar Cadastro button */}
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => {
+                            setHideNewCadastroInAssociate(true);
+                            setCertAnalysisHasSearched(true);
+                            setShowAssociateModal(true);
+                          }}
+                          className="px-5 py-2.5 bg-white text-slate-700 border-2 border-slate-200 font-bold rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all text-xs flex items-center gap-2"
+                        >
+                          <Search size={14} />
+                          Associar Cadastro
+                        </button>
                       </div>
 
                       {suggestedFicha && (
@@ -3823,8 +3810,18 @@ export default function App() {
                                 className="overflow-hidden"
                               >
                                 <div className="bg-white border-2 border-blue-100 shadow-blue-50 rounded-2xl p-8 space-y-8 shadow-sm mt-2 relative">
-                                  <div className="absolute top-4 right-8">
-                                    <span className="text-[9px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-full uppercase tracking-tighter">Dados em Revisão</span>
+                                  <div className="absolute top-4 right-8 flex items-center gap-3">
+                                    <button
+                                      onClick={() => {
+                                        setAssociatedPerson(suggestedFicha);
+                                        setSuggestedFicha(null);
+                                        setCertAnalysisHasSearched(true);
+                                      }}
+                                      className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-xs shadow-md shadow-blue-200 flex items-center gap-2"
+                                    >
+                                      <CheckCircle size={13} />
+                                      Aceitar Match
+                                    </button>
                                   </div>
 
                                   <div className="flex flex-col md:flex-row gap-8">
@@ -3842,7 +3839,7 @@ export default function App() {
                                       </div>
                                     </div>
 
-                                    <div className="flex-1 space-y-6">
+                                    <div className="flex-1 space-y-6 pt-8">
                                       <div className="w-full max-w-xs">
                                         <DetailField label="Cadastro nº:" value={suggestedFicha.number} />
                                       </div>
@@ -4393,7 +4390,7 @@ export default function App() {
                                       <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                                         <th className="px-6 py-4">Data</th>
                                         <th className="px-6 py-4">Motivo</th>
-                                        <th className="px-6 py-4">Nº Ref</th>
+                                        <th className="px-6 py-4">Nº SIG</th>
                                         <th className="px-6 py-4">Destino</th>
                                         <th className="px-6 py-4">Medidas</th>
                                         <th className="px-6 py-4">Tipo</th>
@@ -4912,7 +4909,7 @@ export default function App() {
                                       <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                                         <th className="px-6 py-4">Data</th>
                                         <th className="px-6 py-4">Motivo</th>
-                                        <th className="px-6 py-4">Nº Ref</th>
+                                        <th className="px-6 py-4">Nº SIG</th>
                                         <th className="px-6 py-4">Destino</th>
                                         <th className="px-6 py-4">Medidas</th>
                                         <th className="px-6 py-4">Tipo</th>
@@ -5655,7 +5652,7 @@ export default function App() {
                                     </select>
                                   </div>
                                   <DetailField label="Data" value={newFichaNewReason.date} type="date" readOnly={false} icon={Calendar} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, date: v})} />
-                                  <DetailField label="N.º Referência" value={newFichaNewReason.refNo} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, refNo: v})} />
+                                  <DetailField label="Nº SIG" value={newFichaNewReason.refNo} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, refNo: v})} />
                                   <DetailField label="Destino" value={newFichaNewReason.destination} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, destination: v})} />
                                   <div className="md:col-span-3">
                                     <DetailField label="Medidas Aplicadas" value={newFichaNewReason.measures} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, measures: v})} />
@@ -6796,13 +6793,109 @@ export default function App() {
                         className="overflow-hidden"
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
+                          {/* Add Motivo Form */}
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => setShowAddMotivoInFicha(v => !v)}
+                              className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-700 transition-all text-xs flex items-center gap-2"
+                            >
+                              <Plus size={14} />
+                              Adicionar Motivo
+                            </button>
+                          </div>
+                          <AnimatePresence>
+                            {showAddMotivoInFicha && (
+                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 space-y-6">
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="md:col-span-2 space-y-2">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo *</label>
+                                      <select value={newMotivoInFicha.reason} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, reason: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                        <option value="">Selecione o motivo...</option>
+                                        <option>Detenção em flagrante delito</option>
+                                        <option>Suspeito de furto qualificado</option>
+                                        <option>Desordem pública e resistência à autoridade</option>
+                                        <option>Tráfico de estupefacientes</option>
+                                        <option>Violência doméstica</option>
+                                        <option>Condução sob efeito de álcool</option>
+                                        <option>Porte ilegal de arma</option>
+                                        <option>Vandalismo e dano em propriedade alheia</option>
+                                        <option>Burla e falsificação de documentos</option>
+                                        <option>Associação criminosa</option>
+                                      </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo</label>
+                                      <select value={newMotivoInFicha.type} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, type: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                        <option value="Criminal">Criminal</option>
+                                        <option value="Policial">Policial</option>
+                                      </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</label>
+                                      <input type="date" value={newMotivoInFicha.date} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, date: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº SIG</label>
+                                      <input type="text" value={newMotivoInFicha.refNo} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, refNo: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Destino</label>
+                                      <select value={newMotivoInFicha.destination} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, destination: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                        <option value="">Selecione o destino...</option>
+                                        <option>Tribunal de Comarca da Praia</option>
+                                        <option>Tribunal de Comarca de São Vicente</option>
+                                        <option>Tribunal de Comarca de Santa Catarina</option>
+                                        <option>Ministério Público</option>
+                                        <option>Prisão Central da Praia</option>
+                                        <option>Estabelecimento Prisional de São Vicente</option>
+                                        <option>Liberdade Provisória</option>
+                                        <option>Arquivo</option>
+                                      </select>
+                                    </div>
+                                    <div className="md:col-span-3 space-y-2">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medidas Aplicadas</label>
+                                      <select value={newMotivoInFicha.measures} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, measures: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                        <option value="">Selecione a medida...</option>
+                                        <option>Prisão preventiva</option>
+                                        <option>Liberdade provisória</option>
+                                        <option>Termo de identidade e residência</option>
+                                        <option>Multa aplicada</option>
+                                        <option>Suspensão da carta de condução</option>
+                                        <option>Trabalho a favor da comunidade</option>
+                                        <option>Proibição de contacto com a vítima</option>
+                                        <option>Pulseira eletrónica</option>
+                                        <option>Internamento compulsivo</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-end gap-3">
+                                    <button onClick={() => { setShowAddMotivoInFicha(false); setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' }); }} className="px-4 py-2 bg-white text-slate-600 border-2 border-slate-200 font-bold rounded-xl hover:bg-slate-50 transition-all text-xs">Cancelar</button>
+                                    <button
+                                      onClick={() => {
+                                        if (!newMotivoInFicha.reason) return;
+                                        const newReg = { ...newMotivoInFicha, id: Date.now(), status: 'Ativo' };
+                                        setSelectedFicha((prev: any) => ({ ...prev, registrationReasons: [...(prev.registrationReasons || []), newReg] }));
+                                        setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' });
+                                        setShowAddMotivoInFicha(false);
+                                      }}
+                                      className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-700 transition-all text-xs flex items-center gap-2"
+                                    >
+                                      <Plus size={14} />
+                                      Adicionar
+                                    </button>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                           <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
                             <table className="w-full text-left border-collapse">
                               <thead>
                                 <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                                   <th className="px-6 py-4">Data</th>
                                   <th className="px-6 py-4">Motivo</th>
-                                  <th className="px-6 py-4">Nº Ref</th>
+                                  <th className="px-6 py-4">Nº SIG</th>
                                   <th className="px-6 py-4">Destino</th>
                                   <th className="px-6 py-4">Medidas</th>
                                   <th className="px-6 py-4">Tipo</th>
@@ -7176,7 +7269,13 @@ export default function App() {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b-2 border-slate-100 pb-6 gap-4">
                   <div className="space-y-1">
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Registo de Pessoa</h2>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Processo nº {selectedPerson.process_number} • Unidade: {selectedPerson.unit}</p>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Registo: <span className="text-slate-600">{selectedPerson.process_number || '---'}</span></span>
+                      <span className="text-slate-200 font-black">·</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência: <span className="text-slate-600">{selectedPerson.occurrence_number || '---'}</span></span>
+                      <span className="text-slate-200 font-black">·</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade: <span className="text-slate-600">{selectedPerson.sent_unit || selectedPerson.unit || '---'}</span></span>
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap gap-4">
@@ -7304,49 +7403,18 @@ export default function App() {
                       animate={{ opacity: 1, y: 0 }}
                       className="space-y-4 mb-8"
                     >
-                      {/* Banner Area */}
-                      <div className={`${suggestedFicha ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'} border-2 rounded-2xl p-6 shadow-sm mb-4`}>
-                        <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-                          <div className="flex items-center gap-4">
-                            <div className={`p-3 ${suggestedFicha ? 'bg-blue-600 shadow-blue-200' : 'bg-slate-400 shadow-slate-200'} text-white rounded-xl shadow-lg`}>
-                              {suggestedFicha ? <ShieldCheck size={24} /> : <Search size={24} />}
-                            </div>
-                            <div>
-                              <h4 className={`text-sm font-black ${suggestedFicha ? 'text-blue-900' : 'text-slate-900'} uppercase tracking-wider`}>
-                                {suggestedFicha ? 'Possível Correspondência Encontrada' : 'Nenhuma Correspondência Encontrada'}
-                              </h4>
-                              <p className={`text-xs ${suggestedFicha ? 'text-blue-700' : 'text-slate-500'} font-medium italic`}>
-                                {suggestedFicha 
-                                  ? <>Dados biográficos coincidem com o cadastro <strong>{suggestedFicha.number}</strong></>
-                                  : 'Não foi encontrada nenhuma correspondência automática para esta pessoa.'}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-3">
-                            {suggestedFicha && (
-                              <button 
-                                onClick={() => {
-                                  setAssociatedPerson(suggestedFicha);
-                                  setSuggestedFicha(null);
-                                }}
-                                className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-xs shadow-lg shadow-blue-200 flex items-center gap-2"
-                              >
-                                <CheckCircle size={14} />
-                                Aceitar Match
-                              </button>
-                            )}
-                            <button 
-                              onClick={() => {
-                                setHideNewCadastroInAssociate(false);
-                                setShowAssociateModal(true);
-                              }}
-                              className="px-4 py-2.5 bg-white text-slate-600 border border-slate-200 font-bold rounded-xl hover:bg-slate-50 transition-all text-xs flex items-center gap-2"
-                            >
-                              <Search size={14} />
-                              Associar Cadastro
-                            </button>
-                          </div>
-                        </div>
+                      {/* Associar Cadastro button */}
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => {
+                            setHideNewCadastroInAssociate(false);
+                            setShowAssociateModal(true);
+                          }}
+                          className="px-5 py-2.5 bg-white text-slate-700 border-2 border-slate-200 font-bold rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all text-xs flex items-center gap-2"
+                        >
+                          <Search size={14} />
+                          Associar Cadastro
+                        </button>
                       </div>
 
                       {suggestedFicha && (
@@ -7373,8 +7441,17 @@ export default function App() {
                                 className="overflow-hidden"
                               >
                                 <div className="bg-white border-2 border-blue-100 shadow-blue-50 rounded-2xl p-8 space-y-8 shadow-sm mt-2 relative">
-                                  <div className="absolute top-4 right-8">
-                                    <span className="text-[9px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-full uppercase tracking-tighter">Dados em Revisão</span>
+                                  <div className="absolute top-4 right-8 flex items-center gap-3">
+                                    <button
+                                      onClick={() => {
+                                        setAssociatedPerson(suggestedFicha);
+                                        setSuggestedFicha(null);
+                                      }}
+                                      className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all text-xs shadow-md shadow-blue-200 flex items-center gap-2"
+                                    >
+                                      <CheckCircle size={13} />
+                                      Aceitar Match
+                                    </button>
                                   </div>
                                   
                                   <div className="flex flex-col md:flex-row gap-8">
@@ -8180,7 +8257,7 @@ export default function App() {
                               <tr className="bg-slate-200 text-slate-700 text-xs uppercase font-bold">
                                 <th className="px-4 py-2 border-r border-slate-300">Data</th>
                                 <th className="px-4 py-2 border-r border-slate-300">Motivo do Cadastro</th>
-                                <th className="px-4 py-2 border-r border-slate-300">Nº Ref/ Nota</th>
+                                <th className="px-4 py-2 border-r border-slate-300">Nº SIG</th>
                                 <th className="px-4 py-2 border-r border-slate-300">Destino</th>
                                 <th className="px-4 py-2 border-r border-slate-300">Medidas</th>
                                 <th className="px-4 py-2">Tipo</th>
