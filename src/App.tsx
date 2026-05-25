@@ -49,7 +49,8 @@ import {
   RotateCcw,
   CheckCircle,
   Database,
-  UserPlus
+  UserPlus,
+  Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -7352,10 +7353,32 @@ export default function App() {
                                         <Search size={14} />
                                         Alterar Vínculo
                                       </button>
-                                      <button 
+                                      <button
                                         onClick={() => {
                                           setHideNewCadastroInAssociate(true);
                                           setIsNewRegistration(true);
+                                          setSelectedFicha(null);
+                                          setExpandedSections(prev => ({ ...prev, other_info: true }));
+                                          // Pré-preencher residência e contactos a partir dos dados SIGO
+                                          if (selectedPerson) {
+                                            const today = new Date().toISOString().split('T')[0];
+                                            const sigoAddress = {
+                                              id: Date.now(),
+                                              type: 'Residência',
+                                              island: selectedPerson.island || '',
+                                              council: selectedPerson.municipality || '',
+                                              parish: selectedPerson.parish || '',
+                                              locality: selectedPerson.locality || '',
+                                              reference: selectedPerson.reference_point || selectedPerson.zone || '',
+                                              createdAt: today,
+                                              validFrom: today,
+                                              validTo: null,
+                                              user: user?.name || 'Sistema',
+                                              fromSigo: true
+                                            };
+                                            setSavedAddresses([]);
+                                            setSavedContacts([]);
+                                          }
                                         }}
                                         className="px-4 py-2 bg-blue-400 text-white font-bold rounded-xl hover:bg-blue-500 transition-all text-xs border border-blue-400 shadow-sm flex items-center gap-2"
                                       >
@@ -7538,26 +7561,32 @@ export default function App() {
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-900 text-white rounded-lg"><User size={18} /></div>
                       <span className="uppercase tracking-widest text-xs">Dados Biográficos</span>
+                      <span className="text-[9px] font-black bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full uppercase tracking-widest">SIGO</span>
                     </div>
                     {expandedSections.biographic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </button>
-                  
+
                   <AnimatePresence>
                     {expandedSections.biographic && (
-                      <motion.div 
+                      <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden"
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8 mt-2">
+                          {/* SIGO notice */}
+                          <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5">
+                            <Lock size={12} className="text-blue-400 flex-shrink-0" />
+                            <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Dados provenientes do SIGO — não editáveis</p>
+                          </div>
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                           <DetailField label="Nome Completo" value={selectedPerson.full_name} />
                           <DetailField label="Data Nascimento *" value={selectedPerson.birth_date ? new Date(selectedPerson.birth_date).toLocaleDateString('pt-BR') : '---'} icon={Calendar} />
-                          <DetailField label="Sexo" value={selectedPerson.gender} type="select" options={['Masculino', 'Feminino', 'Outro']} />
-                          <DetailField label="Estado Civil" value={selectedPerson.marital_status} type="select" options={['Solteiro', 'Casado', 'Divorciado', 'Viúvo']} />
-                          <DetailField label="Naturalidade" value={selectedPerson.naturality} type="select" options={['Cabo Verde', 'Angola', 'Portugal']} />
-                          <DetailField label="Nacionalidade" value={selectedPerson.nationality} type="select" options={['Cabo Verde', 'Angola', 'Portugal']} />
+                          <DetailField label="Sexo" value={selectedPerson.gender} />
+                          <DetailField label="Estado Civil" value={selectedPerson.marital_status} />
+                          <DetailField label="Naturalidade" value={selectedPerson.naturality} />
+                          <DetailField label="Nacionalidade" value={selectedPerson.nationality} />
                           <DetailField label="Nome Pai" value={selectedPerson.father_name} />
                           <DetailField label="Nome Mãe" value={selectedPerson.mother_name} />
                           <DetailField label="Profissão" value={selectedPerson.profession} />
@@ -7567,8 +7596,8 @@ export default function App() {
                         <div className="space-y-4 mt-8">
                           <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Identificação</h3>
                           <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-                            <DetailField label="NIF" value={selectedPerson.nif || ''} readOnly={false} onChange={(val) => setSelectedPerson({...selectedPerson, nif: val})} />
-                            <DetailField label="Tipo Documento" value={selectedPerson.doc_type} type="select" options={['CNI', 'Passaporte', 'BI']} />
+                            <DetailField label="NIF" value={selectedPerson.nif || ''} />
+                            <DetailField label="Tipo Documento" value={selectedPerson.doc_type} />
                             <DetailField label="Número Documento" value={selectedPerson.doc_number} />
                             <DetailField label="Data Emissão" value={selectedPerson.doc_issue_date ? new Date(selectedPerson.doc_issue_date).toLocaleDateString('pt-BR') : '---'} icon={Calendar} />
                             <DetailField label="Data Validade" value={selectedPerson.doc_expiry_date ? new Date(selectedPerson.doc_expiry_date).toLocaleDateString('pt-BR') : '---'} icon={Calendar} />
@@ -7576,27 +7605,6 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Contacto */}
-                        <div className="space-y-4 mt-8">
-                          <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contacto</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <DetailField label="Telemovel" value={selectedPerson.phone} />
-                            <DetailField label="Email" value={selectedPerson.email} />
-                          </div>
-                        </div>
-
-                        {/* Residencia */}
-                        <div className="space-y-4 mt-8">
-                          <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Residencia</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <DetailField label="Ilha" value={selectedPerson.island} type="select" options={['Santiago', 'São Vicente', 'Sal', 'Fogo', 'Santo Antão']} />
-                            <DetailField label="Concelho" value={selectedPerson.municipality} type="select" options={['Praia', 'Mindelo', 'Espargos', 'São Filipe', 'Porto Novo']} />
-                            <DetailField label="Freguesia" value={selectedPerson.parish} type="select" options={['N.S. Da Graça', 'N.S. Da Luz']} />
-                            <DetailField label="Localidade" value={selectedPerson.locality} type="select" options={['Cidade Da Praia', 'Mindelo']} />
-                            <DetailField label="Zona" value={selectedPerson.zone} type="select" options={['Txadinha', 'Monte Sossego']} />
-                            <DetailField label="Outro Ponto de Referência" value={selectedPerson.reference_point} />
-                          </div>
-                        </div>
                       </div>
                     </motion.div>
                     )}
@@ -7768,14 +7776,8 @@ export default function App() {
                   )}
                 </AnimatePresence>
 
-                {/* Outras Informações Accordion (New Registration Mode) */}
-                <AnimatePresence>
-                  {isNewRegistration && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="space-y-4"
-                    >
+                {/* Outras Informações Accordion */}
+                <div className="space-y-4">
                       <button 
                         onClick={() => toggleSection('other_info')}
                         className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
@@ -7798,14 +7800,18 @@ export default function App() {
                             <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm mt-2 space-y-12">
                               {/* Endereço */}
                               <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                  <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Endereço</h4>
+                                  {isNewRegistration && (
+                                    <Button variant="outline" icon={showAddAddress ? X : Plus} onClick={() => setShowAddAddress(!showAddAddress)}>
+                                      {showAddAddress ? 'Cancelar' : 'Adicionar Endereço'}
+                                    </Button>
+                                  )}
+                                </div>
+                                {/* Formulário — só em novo cadastro */}
                                 <AnimatePresence>
-                                  {showAddAddress && (
-                                    <motion.div 
-                                      initial={{ height: 0, opacity: 0 }}
-                                      animate={{ height: 'auto', opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
-                                      className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
-                                    >
+                                  {isNewRegistration && showAddAddress && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
                                       <div className="flex justify-between items-center border-b border-slate-200 pb-2">
                                         <h5 className="text-xs font-bold text-slate-700 uppercase">Novo Endereço</h5>
                                         <button onClick={() => setShowAddAddress(false)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
@@ -7813,11 +7819,7 @@ export default function App() {
                                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div className="space-y-1">
                                           <label className="text-[10px] font-bold text-slate-500 uppercase">Tipo</label>
-                                          <select 
-                                            value={newAddress.type}
-                                            onChange={(e) => setNewAddress({...newAddress, type: e.target.value})}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                          >
+                                          <select value={newAddress.type} onChange={(e) => setNewAddress({...newAddress, type: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors">
                                             <option value="Residência">Residência</option>
                                             <option value="Trabalho">Trabalho</option>
                                             <option value="Outro">Outro</option>
@@ -7825,11 +7827,7 @@ export default function App() {
                                         </div>
                                         <div className="space-y-1">
                                           <label className="text-[10px] font-bold text-slate-500 uppercase">Ilha</label>
-                                          <select 
-                                            value={newAddress.island}
-                                            onChange={(e) => setNewAddress({...newAddress, island: e.target.value})}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                          >
+                                          <select value={newAddress.island} onChange={(e) => setNewAddress({...newAddress, island: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors">
                                             <option value="">Selecione...</option>
                                             <option value="Santiago">Santiago</option>
                                             <option value="São Vicente">São Vicente</option>
@@ -7844,11 +7842,7 @@ export default function App() {
                                         </div>
                                         <div className="space-y-1">
                                           <label className="text-[10px] font-bold text-slate-500 uppercase">Conselho</label>
-                                          <select 
-                                            value={newAddress.council}
-                                            onChange={(e) => setNewAddress({...newAddress, council: e.target.value})}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                          >
+                                          <select value={newAddress.council} onChange={(e) => setNewAddress({...newAddress, council: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors">
                                             <option value="">Selecione...</option>
                                             <option value="Praia">Praia</option>
                                             <option value="Mindelo">Mindelo</option>
@@ -7858,11 +7852,7 @@ export default function App() {
                                         </div>
                                         <div className="space-y-1">
                                           <label className="text-[10px] font-bold text-slate-500 uppercase">Freguesia</label>
-                                          <select 
-                                            value={newAddress.parish}
-                                            onChange={(e) => setNewAddress({...newAddress, parish: e.target.value})}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                          >
+                                          <select value={newAddress.parish} onChange={(e) => setNewAddress({...newAddress, parish: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors">
                                             <option value="">Selecione...</option>
                                             <option value="Nossa Senhora da Graça">Nossa Senhora da Graça</option>
                                             <option value="São Nicolau Tolentino">São Nicolau Tolentino</option>
@@ -7871,11 +7861,7 @@ export default function App() {
                                         </div>
                                         <div className="space-y-1">
                                           <label className="text-[10px] font-bold text-slate-500 uppercase">Localidade</label>
-                                          <select 
-                                            value={newAddress.locality}
-                                            onChange={(e) => setNewAddress({...newAddress, locality: e.target.value})}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                          >
+                                          <select value={newAddress.locality} onChange={(e) => setNewAddress({...newAddress, locality: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors">
                                             <option value="">Selecione...</option>
                                             <option value="Achada Santo António">Achada Santo António</option>
                                             <option value="Palmarejo">Palmarejo</option>
@@ -7885,75 +7871,75 @@ export default function App() {
                                         </div>
                                         <div className="space-y-1">
                                           <label className="text-[10px] font-bold text-slate-500 uppercase">Referência</label>
-                                          <input 
-                                            type="text" 
-                                            value={newAddress.reference}
-                                            onChange={(e) => setNewAddress({...newAddress, reference: e.target.value})}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                          />
+                                          <input type="text" value={newAddress.reference} onChange={(e) => setNewAddress({...newAddress, reference: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
                                         </div>
                                       </div>
                                       <div className="flex justify-end">
-                                        <button 
-                                          onClick={() => handleAddOtherInfo('address')}
-                                          className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors"
-                                        >
-                                          Confirmar Adição
-                                        </button>
+                                        <button onClick={() => handleAddOtherInfo('address')} className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors">Confirmar Adição</button>
                                       </div>
                                     </motion.div>
                                   )}
                                 </AnimatePresence>
-
-                                <div className="flex justify-between items-center">
-                                  <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Endereço</h4>
-                                  <Button 
-                                    variant="outline" 
-                                    icon={showAddAddress ? X : Plus} 
-                                    onClick={() => setShowAddAddress(!showAddAddress)}
-                                  >
-                                    {showAddAddress ? 'Cancelar' : 'Adicionar Endereço'}
-                                  </Button>
-                                </div>
-
                                 <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
                                   <table className="w-full text-left border-collapse">
                                     <thead>
                                       <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                        <th className="px-6 py-4">N º</th>
+                                        <th className="px-6 py-4">Nº</th>
                                         <th className="px-6 py-4">Tipo</th>
                                         <th className="px-6 py-4">Ilha</th>
                                         <th className="px-6 py-4">Localidade</th>
-                                        <th className="px-6 py-4">Criado em</th>
                                         <th className="px-6 py-4 text-right">Ação</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                      {(selectedFicha?.addresses || savedAddresses)?.filter((a: any) => a.validTo === null).map((addr: any, idx: number) => (
-                                        <tr key={addr.id} className="hover:bg-slate-50 transition-colors group">
-                                          <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
-                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.type}</td>
-                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.island}</td>
-                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.locality}</td>
-                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.validFrom}</td>
-                                          <td className="px-6 py-4 text-right flex justify-end gap-3">
-                                            <button 
+                                      {/* Linha SIGO — sempre visível */}
+                                      {selectedPerson?.island && (
+                                        <tr className="bg-blue-50/40">
+                                          <td className="px-6 py-4 text-xs font-black text-slate-900">01</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">Residência</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{selectedPerson.island}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{selectedPerson.locality || '---'}</td>
+                                          <td className="px-6 py-4 text-right">
+                                            <button
                                               onClick={() => {
-                                                setSelectedAddressDetails(addr);
+                                                setSelectedAddressDetails({
+                                                  type: 'Residência',
+                                                  island: selectedPerson.island,
+                                                  council: selectedPerson.municipality,
+                                                  parish: selectedPerson.parish,
+                                                  locality: selectedPerson.locality,
+                                                  zone: selectedPerson.zone,
+                                                  reference: selectedPerson.reference_point,
+                                                  validFrom: '—',
+                                                  user: 'SIGO',
+                                                });
                                                 setShowAddressDetailsModal(true);
                                               }}
                                               className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all"
                                             >
                                               <Search size={16} />
                                             </button>
-                                            {!addr.validTo && (
-                                              <button 
-                                                onClick={() => handleDeactivateOtherInfo('address', addr.id)}
-                                                className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors"
-                                              >
-                                                Desativar
-                                              </button>
-                                            )}
+                                          </td>
+                                        </tr>
+                                      )}
+                                      {/* Linhas adicionadas manualmente — só em novo cadastro */}
+                                      {isNewRegistration && savedAddresses?.filter((a: any) => a.validTo === null).map((addr: any, idx: number) => (
+                                        <tr key={addr.id} className="hover:bg-slate-50 transition-colors group">
+                                          <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 2).toString().padStart(2, '0')}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.type}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.island}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.locality}</td>
+                                          <td className="px-6 py-4 text-right flex justify-end gap-2">
+                                            <button
+                                              onClick={() => {
+                                                setSelectedAddressDetails({ ...addr, council: addr.municipality });
+                                                setShowAddressDetailsModal(true);
+                                              }}
+                                              className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+                                            >
+                                              <Search size={16} />
+                                            </button>
+                                            <button onClick={() => setSavedAddresses(prev => prev.filter((a: any) => a.id !== addr.id))} className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors">Remover</button>
                                           </td>
                                         </tr>
                                       ))}
@@ -7964,14 +7950,18 @@ export default function App() {
 
                               {/* Contactos */}
                               <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                  <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</h4>
+                                  {isNewRegistration && (
+                                    <Button variant="outline" icon={showAddContact ? X : Plus} onClick={() => setShowAddContact(!showAddContact)}>
+                                      {showAddContact ? 'Cancelar' : 'Adicionar Contacto'}
+                                    </Button>
+                                  )}
+                                </div>
+                                {/* Formulário — só em novo cadastro */}
                                 <AnimatePresence>
-                                  {showAddContact && (
-                                    <motion.div 
-                                      initial={{ height: 0, opacity: 0 }}
-                                      animate={{ height: 'auto', opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
-                                      className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
-                                    >
+                                  {isNewRegistration && showAddContact && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
                                       <div className="flex justify-between items-center border-b border-slate-200 pb-2">
                                         <h5 className="text-xs font-bold text-slate-700 uppercase">Novo Contacto</h5>
                                         <button onClick={() => setShowAddContact(false)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
@@ -7979,11 +7969,7 @@ export default function App() {
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-1">
                                           <label className="text-[10px] font-bold text-slate-500 uppercase">Tipo</label>
-                                          <select 
-                                            value={newContact.type}
-                                            onChange={(e) => setNewContact({...newContact, type: e.target.value})}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                          >
+                                          <select value={newContact.type} onChange={(e) => setNewContact({...newContact, type: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors">
                                             <option value="Telemóvel">Telemóvel</option>
                                             <option value="Telefone">Telefone</option>
                                             <option value="Email">Email</option>
@@ -7991,65 +7977,52 @@ export default function App() {
                                         </div>
                                         <div className="space-y-1">
                                           <label className="text-[10px] font-bold text-slate-500 uppercase">Informação</label>
-                                          <input 
-                                            type="text" 
-                                            value={newContact.info}
-                                            onChange={(e) => setNewContact({...newContact, info: e.target.value})}
-                                            placeholder="Ex: 999 99 99 ou email@exemplo.com"
-                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                          />
+                                          <input type="text" value={newContact.info} onChange={(e) => setNewContact({...newContact, info: e.target.value})} placeholder="Ex: 999 99 99 ou email@exemplo.com" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
                                         </div>
                                       </div>
                                       <div className="flex justify-end">
-                                        <button 
-                                          onClick={() => handleAddOtherInfo('contact')}
-                                          className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors"
-                                        >
-                                          Confirmar Adição
-                                        </button>
+                                        <button onClick={() => handleAddOtherInfo('contact')} className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors">Confirmar Adição</button>
                                       </div>
                                     </motion.div>
                                   )}
                                 </AnimatePresence>
-
-                                <div className="flex justify-between items-center">
-                                  <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</h4>
-                                  <Button 
-                                    variant="outline" 
-                                    icon={showAddContact ? X : Plus} 
-                                    onClick={() => setShowAddContact(!showAddContact)}
-                                  >
-                                    {showAddContact ? 'Cancelar' : 'Adicionar Contacto'}
-                                  </Button>
-                                </div>
-
                                 <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
                                   <table className="w-full text-left border-collapse">
                                     <thead>
                                       <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                        <th className="px-6 py-4">N º</th>
+                                        <th className="px-6 py-4">Nº</th>
                                         <th className="px-6 py-4">Tipo</th>
                                         <th className="px-6 py-4">Informação</th>
-                                        <th className="px-6 py-4">Criado em</th>
-                                        <th className="px-6 py-4 text-right">Ação</th>
+                                        {isNewRegistration && <th className="px-6 py-4 text-right">Ação</th>}
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                      {(selectedFicha?.contacts || savedContacts)?.filter((c: any) => c.validTo === null).map((contact: any, idx: number) => (
+                                      {/* Telemóvel SIGO — sem ações */}
+                                      {selectedPerson?.phone && (
+                                        <tr className="bg-blue-50/40">
+                                          <td className="px-6 py-4 text-xs font-black text-slate-900">01</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">Telemóvel</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-800">{selectedPerson.phone}</td>
+                                          {isNewRegistration && <td className="px-6 py-4 text-right text-slate-300 text-xs">—</td>}
+                                        </tr>
+                                      )}
+                                      {/* Email SIGO — sem ações */}
+                                      {selectedPerson?.email && (
+                                        <tr className="bg-blue-50/40">
+                                          <td className="px-6 py-4 text-xs font-black text-slate-900">{selectedPerson?.phone ? '02' : '01'}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">Email</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-800">{selectedPerson.email}</td>
+                                          {isNewRegistration && <td className="px-6 py-4 text-right text-slate-300 text-xs">—</td>}
+                                        </tr>
+                                      )}
+                                      {/* Contactos manuais — só em novo cadastro */}
+                                      {isNewRegistration && savedContacts?.filter((c: any) => c.validTo === null).map((contact: any, idx: number) => (
                                         <tr key={contact.id} className="hover:bg-slate-50 transition-colors group">
-                                          <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
+                                          <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + (selectedPerson?.phone ? 1 : 0) + (selectedPerson?.email ? 1 : 0) + 1).toString().padStart(2, '0')}</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-600">{contact.type}</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-800">{contact.info}</td>
-                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{contact.validFrom}</td>
                                           <td className="px-6 py-4 text-right">
-                                            {!contact.validTo && (
-                                              <button 
-                                                onClick={() => handleDeactivateOtherInfo('contact', contact.id)}
-                                                className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors"
-                                              >
-                                                Desativar
-                                              </button>
-                                            )}
+                                            <button onClick={() => setSavedContacts(prev => prev.filter((c: any) => c.id !== contact.id))} className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors">Remover</button>
                                           </td>
                                         </tr>
                                       ))}
@@ -8058,6 +8031,7 @@ export default function App() {
                                 </div>
                               </div>
 
+                              {isNewRegistration && (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                                 {/* Alcunhas */}
                                 <div className="space-y-4">
@@ -8222,13 +8196,12 @@ export default function App() {
                                   </div>
                                 </div>
                               </div>
+                              )}
                             </div>
                           </motion.div>
                         )}
                       </AnimatePresence>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                </div>
 
                 {/* Motivo do Cadastro Accordion */}
                 <div className="space-y-4">
@@ -8306,8 +8279,9 @@ export default function App() {
                         className="overflow-hidden"
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 space-y-4 mt-2 shadow-sm">
+                          {(isNewRegistration || selectedFicha) && (
                           <div className="flex justify-end">
-                            <button 
+                            <button
                               onClick={() => {
                                 setEditingObs(null);
                                 setObsContent('');
@@ -8319,6 +8293,7 @@ export default function App() {
                               Nova Observação
                             </button>
                           </div>
+                          )}
                           {selectedPerson.observations?.map((o: any) => (
                             <div key={o.id} className="bg-white border border-slate-300 p-6 relative group">
                               <div className="flex items-center justify-between mb-4">
@@ -8391,8 +8366,9 @@ export default function App() {
                         className="overflow-hidden"
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 mt-2 space-y-6 shadow-sm">
+                          {(isNewRegistration || selectedFicha) && (
                           <div className="flex justify-end">
-                            <button 
+                            <button
                               onClick={() => setShowAttachmentModal(true)}
                               className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
                             >
@@ -8400,6 +8376,7 @@ export default function App() {
                               Adicionar Anexo
                             </button>
                           </div>
+                          )}
 
                           {savedAttachments.length > 0 ? (
                             <div className="space-y-2">
@@ -8834,9 +8811,12 @@ export default function App() {
                       onClick={() => {
                         setIsNewRegistration(true);
                         setAssociatedPerson(null);
+                        setSelectedFicha(null);
                         setShowConfirmNew(false);
                         setShowAssociateModal(false);
-                        setExpandedSections(prev => ({ ...prev, biographic: true, complementary: true, biometric: true }));
+                        setExpandedSections(prev => ({ ...prev, biographic: true, complementary: true, biometric: true, other_info: true }));
+                        setSavedAddresses([]);
+                        setSavedContacts([]);
                       }}
                       className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all"
                     >
