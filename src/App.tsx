@@ -202,13 +202,12 @@ export default function App() {
       naturality: 'Cabo Verde', nationality: 'Cabo Verde', father_name: 'António Fonseca', mother_name: 'Maria Fonseca', profession: 'Estudante', 
       doc_type: 'BI', doc_number: '001234567LA041', doc_issue_date: '2020-01-01', doc_expiry_date: '2030-01-01', doc_issue_location: 'Praia',
       phone: '9884565', email: 'bruno@email.cv', island: 'Santiago', municipality: 'Praia', parish: 'N.S. Da Graça', locality: 'Cidade Da Praia', zone: 'Txadinha', reference_point: 'Perto da Escola',
-      nif: '200123456', status: 'Por Registar', sent_by: 'Mascarenha', sent_date: '2023-03-20', sent_unit: 'ESF Praia', completed_by: null, completed_date: null, completed_unit: null,
+      nif: '200123456', status: 'Por Registar', sent_by: 'Carlos Mascarenha', sent_date: '2023-03-20', sent_unit: 'ESF Praia', completed_by: null, completed_date: null, completed_unit: null,
       records: [
-        {id: 1, person_id: 1, date: '2023-05-12', reason: 'Furto qualificado em residência', ref_note: 'REF-2023-045', destination: 'Ministério Público', measures: 'Termo de Identidade e Residência', type: 'Criminal'}
+        {id: 1, person_id: 1, date: '2023-05-12T14:32:00', reason: 'Furto qualificado em residência', ref_note: 'REF-2023-045', measures: 'Termo de Identidade e Residência', type: 'Criminal', auto_type: 'Auto de Notícia', natureza: 'Crime contra o Património', enquadramento: 'Furto Qualificado — Art. 197º CP', created_by: 'Carlos Mascarenha', sent_by: 'João Andrade', unit: 'ESF Praia'}
       ],
       observations: [
-        {id: 1, person_id: 1, author: 'Mascarenha', date: '2023-03-20', content: 'O indivíduo demonstrou comportamento cooperativo durante a abordagem inicial, mas apresentou resistência ao ser informado sobre a detenção.'},
-        {id: 2, person_id: 1, author: 'Tavares', date: '2024-10-11', content: 'Evidências coletadas no local confirmam a participação direta do suspeito no evento reportado. Relatório detalhado anexo ao processo físico.'}
+        {id: 1, person_id: 1, author: 'Carlos Mascarenha', date: '2023-03-20', content: 'Pedido de registo enviado após abordagem e identificação do indivíduo. Documentação entregue à esquadra para instrução do processo.'}
       ]
     }
   ]);
@@ -283,7 +282,7 @@ export default function App() {
         { id: 1, createdAt: '2024-02-24', validFrom: '2024-02-24', validTo: null, user: 'Paulo', type: 'Facebook', link: 'facebook.com/bruno' }
       ],
       registrationReasons: [
-        { id: 1, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: '---', destination: '---', measures: '---', type: 'Criminal', status: 'Aguardando Reabilitação', 
+        { id: 1, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1042', destination: '---', measures: '---', type: 'Criminal', auto_type: 'Auto de Detenção', natureza: 'Crime contra as Pessoas', enquadramento: 'Ofensa à Integridade Física — Art. 131º CP', tipologia: 'Detenção em Flagrante Delito', status: 'Ativo',
           rehabilitationDetails: {
             reason: 'O indivíduo cumpriu a pena e demonstrou bom comportamento nos últimos 5 anos, sem novos registros criminais.',
             attachments: [
@@ -294,15 +293,15 @@ export default function App() {
             requestedBy: 'Bruno Fonseca'
           }
         },
-        { id: 2, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: '---', destination: '---', measures: '---', type: 'Policial', status: 'Ativo' },
-        { id: 3, date: '15/03/2023', reason: 'Suspeito de furto qualificado', refNo: 'OC-2023-0821', destination: 'Tribunal de Comarca da Praia', measures: 'Liberdade provisória', type: 'Criminal', status: 'Ativo',
+        { id: 2, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1078', destination: '---', measures: '---', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Desordem Pública — Art. 279º CP', tipologia: 'Arguido', status: 'Ativo' },
+        { id: 3, date: '15/03/2023', reason: 'Suspeito de furto qualificado', refNo: 'OC-2023-0821', destination: 'Tribunal de Comarca da Praia', measures: 'Liberdade provisória', type: 'Criminal', auto_type: 'Auto de Notícia', natureza: 'Crime contra o Património', enquadramento: 'Furto Qualificado — Art. 197º CP', tipologia: 'Suspeito de Crime', status: 'Ativo',
           rejectedRehabilitation: {
             reason: 'O período mínimo de 3 anos após a condenação ainda não foi cumprido. A reabilitação só poderá ser solicitada novamente após 15/03/2026.',
             rejectedAt: '02/01/2025',
-            rejectedBy: 'Superintendente Carlos Mendes'
+            rejectedBy: 'Carlos Mendes'
           }
         },
-        { id: 4, date: '20/06/2021', reason: 'Desordem pública e resistência à autoridade', refNo: 'OC-2021-0345', destination: '---', measures: 'Multa aplicada', type: 'Policial', status: 'Reabilitado',
+        { id: 4, date: '20/06/2021', reason: 'Desordem pública e resistência à autoridade', refNo: 'OC-2021-0345', destination: 'Ministério Público', measures: 'Multa aplicada', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Resistência à Autoridade — Art. 283º CP', tipologia: 'Arguido', status: 'Reabilitado',
           rehabilitationDetails: {
             reason: 'O indivíduo cumpriu integralmente as obrigações impostas, pagou a multa e não registou novos incidentes nos últimos 4 anos. A reabilitação é amplamente justificada.',
             attachments: [
@@ -312,7 +311,7 @@ export default function App() {
             requestedAt: '10/07/2025',
             requestedBy: 'Mónica Tavares',
             acceptedAt: '18/07/2025',
-            acceptedBy: 'Superintendente Carlos Mendes'
+            acceptedBy: 'Carlos Mendes'
           }
         }
       ],
@@ -408,7 +407,9 @@ export default function App() {
   
   // Add Motivo in Ficha State
   const [showAddMotivoInFicha, setShowAddMotivoInFicha] = useState(false);
-  const [newMotivoInFicha, setNewMotivoInFicha] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' });
+  const [newMotivoInFicha, setNewMotivoInFicha] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+  const [editingMotivoId, setEditingMotivoId] = useState<number | null>(null);
+  const [editingMotivoData, setEditingMotivoData] = useState({ type: 'Criminal', sijNo: '', measures: '' });
 
   // Rehabilitation Modal State
   const [showRehabilitationModal, setShowRehabilitationModal] = useState(false);
@@ -552,7 +553,7 @@ export default function App() {
   const [newFichaSocials, setNewFichaSocials] = useState<any[]>([]);
   const [newFichaNewSocial, setNewFichaNewSocial] = useState({ type: 'Facebook', link: '' });
   const [newFichaReasons, setNewFichaReasons] = useState<any[]>([]);
-  const [newFichaNewReason, setNewFichaNewReason] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' });
+  const [newFichaNewReason, setNewFichaNewReason] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
   const [newFichaObservations, setNewFichaObservations] = useState<{content:string;author:string;date:string}[]>([]);
   const [newFichaNewObs, setNewFichaNewObs] = useState('');
   const [newFichaAttachments, setNewFichaAttachments] = useState<{name:string;type:string}[]>([]);
@@ -951,7 +952,7 @@ export default function App() {
           if (r.id === selectedReasonForRehab.id) {
             return {
               ...r,
-              status: 'Aguardando Reabilitação',
+              status: 'Ativo',
               rehabilitationDetails: {
                 reason: rehabilitationReason,
                 attachments: rehabilitationAttachments.map(file => ({ name: file.name, size: file.size })),
@@ -5640,47 +5641,188 @@ export default function App() {
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                             <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
                               <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                  <div className="md:col-span-2 space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo *</label>
-                                    <input type="text" value={newFichaNewReason.reason} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, reason: e.target.value})} placeholder="Descreva o motivo..." className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                                  </div>
+                                {/* Linha 1 — Tipo, Tipo de Auto, Data */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                   <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo *</label>
                                     <select value={newFichaNewReason.type} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, type: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
                                       <option value="Criminal">Criminal</option>
                                       <option value="Policial">Policial</option>
                                     </select>
                                   </div>
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</label>
+                                    <select value={newFichaNewReason.auto_type} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, auto_type: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                      <option value="">Selecione...</option>
+                                      <option>Auto de Notícia</option>
+                                      <option>Auto de Detenção</option>
+                                      <option>Auto de Flagrante Delito</option>
+                                      <option>Auto de Ocorrência</option>
+                                      <option>Auto de Apreensão</option>
+                                      <option>Outro</option>
+                                    </select>
+                                  </div>
                                   <DetailField label="Data" value={newFichaNewReason.date} type="date" readOnly={false} icon={Calendar} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, date: v})} />
-                                  <DetailField label="Nº SIG" value={newFichaNewReason.refNo} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, refNo: v})} />
-                                  <DetailField label="Destino" value={newFichaNewReason.destination} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, destination: v})} />
-                                  <div className="md:col-span-3">
-                                    <DetailField label="Medidas Aplicadas" value={newFichaNewReason.measures} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, measures: v})} />
+                                </div>
+                                {/* Linha 2 — Natureza, Enquadramento, Tipologia */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Natureza de Ocorrência</label>
+                                    <select value={newFichaNewReason.natureza} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, natureza: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                      <option value="">Selecione...</option>
+                                      <option>Crime contra o Património</option>
+                                      <option>Crime contra as Pessoas</option>
+                                      <option>Crime contra a Ordem Pública</option>
+                                      <option>Crime contra o Estado</option>
+                                      <option>Crime contra a Família</option>
+                                      <option>Crime de Droga / Tráfico</option>
+                                      <option>Crime de Natureza Sexual</option>
+                                      <option>Outro</option>
+                                    </select>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enquadramento de Crime</label>
+                                    <select value={newFichaNewReason.enquadramento} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, enquadramento: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                      <option value="">Selecione...</option>
+                                      <option>Furto Simples — Art. 193º CP</option>
+                                      <option>Furto Qualificado — Art. 197º CP</option>
+                                      <option>Roubo — Art. 200º CP</option>
+                                      <option>Homicídio — Art. 122º CP</option>
+                                      <option>Ofensa à Integridade Física — Art. 131º CP</option>
+                                      <option>Violência Doméstica — Art. 134º CP</option>
+                                      <option>Tráfico de Droga — Lei 78/III/90</option>
+                                      <option>Desordem Pública — Art. 279º CP</option>
+                                      <option>Resistência à Autoridade — Art. 283º CP</option>
+                                      <option>Outro</option>
+                                    </select>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipologia</label>
+                                    <select value={newFichaNewReason.tipologia} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, tipologia: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                      <option value="">Selecione...</option>
+                                      <option>Detenção em Flagrante Delito</option>
+                                      <option>Suspeito de Crime</option>
+                                      <option>Arguido</option>
+                                      <option>Investigado</option>
+                                      <option>Condenado</option>
+                                      <option>Reincidente</option>
+                                      <option>Outro</option>
+                                    </select>
+                                  </div>
+                                </div>
+                                {/* Linha 3 — Motivo (dropdown), Destino */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo *</label>
+                                    <select value={newFichaNewReason.reason} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, reason: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                      <option value="">Selecione o motivo...</option>
+                                      <option>Detenção em flagrante delito</option>
+                                      <option>Suspeito de furto qualificado</option>
+                                      <option>Suspeito de roubo</option>
+                                      <option>Suspeito de homicídio</option>
+                                      <option>Desordem pública</option>
+                                      <option>Resistência à autoridade</option>
+                                      <option>Tráfico de estupefacientes</option>
+                                      <option>Violência doméstica</option>
+                                      <option>Ofensa à integridade física</option>
+                                      <option>Outro</option>
+                                    </select>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Destino</label>
+                                    <select value={newFichaNewReason.destination} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, destination: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                      <option value="">Selecione...</option>
+                                      <option>Ministério Público</option>
+                                      <option>Tribunal de Comarca da Praia</option>
+                                      <option>Tribunal de Comarca de São Vicente</option>
+                                      <option>Estabelecimento Prisional</option>
+                                      <option>Delegacia de Saúde</option>
+                                      <option>Serviços Sociais</option>
+                                      <option>Libertado</option>
+                                      <option>Outro</option>
+                                    </select>
+                                  </div>
+                                </div>
+                                {/* Linha 4 — Nº Ocorrência, Medidas */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <DetailField label="Nº Ocorrência" value={newFichaNewReason.refNo} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, refNo: v})} />
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medidas Aplicadas</label>
+                                    <select value={newFichaNewReason.measures} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, measures: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                      <option value="">Selecione...</option>
+                                      <option>Prisão Preventiva</option>
+                                      <option>Termo de Identidade e Residência</option>
+                                      <option>Liberdade Provisória</option>
+                                      <option>Obrigação de Apresentação Periódica</option>
+                                      <option>Proibição de Contacto</option>
+                                      <option>Suspensão de Pena</option>
+                                      <option>Multa</option>
+                                      <option>Sem medidas aplicadas</option>
+                                      <option>Outro</option>
+                                    </select>
                                   </div>
                                 </div>
                                 <div className="flex justify-end">
                                   <Button variant="primary" icon={Plus} onClick={() => {
                                     if (!newFichaNewReason.reason) return;
                                     setNewFichaReasons([...newFichaReasons, { ...newFichaNewReason, id: Date.now(), status: 'Ativo' }]);
-                                    setNewFichaNewReason({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' });
+                                    setNewFichaNewReason({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
                                   }}>Adicionar Motivo</Button>
                                 </div>
                               </div>
                               {newFichaReasons.length > 0 ? (
                                 <div className="space-y-3">
                                   {newFichaReasons.map((r, i) => (
-                                    <div key={i} className="flex items-start justify-between bg-white border-2 border-slate-100 rounded-2xl p-5 shadow-sm">
-                                      <div className="space-y-1 flex-1">
-                                        <div className="flex items-center gap-3">
-                                          <span className="text-sm font-black text-slate-900">{r.reason}</span>
+                                    <div key={i} className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                                      {/* Info fora da tabela */}
+                                      <div className="px-5 py-4 grid grid-cols-2 md:grid-cols-4 gap-4 border-b border-slate-100">
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo</p>
                                           <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${r.type === 'Criminal' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>{r.type}</span>
                                         </div>
-                                        {r.date && <p className="text-xs text-slate-500">Data: <span className="font-bold">{r.date}</span></p>}
-                                        {r.destination && <p className="text-xs text-slate-500">Destino: <span className="font-bold">{r.destination}</span></p>}
-                                        {r.measures && <p className="text-xs text-slate-500">Medidas: <span className="font-bold">{r.measures}</span></p>}
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.auto_type || '---'}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.date || '---'}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Destino</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.destination || '---'}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.refNo || '---'}</p>
+                                        </div>
+                                        <div className="md:col-span-2 space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Medidas</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.measures || '---'}</p>
+                                        </div>
+                                        <div className="flex items-end justify-end">
+                                          <button onClick={() => setNewFichaReasons(newFichaReasons.filter((_,j)=>j!==i))} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                                        </div>
                                       </div>
-                                      <button onClick={() => setNewFichaReasons(newFichaReasons.filter((_,j)=>j!==i))} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all ml-4"><Trash2 size={14} /></button>
+                                      {/* Tabela — Natureza, Enquadramento, Tipologia, Motivo */}
+                                      <table className="w-full text-left border-collapse">
+                                        <thead>
+                                          <tr className="bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                            <th className="px-5 py-2">Natureza de Ocorrência</th>
+                                            <th className="px-5 py-2">Enquadramento de Crime</th>
+                                            <th className="px-5 py-2">Tipologia</th>
+                                            <th className="px-5 py-2">Motivo</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          <tr>
+                                            <td className="px-5 py-3 text-xs font-bold text-slate-800">{r.natureza || '---'}</td>
+                                            <td className="px-5 py-3 text-xs font-bold text-slate-800">{r.enquadramento || '---'}</td>
+                                            <td className="px-5 py-3 text-xs font-bold text-slate-800">{r.tipologia || '---'}</td>
+                                            <td className="px-5 py-3 text-xs font-bold text-slate-800">{r.reason || '---'}</td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
                                     </div>
                                   ))}
                                 </div>
@@ -6807,77 +6949,126 @@ export default function App() {
                           <AnimatePresence>
                             {showAddMotivoInFicha && (
                               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 space-y-6">
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="md:col-span-2 space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo *</label>
-                                      <select value={newMotivoInFicha.reason} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, reason: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                        <option value="">Selecione o motivo...</option>
-                                        <option>Detenção em flagrante delito</option>
-                                        <option>Suspeito de furto qualificado</option>
-                                        <option>Desordem pública e resistência à autoridade</option>
-                                        <option>Tráfico de estupefacientes</option>
-                                        <option>Violência doméstica</option>
-                                        <option>Condução sob efeito de álcool</option>
-                                        <option>Porte ilegal de arma</option>
-                                        <option>Vandalismo e dano em propriedade alheia</option>
-                                        <option>Burla e falsificação de documentos</option>
-                                        <option>Associação criminosa</option>
-                                      </select>
-                                    </div>
+                                <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 space-y-5">
+                                  {/* Linha 1 — Tipo, Tipo de Auto, Data */}
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo</label>
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo *</label>
                                       <select value={newMotivoInFicha.type} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, type: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
                                         <option value="Criminal">Criminal</option>
                                         <option value="Policial">Policial</option>
                                       </select>
                                     </div>
                                     <div className="space-y-2">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</label>
+                                      <select value={newMotivoInFicha.auto_type} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, auto_type: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                        <option value="">Selecione...</option>
+                                        <option>Auto de Notícia</option>
+                                        <option>Auto de Detenção</option>
+                                        <option>Auto de Flagrante Delito</option>
+                                        <option>Auto de Ocorrência</option>
+                                        <option>Auto de Apreensão</option>
+                                        <option>Outro</option>
+                                      </select>
+                                    </div>
+                                    <div className="space-y-2">
                                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</label>
                                       <input type="date" value={newMotivoInFicha.date} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, date: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
                                     </div>
+                                  </div>
+                                  {/* Linha 2 — Natureza, Enquadramento, Tipologia */}
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº SIG</label>
-                                      <input type="text" value={newMotivoInFicha.refNo} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, refNo: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Natureza de Ocorrência</label>
+                                      <select value={newMotivoInFicha.natureza} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, natureza: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                        <option value="">Selecione...</option>
+                                        <option>Crime contra o Património</option>
+                                        <option>Crime contra as Pessoas</option>
+                                        <option>Crime contra a Ordem Pública</option>
+                                        <option>Crime contra o Estado</option>
+                                        <option>Crime contra a Família</option>
+                                        <option>Crime de Droga / Tráfico</option>
+                                        <option>Crime de Natureza Sexual</option>
+                                        <option>Outro</option>
+                                      </select>
                                     </div>
+                                    <div className="space-y-2">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enquadramento de Crime</label>
+                                      <select value={newMotivoInFicha.enquadramento} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, enquadramento: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                        <option value="">Selecione...</option>
+                                        <option>Furto Simples — Art. 193º CP</option>
+                                        <option>Furto Qualificado — Art. 197º CP</option>
+                                        <option>Roubo — Art. 200º CP</option>
+                                        <option>Homicídio — Art. 122º CP</option>
+                                        <option>Ofensa à Integridade Física — Art. 131º CP</option>
+                                        <option>Violência Doméstica — Art. 134º CP</option>
+                                        <option>Tráfico de Droga — Lei 78/III/90</option>
+                                        <option>Desordem Pública — Art. 279º CP</option>
+                                        <option>Resistência à Autoridade — Art. 283º CP</option>
+                                        <option>Outro</option>
+                                      </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipologia</label>
+                                      <select value={newMotivoInFicha.tipologia} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, tipologia: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                        <option value="">Selecione...</option>
+                                        <option>Detenção em Flagrante Delito</option>
+                                        <option>Suspeito de Crime</option>
+                                        <option>Arguido</option>
+                                        <option>Investigado</option>
+                                        <option>Condenado</option>
+                                        <option>Reincidente</option>
+                                        <option>Outro</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                  {/* Linha 3 — Destino */}
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Destino</label>
                                       <select value={newMotivoInFicha.destination} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, destination: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                        <option value="">Selecione o destino...</option>
+                                        <option value="">Selecione...</option>
+                                        <option>Ministério Público</option>
                                         <option>Tribunal de Comarca da Praia</option>
                                         <option>Tribunal de Comarca de São Vicente</option>
                                         <option>Tribunal de Comarca de Santa Catarina</option>
-                                        <option>Ministério Público</option>
                                         <option>Prisão Central da Praia</option>
                                         <option>Estabelecimento Prisional de São Vicente</option>
                                         <option>Liberdade Provisória</option>
-                                        <option>Arquivo</option>
+                                        <option>Outro</option>
                                       </select>
                                     </div>
-                                    <div className="md:col-span-3 space-y-2">
+                                  </div>
+                                  {/* Linha 4 — Nº Ocorrência, Medidas */}
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</label>
+                                      <input type="text" value={newMotivoInFicha.refNo} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, refNo: e.target.value})} placeholder="Ex: OC-2024-0001" className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                    </div>
+                                    <div className="space-y-2">
                                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medidas Aplicadas</label>
                                       <select value={newMotivoInFicha.measures} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, measures: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                        <option value="">Selecione a medida...</option>
-                                        <option>Prisão preventiva</option>
-                                        <option>Liberdade provisória</option>
-                                        <option>Termo de identidade e residência</option>
-                                        <option>Multa aplicada</option>
-                                        <option>Suspensão da carta de condução</option>
-                                        <option>Trabalho a favor da comunidade</option>
-                                        <option>Proibição de contacto com a vítima</option>
-                                        <option>Pulseira eletrónica</option>
-                                        <option>Internamento compulsivo</option>
+                                        <option value="">Selecione...</option>
+                                        <option>Prisão Preventiva</option>
+                                        <option>Termo de Identidade e Residência</option>
+                                        <option>Liberdade Provisória</option>
+                                        <option>Obrigação de Apresentação Periódica</option>
+                                        <option>Proibição de Contacto</option>
+                                        <option>Suspensão de Pena</option>
+                                        <option>Multa</option>
+                                        <option>Sem medidas aplicadas</option>
+                                        <option>Outro</option>
                                       </select>
                                     </div>
                                   </div>
                                   <div className="flex justify-end gap-3">
-                                    <button onClick={() => { setShowAddMotivoInFicha(false); setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' }); }} className="px-4 py-2 bg-white text-slate-600 border-2 border-slate-200 font-bold rounded-xl hover:bg-slate-50 transition-all text-xs">Cancelar</button>
+                                    <button onClick={() => { setShowAddMotivoInFicha(false); setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' }); }} className="px-4 py-2 bg-white text-slate-600 border-2 border-slate-200 font-bold rounded-xl hover:bg-slate-50 transition-all text-xs">Cancelar</button>
                                     <button
                                       onClick={() => {
-                                        if (!newMotivoInFicha.reason) return;
+                                        if (!newMotivoInFicha.refNo) return;
                                         const newReg = { ...newMotivoInFicha, id: Date.now(), status: 'Ativo' };
                                         setSelectedFicha((prev: any) => ({ ...prev, registrationReasons: [...(prev.registrationReasons || []), newReg] }));
-                                        setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' });
+                                        setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
                                         setShowAddMotivoInFicha(false);
                                       }}
                                       className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-700 transition-all text-xs flex items-center gap-2"
@@ -6890,89 +7081,127 @@ export default function App() {
                               </motion.div>
                             )}
                           </AnimatePresence>
-                          <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
-                            <table className="w-full text-left border-collapse">
-                              <thead>
-                                <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                  <th className="px-6 py-4">Data</th>
-                                  <th className="px-6 py-4">Motivo</th>
-                                  <th className="px-6 py-4">Nº SIG</th>
-                                  <th className="px-6 py-4">Destino</th>
-                                  <th className="px-6 py-4">Medidas</th>
-                                  <th className="px-6 py-4">Tipo</th>
-                                  <th className="px-6 py-4">Estado</th>
-                                  <th className="px-6 py-4 text-right">Ação</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-50">
-                                {(selectedFicha?.registrationReasons || []).map((reg: any) => (
-                                  <tr key={reg.id} className="hover:bg-slate-50 transition-colors group">
-                                    <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.date}</td>
-                                    <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.reason}</td>
-                                    <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.refNo}</td>
-                                    <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.destination}</td>
-                                    <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.measures}</td>
-                                    <td className="px-6 py-4 text-xs">
-                                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${
-                                        reg.type === 'Criminal' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
-                                      }`}>
-                                        {reg.type}
-                                      </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-xs">
-                                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${
-                                          reg.status === 'Reabilitado' ? 'bg-emerald-50 text-emerald-600' :
-                                          reg.status === 'Aguardando Reabilitação' ? 'bg-blue-50 text-blue-600' :
-                                          'bg-amber-50 text-amber-600'
-                                        }`}>
-                                          {reg.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                      <div className="flex justify-end gap-3">
-                                        {reg.rejectedRehabilitation && (
-                                          <button
-                                            onClick={() => {
-                                              setSelectedRejectionDetails(reg.rejectedRehabilitation);
-                                              setShowRejectionReasonModal(true);
-                                            }}
-                                            className="p-2 text-red-400 hover:text-red-600 hover:bg-white rounded-lg transition-all"
-                                            title="Ver motivo da recusa"
-                                          >
-                                            <Info size={16} />
-                                          </button>
-                                        )}
-                                        {reg.status === 'Ativo' && (
-                                          <button
-                                            onClick={() => {
-                                              setSelectedReasonForRehab(reg);
-                                              setShowRehabilitationModal(true);
-                                            }}
-                                            className="p-2 text-emerald-400 hover:text-emerald-600 hover:bg-white rounded-lg transition-all"
-                                            title="Pedir Reabilitação"
-                                          >
-                                            <ShieldCheck size={16} />
-                                          </button>
-                                        )}
-                                        {reg.rehabilitationDetails && (
-                                          <button
-                                            onClick={() => {
-                                              setSelectedReasonForRehab(reg);
-                                              setRehabDetailsViewOnly(true);
-                                              setShowRehabilitationDetailsModal(true);
-                                            }}
-                                            className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all"
-                                            title="Ver detalhes da reabilitação"
-                                          >
-                                            <Search size={16} />
-                                          </button>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+
+                          {/* Lista de registos — card por registo */}
+                          <div className="space-y-4">
+                            {(selectedFicha?.registrationReasons || []).map((reg: any) => (
+                              <div key={reg.id} className="relative border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                                {/* Botão editar — canto superior direito */}
+                                <button
+                                  onClick={() => {
+                                    setEditingMotivoId(reg.id);
+                                    setEditingMotivoData({ type: reg.type, sijNo: reg.sijNo || '', measures: reg.measures || '' });
+                                  }}
+                                  className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all z-10"
+                                  title="Editar"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <div className="px-6 py-5 grid grid-cols-2 md:grid-cols-4 gap-5 bg-white">
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</p>
+                                    <p className="text-xs font-bold text-slate-800">{reg.refNo || '---'}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data</p>
+                                    <p className="text-xs font-bold text-slate-800">{reg.date || '---'}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</p>
+                                    <p className="text-xs font-bold text-slate-800">{reg.auto_type || '---'}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo</p>
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${reg.type === 'Criminal' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>{reg.type}</span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Natureza de Ocorrência</p>
+                                    <p className="text-xs font-bold text-slate-800">{reg.natureza || '---'}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Enquadramento</p>
+                                    <p className="text-xs font-bold text-slate-800">{reg.enquadramento || '---'}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipologia</p>
+                                    <p className="text-xs font-bold text-slate-800">{reg.tipologia || '---'}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Destino</p>
+                                    <p className="text-xs font-bold text-slate-800">{reg.destination || '---'}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nº SIJ</p>
+                                    <p className="text-xs font-bold text-slate-800">{reg.sijNo || '---'}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Medidas</p>
+                                    <p className="text-xs font-bold text-slate-800">{reg.measures || '---'}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Estado</p>
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${reg.status === 'Reabilitado' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                      {reg.status === 'Reabilitado' ? 'Reabilitado' : 'Ativo'}
+                                    </span>
+                                  </div>
+                                </div>
+                                {/* Barra de Reabilitação — contextual */}
+                                <div className={`px-6 py-3 flex items-center justify-between border-t-2 ${
+                                  reg.status === 'Reabilitado' ? 'bg-emerald-50 border-emerald-100' :
+                                  (reg.status === 'Ativo' && reg.rehabilitationDetails) ? 'bg-blue-50 border-blue-100' :
+                                  'bg-slate-50 border-slate-100'
+                                }`}>
+                                  <div className="flex items-center gap-2">
+                                    {/* Ativo com pedido pendente */}
+                                    {reg.status === 'Ativo' && reg.rehabilitationDetails && (
+                                      <>
+                                        <ShieldCheck size={14} className="text-blue-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Pedido de reabilitação pendente</span>
+                                      </>
+                                    )}
+                                    {/* Reabilitado */}
+                                    {reg.status === 'Reabilitado' && (
+                                      <>
+                                        <ShieldCheck size={14} className="text-emerald-600" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Reabilitado</span>
+                                      </>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {/* Ativo sem pedido → botão solicitar (sem label) */}
+                                    {reg.status === 'Ativo' && !reg.rehabilitationDetails && (
+                                      <button
+                                        onClick={() => { setSelectedReasonForRehab(reg); setShowRehabilitationModal(true); }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-emerald-700 transition-all"
+                                      >
+                                        <ShieldCheck size={12} />
+                                        Solicitar Reabilitação
+                                      </button>
+                                    )}
+                                    {/* Ativo com pedido pendente → ver pedido (só leitura na ficha) */}
+                                    {reg.status === 'Ativo' && reg.rehabilitationDetails && (
+                                      <button
+                                        onClick={() => { setSelectedReasonForRehab(reg); setRehabDetailsViewOnly(true); setShowRehabilitationDetailsModal(true); }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-blue-700 transition-all"
+                                      >
+                                        <Search size={12} />
+                                        Ver Pedido
+                                      </button>
+                                    )}
+                                    {/* Reabilitado → ver detalhes */}
+                                    {reg.status === 'Reabilitado' && reg.rehabilitationDetails && (
+                                      <button
+                                        onClick={() => { setSelectedReasonForRehab(reg); setRehabDetailsViewOnly(true); setShowRehabilitationDetailsModal(true); }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-emerald-200 transition-all"
+                                      >
+                                        <Search size={12} />
+                                        Ver Detalhes
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </motion.div>
@@ -8224,31 +8453,70 @@ export default function App() {
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden"
                       >
-                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden mt-2 shadow-sm">
-                          <table className="w-full text-left border-collapse">
-                            <thead>
-                              <tr className="bg-slate-200 text-slate-700 text-xs uppercase font-bold">
-                                <th className="px-4 py-2 border-r border-slate-300">Data</th>
-                                <th className="px-4 py-2 border-r border-slate-300">Motivo do Cadastro</th>
-                                <th className="px-4 py-2 border-r border-slate-300">Nº SIG</th>
-                                <th className="px-4 py-2 border-r border-slate-300">Destino</th>
-                                <th className="px-4 py-2 border-r border-slate-300">Medidas</th>
-                                <th className="px-4 py-2">Tipo</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {selectedPerson.records?.map((r: any) => (
-                                <tr key={r.id} className="border-t border-slate-300">
-                                  <td className="px-4 py-2 border-r border-slate-300 text-sm">{new Date(r.date).toLocaleDateString('pt-BR')}</td>
-                                  <td className="px-4 py-2 border-r border-slate-300 text-sm">{r.reason}</td>
-                                  <td className="px-4 py-2 border-r border-slate-300 text-sm">{r.ref_note}</td>
-                                  <td className="px-4 py-2 border-r border-slate-300 text-sm">{r.destination}</td>
-                                  <td className="px-4 py-2 border-r border-slate-300 text-sm">{r.measures}</td>
-                                  <td className="px-4 py-2 text-sm">{r.type}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                        <div className="space-y-4 mt-2">
+                          {selectedPerson.records?.map((r: any) => (
+                            <div key={r.id} className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                              {/* Campos fora da tabela */}
+                              <div className="px-6 py-5 grid grid-cols-2 md:grid-cols-3 gap-6 border-b border-slate-100">
+                                <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data e Hora</p>
+                                  <p className="text-sm font-bold text-slate-800">
+                                    {new Date(r.date).toLocaleDateString('pt-BR')}
+                                  </p>
+                                  <p className="text-xs font-medium text-slate-400">
+                                    {new Date(r.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</p>
+                                  <p className="text-sm font-bold text-slate-800">{r.ref_note || '---'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</p>
+                                  <p className="text-sm font-bold text-slate-800">{r.auto_type || '---'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Criado por</p>
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                                      <User size={11} className="text-slate-500" />
+                                    </div>
+                                    <p className="text-sm font-bold text-slate-800">{r.created_by || '---'}</p>
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enviado por</p>
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                                      <User size={11} className="text-slate-500" />
+                                    </div>
+                                    <p className="text-sm font-bold text-slate-800">{r.sent_by || '---'}</p>
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</p>
+                                  <p className="text-sm font-bold text-slate-800">{r.unit || '---'}</p>
+                                </div>
+                              </div>
+                              {/* Tabela — Natureza, Enquadramento, Tipologia */}
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                    <th className="px-6 py-3">Natureza de Ocorrência</th>
+                                    <th className="px-6 py-3">Enquadramento de Crime</th>
+                                    <th className="px-6 py-3">Tipologia</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td className="px-6 py-3 text-sm font-bold text-slate-800">{r.natureza || '---'}</td>
+                                    <td className="px-6 py-3 text-sm font-bold text-slate-800">{r.enquadramento || '---'}</td>
+                                    <td className="px-6 py-3 text-sm font-bold text-slate-800">{r.reason || '---'}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          ))}
                         </div>
                       </motion.div>
                     )}
@@ -8280,19 +8548,19 @@ export default function App() {
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 space-y-4 mt-2 shadow-sm">
                           {(isNewRegistration || selectedFicha) && (
-                          <div className="flex justify-end">
-                            <button
-                              onClick={() => {
-                                setEditingObs(null);
-                                setObsContent('');
-                                setShowObsModal(true);
-                              }}
-                              className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
-                            >
-                              <Plus size={16} />
-                              Nova Observação
-                            </button>
-                          </div>
+                            <div className="flex justify-end">
+                              <button
+                                onClick={() => {
+                                  setEditingObs(null);
+                                  setObsContent('');
+                                  setShowObsModal(true);
+                                }}
+                                className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
+                              >
+                                <Plus size={16} />
+                                Nova Observação
+                              </button>
+                            </div>
                           )}
                           {selectedPerson.observations?.map((o: any) => (
                             <div key={o.id} className="bg-white border border-slate-300 p-6 relative group">
@@ -8306,10 +8574,9 @@ export default function App() {
                                     <p className="text-xs text-slate-500">{new Date(o.date).toLocaleDateString('pt-BR')}</p>
                                   </div>
                                 </div>
-                                
                                 {user?.name === o.author && (
                                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button 
+                                    <button
                                       onClick={() => {
                                         setEditingObs(o);
                                         setObsContent(o.content);
@@ -8319,7 +8586,7 @@ export default function App() {
                                     >
                                       <Edit size={16} />
                                     </button>
-                                    <button 
+                                    <button
                                       onClick={() => {
                                         if (confirm('Deseja eliminar esta observação?')) {
                                           const newObs = selectedPerson.observations.filter((obs: any) => obs.id !== o.id);
@@ -8333,9 +8600,7 @@ export default function App() {
                                   </div>
                                 )}
                               </div>
-                              <p className="text-sm text-slate-700 leading-relaxed">
-                                {o.content}
-                              </p>
+                              <p className="text-sm text-slate-700 leading-relaxed">{o.content}</p>
                             </div>
                           ))}
                         </div>
@@ -9152,108 +9417,100 @@ export default function App() {
       {/* Solicitação Reabilitação Cadastro Modal */}
       <AnimatePresence>
         {showRehabilitationModal && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-            <motion.div 
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white border-4 border-slate-900 w-full max-w-xl shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] overflow-hidden"
+              className="bg-white rounded-2xl w-full max-w-lg shadow-2xl border-2 border-slate-100 overflow-hidden"
             >
-              <div className="p-6 border-b-4 border-slate-900 bg-slate-900 flex items-center justify-between">
+              {/* Header */}
+              <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-500 rounded-lg text-white">
-                    <ShieldCheck size={24} />
+                  <div className="p-2 bg-white/10 rounded-lg"><ShieldCheck size={18} className="text-white" /></div>
+                  <div>
+                    <h2 className="text-sm font-black text-white uppercase tracking-widest">Solicitar Reabilitação</h2>
+                    <p className="text-[10px] text-slate-400 font-medium mt-0.5">Ficha N.º {selectedFicha?.number} — {selectedFicha?.name}</p>
                   </div>
-                  <h2 className="text-xl font-bold text-white">Solicitação de Reabilitação</h2>
                 </div>
-                <button 
-                  onClick={() => setShowRehabilitationModal(false)}
-                  className="p-2 hover:bg-slate-800 rounded-full text-slate-400 transition-colors"
-                >
-                  <X size={24} />
+                <button onClick={() => setShowRehabilitationModal(false)} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                  <X size={18} />
                 </button>
               </div>
 
-              <div className="p-8 space-y-8">
-                <div className="space-y-3">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Motivo da Reabilitação</label>
-                  <textarea 
-                    rows={3}
+              {/* Body */}
+              <div className="p-6 space-y-5">
+                {/* Info do registo */}
+                {selectedReasonForRehab && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</p>
+                      <p className="text-sm font-black text-slate-900">{selectedReasonForRehab.refNo || '---'}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo</p>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${selectedReasonForRehab.type === 'Criminal' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>{selectedReasonForRehab.type}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Motivo */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo da Solicitação *</p>
+                  <textarea
+                    rows={4}
                     value={rehabilitationReason}
                     onChange={(e) => setRehabilitationReason(e.target.value)}
                     placeholder="Descreva detalhadamente o motivo do pedido de reabilitação..."
-                    className="w-full px-4 py-3 border-2 border-slate-900 rounded-lg outline-none focus:ring-4 focus:ring-emerald-500/20 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all resize-none"
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-medium text-slate-900 outline-none focus:border-slate-900 transition-all resize-none"
                   />
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Anexos Necessários</label>
-                    <label className="cursor-pointer px-3 py-1 bg-blue-50 text-blue-700 font-bold rounded border-2 border-blue-200 text-[10px] hover:bg-blue-100 transition-colors flex items-center gap-1">
+                {/* Anexos */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Anexos</p>
+                    <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-200 transition-all">
                       <Plus size={12} />
-                      Adicionar Anexo
-                      <input 
-                        type="file" 
-                        multiple
-                        className="hidden" 
-                        onChange={(e) => {
-                          if (e.target.files) {
-                            setRehabilitationAttachments([...rehabilitationAttachments, ...Array.from(e.target.files)]);
-                          }
-                        }}
-                      />
+                      Adicionar
+                      <input type="file" multiple className="hidden" onChange={(e) => { if (e.target.files) setRehabilitationAttachments([...rehabilitationAttachments, ...Array.from(e.target.files)]); }} />
                     </label>
                   </div>
-
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                    {rehabilitationAttachments.length === 0 ? (
-                      <div className="py-8 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400">
-                        <Paperclip size={24} className="mb-2 opacity-20" />
-                        <p className="text-[10px] font-medium italic">Nenhum anexo selecionado</p>
-                      </div>
-                    ) : (
-                      rehabilitationAttachments.map((file, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border-2 border-slate-200 rounded-lg group hover:border-slate-900 transition-colors">
+                  {rehabilitationAttachments.length === 0 ? (
+                    <div className="py-6 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400">
+                      <Paperclip size={20} className="mb-1.5 opacity-30" />
+                      <p className="text-[10px] font-medium">Nenhum anexo selecionado</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {rehabilitationAttachments.map((file, idx) => (
+                        <div key={idx} className="flex items-center justify-between px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl hover:border-slate-200 transition-all">
                           <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="p-2 bg-white border border-slate-200 rounded shadow-sm">
-                              <Paperclip size={14} className="text-slate-400" />
-                            </div>
+                            <Paperclip size={14} className="text-slate-400 flex-shrink-0" />
                             <div className="overflow-hidden">
                               <p className="text-xs font-bold text-slate-700 truncate">{file.name}</p>
                               <p className="text-[10px] text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
                             </div>
                           </div>
-                          <button 
-                            onClick={() => {
-                              const newFiles = [...rehabilitationAttachments];
-                              newFiles.splice(idx, 1);
-                              setRehabilitationAttachments(newFiles);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
-                          >
+                          <button onClick={() => { const f = [...rehabilitationAttachments]; f.splice(idx, 1); setRehabilitationAttachments(f); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
                             <Trash2 size={14} />
                           </button>
                         </div>
-                      ))
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                <div className="flex justify-end gap-4 pt-4">
-                  <button 
-                    onClick={() => setShowRehabilitationModal(false)}
-                    className="px-8 py-2.5 bg-white text-slate-900 font-bold border-2 border-slate-900 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-[0px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
-                  >
-                    CANCELAR
-                  </button>
-                  <button 
-                    onClick={handleConfirmRehabilitation}
-                    className="px-10 py-2.5 bg-emerald-500 text-white font-bold border-2 border-slate-900 rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-[0px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center gap-2"
-                  >
-                    <ShieldCheck size={18} />
-                    CONFIRMAR SOLICITAÇÃO
-                  </button>
-                </div>
+              {/* Footer */}
+              <div className="px-6 py-4 border-t-2 border-slate-100 flex items-center justify-end gap-3">
+                <button onClick={() => { setShowRehabilitationModal(false); setRehabilitationReason(''); setRehabilitationAttachments([]); }} className="px-4 py-2 bg-white text-slate-700 border-2 border-slate-200 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all">
+                  Cancelar
+                </button>
+                <button onClick={handleConfirmRehabilitation} className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-emerald-700 transition-all">
+                  <ShieldCheck size={14} />
+                  Confirmar Solicitação
+                </button>
               </div>
             </motion.div>
           </div>
@@ -9571,6 +9828,136 @@ export default function App() {
                   className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all"
                 >
                   Entendido
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal — Editar Motivo de Cadastro */}
+      <AnimatePresence>
+        {editingMotivoId !== null && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl w-full max-w-md shadow-2xl border-2 border-slate-100 overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/10 rounded-lg"><Edit size={18} className="text-white" /></div>
+                  <div>
+                    <h2 className="text-sm font-black text-white uppercase tracking-widest">Editar Registo</h2>
+                    <p className="text-[10px] text-slate-400 font-medium mt-0.5">Ficha N.º {selectedFicha?.number} — {selectedFicha?.name}</p>
+                  </div>
+                </div>
+                <button onClick={() => setEditingMotivoId(null)} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-5">
+                {/* Info do registo (readonly) */}
+                {(() => {
+                  const reg = (selectedFicha?.registrationReasons || []).find((r: any) => r.id === editingMotivoId);
+                  return reg ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</p>
+                        <p className="text-sm font-black text-slate-900">{reg.refNo || '---'}</p>
+                      </div>
+                      <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Destino</p>
+                        <p className="text-sm font-black text-slate-900">{reg.destination || '---'}</p>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+
+                {/* Tipo */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Tipo</label>
+                  <div className="flex gap-3">
+                    {['Criminal', 'Policial'].map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setEditingMotivoData({ ...editingMotivoData, type: t })}
+                        className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest border-2 transition-all ${
+                          editingMotivoData.type === t
+                            ? t === 'Criminal'
+                              ? 'bg-purple-600 border-purple-600 text-white shadow-md'
+                              : 'bg-blue-600 border-blue-600 text-white shadow-md'
+                            : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Nº SIJ */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Nº SIJ</label>
+                  <input
+                    type="text"
+                    value={editingMotivoData.sijNo}
+                    onChange={(e) => setEditingMotivoData({ ...editingMotivoData, sijNo: e.target.value })}
+                    placeholder="Ex: SIJ-2024-0001"
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all"
+                  />
+                </div>
+
+                {/* Medidas Aplicadas */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Medidas Aplicadas</label>
+                  <select
+                    value={editingMotivoData.measures}
+                    onChange={(e) => setEditingMotivoData({ ...editingMotivoData, measures: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all appearance-none"
+                  >
+                    <option value="">Selecione...</option>
+                    <option>Prisão Preventiva</option>
+                    <option>Termo de Identidade e Residência</option>
+                    <option>Liberdade Provisória</option>
+                    <option>Obrigação de Apresentação Periódica</option>
+                    <option>Proibição de Contacto</option>
+                    <option>Suspensão de Pena</option>
+                    <option>Multa</option>
+                    <option>Sem medidas aplicadas</option>
+                    <option>Outro</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t-2 border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setEditingMotivoId(null)}
+                  className="px-4 py-2 bg-white text-slate-700 border-2 border-slate-200 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedFicha((prev: any) => ({
+                      ...prev,
+                      registrationReasons: (prev.registrationReasons || []).map((r: any) =>
+                        r.id === editingMotivoId
+                          ? { ...r, type: editingMotivoData.type, sijNo: editingMotivoData.sijNo, measures: editingMotivoData.measures }
+                          : r
+                      )
+                    }));
+                    setEditingMotivoId(null);
+                  }}
+                  className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all"
+                >
+                  <Check size={14} />
+                  Guardar
                 </button>
               </div>
             </motion.div>
