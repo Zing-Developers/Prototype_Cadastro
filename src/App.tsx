@@ -50,7 +50,8 @@ import {
   CheckCircle,
   Database,
   UserPlus,
-  Lock
+  Lock,
+  SlidersHorizontal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -192,7 +193,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [currentView, setCurrentView] = useState<'dashboard' | 'person_list' | 'person_detail' | 'ficha_list' | 'ficha_new' | 'ficha_detail' | 'recognition' | 'rehabilitation_list' | 'document_registration' | 'document_detail' | 'document_search' | 'certificate_list' | 'certificate_registration'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'person_list' | 'person_detail' | 'ficha_list' | 'ficha_new' | 'ficha_detail' | 'recognition' | 'rehabilitation_list' | 'document_registration' | 'document_detail' | 'document_search' | 'certificate_list' | 'certificate_registration' | 'parametrizacoes'>('dashboard');
   const [selectedPerson, setSelectedPerson] = useState<any>(null);
   const [selectedFicha, setSelectedFicha] = useState<any>(null);
   const [persons, setPersons] = useState<any[]>([
@@ -281,8 +282,14 @@ export default function App() {
       socialNetworks: [
         { id: 1, createdAt: '2024-02-24', validFrom: '2024-02-24', validTo: null, user: 'Paulo', type: 'Facebook', link: 'facebook.com/bruno' }
       ],
+      documents: [
+        { id: 1, createdAt: '2024-02-24', validFrom: '2024-02-24', validTo: null, user: 'Paulo', type: 'CNI', number: '001234567LA041', issueDate: '2020-01-01', expiryDate: '2030-01-01', issueLocation: 'Praia' }
+      ],
+      groups: [
+        { id: 1, createdAt: '2023-05-12', validFrom: '2023-05-12', validTo: null, user: 'Carlos Mascarenha', sigla: 'TL', nome: 'Thug Life', funcao: 'Membro', areaAtuacao: 'Tráfico de estupefacientes', ilha: 'Santiago', cidade: 'Praia', freguesia: 'Achada Santo António', localidade: 'Achada Santo António', referencia: 'Zona do Mercado' }
+      ],
       registrationReasons: [
-        { id: 1, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1042', destination: '---', measures: '---', type: 'Criminal', auto_type: 'Auto de Detenção', natureza: 'Crime contra as Pessoas', enquadramento: 'Ofensa à Integridade Física — Art. 131º CP', tipologia: 'Detenção em Flagrante Delito', status: 'Ativo',
+        { id: 1, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1042', unit: 'ESF Praia', measures: 'Prisão Preventiva', type: 'Criminal', auto_type: 'Auto de Detenção', natureza: 'Crime contra as Pessoas', enquadramento: 'Ofensa à Integridade Física — Art. 131º CP', tipologia: 'Detenção em Flagrante Delito', status: 'Ativo',
           rehabilitationDetails: {
             reason: 'O indivíduo cumpriu a pena e demonstrou bom comportamento nos últimos 5 anos, sem novos registros criminais.',
             attachments: [
@@ -293,15 +300,15 @@ export default function App() {
             requestedBy: 'Bruno Fonseca'
           }
         },
-        { id: 2, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1078', destination: '---', measures: '---', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Desordem Pública — Art. 279º CP', tipologia: 'Arguido', status: 'Ativo' },
-        { id: 3, date: '15/03/2023', reason: 'Suspeito de furto qualificado', refNo: 'OC-2023-0821', destination: 'Tribunal de Comarca da Praia', measures: 'Liberdade provisória', type: 'Criminal', auto_type: 'Auto de Notícia', natureza: 'Crime contra o Património', enquadramento: 'Furto Qualificado — Art. 197º CP', tipologia: 'Suspeito de Crime', status: 'Ativo',
+        { id: 2, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1078', unit: 'ESF Mindelo', measures: 'Termo de Identidade e Residência', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Desordem Pública — Art. 279º CP', tipologia: 'Arguido', status: 'Ativo' },
+        { id: 3, date: '15/03/2023', reason: 'Suspeito de furto qualificado', refNo: 'OC-2023-0821', unit: 'DP Praia', measures: 'Liberdade Provisória', type: 'Criminal', auto_type: 'Auto de Notícia', natureza: 'Crime contra o Património', enquadramento: 'Furto Qualificado — Art. 197º CP', tipologia: 'Suspeito de Crime', status: 'Ativo',
           rejectedRehabilitation: {
             reason: 'O período mínimo de 3 anos após a condenação ainda não foi cumprido. A reabilitação só poderá ser solicitada novamente após 15/03/2026.',
             rejectedAt: '02/01/2025',
             rejectedBy: 'Carlos Mendes'
           }
         },
-        { id: 4, date: '20/06/2021', reason: 'Desordem pública e resistência à autoridade', refNo: 'OC-2021-0345', destination: 'Ministério Público', measures: 'Multa aplicada', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Resistência à Autoridade — Art. 283º CP', tipologia: 'Arguido', status: 'Reabilitado',
+        { id: 4, date: '20/06/2021', reason: 'Desordem pública e resistência à autoridade', refNo: 'OC-2021-0345', unit: 'ESF Praia', measures: 'Multa', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Resistência à Autoridade — Art. 283º CP', tipologia: 'Arguido', status: 'Reabilitado',
           rehabilitationDetails: {
             reason: 'O indivíduo cumpriu integralmente as obrigações impostas, pagou a multa e não registou novos incidentes nos últimos 4 anos. A reabilitação é amplamente justificada.',
             attachments: [
@@ -402,14 +409,102 @@ export default function App() {
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddNickname, setShowAddNickname] = useState(false);
   const [showAddSocial, setShowAddSocial] = useState(false);
+  const [showAddDocument, setShowAddDocument] = useState(false);
+  const [newDocument, setNewDocument] = useState({ type: 'CNI', number: '', issueDate: '', expiryDate: '', issueLocation: '' });
+  const [showAddGroup, setShowAddGroup] = useState(false);
+  const [newGroup, setNewGroup] = useState({ sigla: '', nome: '', funcao: '' });
   const [showAddressDetailsModal, setShowAddressDetailsModal] = useState(false);
   const [selectedAddressDetails, setSelectedAddressDetails] = useState<any>(null);
   
   // Add Motivo in Ficha State
   const [showAddMotivoInFicha, setShowAddMotivoInFicha] = useState(false);
-  const [newMotivoInFicha, setNewMotivoInFicha] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+  const [newMotivoInFicha, setNewMotivoInFicha] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
   const [editingMotivoId, setEditingMotivoId] = useState<number | null>(null);
-  const [editingMotivoData, setEditingMotivoData] = useState({ type: 'Criminal', sijNo: '', measures: '' });
+  const [editingMotivoData, setEditingMotivoData] = useState({ type: 'Criminal', sijNo: '', unit: '', measures: '' });
+  const [showEditBiographic, setShowEditBiographic] = useState(false);
+  const [editBiographicData, setEditBiographicData] = useState<any>({});
+
+  // Parametrizações
+  const [activeParamTab, setActiveParamTab] = useState<'domains' | 'groups'>('domains');
+  const [selectedDomain, setSelectedDomain] = useState('Medidas Aplicadas');
+  const [showAddParam, setShowAddParam] = useState(false);
+  const [newParamData, setNewParamData] = useState({ valor: '', descricao: '' });
+  const [editingParamId, setEditingParamId] = useState<number | null>(null);
+  const [editingParamData, setEditingParamData] = useState({ valor: '', descricao: '' });
+  const [paramGroups, setParamGroups] = useState<any[]>([
+    { id: 1, sigla: 'SG', nome: 'Sem Grupo',      areaAtuacao: '---',                          ilha: '',          cidade: '',        freguesia: '',                  localidade: '',                 referencia: '',               estado: 'Ativo' },
+    { id: 2, sigla: 'TL', nome: 'Thug Life',       areaAtuacao: 'Tráfico de estupefacientes',   ilha: 'Santiago',  cidade: 'Praia',   freguesia: 'Achada Sto António', localidade: 'Achada Sto António',referencia: 'Zona do Mercado',  estado: 'Ativo' },
+    { id: 3, sigla: 'BP', nome: 'Black Power',      areaAtuacao: 'Crimes contra o património',   ilha: 'Santiago',  cidade: 'Praia',   freguesia: 'Tira Chapéu',       localidade: 'Tira Chapéu',      referencia: '',               estado: 'Ativo' },
+    { id: 4, sigla: 'OI', nome: 'Os Invictos',      areaAtuacao: 'Tráfico de estupefacientes',   ilha: 'Santiago',  cidade: 'Praia',   freguesia: 'Fazenda',           localidade: 'Fazenda',          referencia: '',               estado: 'Ativo' },
+    { id: 5, sigla: 'SK', nome: 'Street Kings',     areaAtuacao: 'Confrontos e desordem pública',ilha: 'São Vicente',cidade: 'Mindelo', freguesia: 'Nª Srª da Luz',    localidade: 'Monte Sossego',    referencia: '',               estado: 'Ativo' },
+  ]);
+  const [showAddParamGroup, setShowAddParamGroup] = useState(false);
+  const [newParamGroup, setNewParamGroup] = useState({ sigla: '', nome: '', areaAtuacao: '', ilha: '', cidade: '', freguesia: '', localidade: '', referencia: '' });
+  const [editingParamGroupId, setEditingParamGroupId] = useState<number | null>(null);
+  const [editingParamGroupData, setEditingParamGroupData] = useState({ sigla: '', nome: '', areaAtuacao: '', ilha: '', cidade: '', freguesia: '', localidade: '', referencia: '' });
+  const [paramDomains, setParamDomains] = useState<Record<string, any[]>>({
+    'Medidas Aplicadas': [
+      { id: 1, valor: 'PP',  descricao: 'Prisão Preventiva',                    estado: 'Ativo' },
+      { id: 2, valor: 'TIR', descricao: 'Termo de Identidade e Residência',     estado: 'Ativo' },
+      { id: 3, valor: 'LP',  descricao: 'Liberdade Provisória',                 estado: 'Ativo' },
+      { id: 4, valor: 'OAP', descricao: 'Obrigação de Apresentação Periódica',  estado: 'Ativo' },
+      { id: 5, valor: 'PC',  descricao: 'Proibição de Contacto',                estado: 'Ativo' },
+      { id: 6, valor: 'SP',  descricao: 'Suspensão de Pena',                    estado: 'Ativo' },
+      { id: 7, valor: 'ML',  descricao: 'Multa',                                estado: 'Ativo' },
+      { id: 8, valor: 'SMA', descricao: 'Sem Medidas Aplicadas',                estado: 'Ativo' },
+    ],
+    'Tipo de Contacto': [
+      { id: 1, valor: 'TM', descricao: 'Telemóvel',                       estado: 'Ativo' },
+      { id: 2, valor: 'TF', descricao: 'Telefone Fixo',                   estado: 'Ativo' },
+      { id: 3, valor: 'EM', descricao: 'Email',                           estado: 'Ativo' },
+    ],
+    'Tipo de Endereço': [
+      { id: 1, valor: 'RES', descricao: 'Residência',  estado: 'Ativo' },
+      { id: 2, valor: 'TRB', descricao: 'Trabalho',    estado: 'Ativo' },
+      { id: 3, valor: 'OUT', descricao: 'Outro',        estado: 'Ativo' },
+    ],
+    'Rede Social': [
+      { id: 1, valor: 'FB', descricao: 'Facebook',    estado: 'Ativo' },
+      { id: 2, valor: 'IG', descricao: 'Instagram',   estado: 'Ativo' },
+      { id: 3, valor: 'TW', descricao: 'Twitter / X', estado: 'Ativo' },
+      { id: 4, valor: 'LI', descricao: 'LinkedIn',    estado: 'Ativo' },
+      { id: 5, valor: 'TT', descricao: 'TikTok',      estado: 'Ativo' },
+      { id: 6, valor: 'WA', descricao: 'WhatsApp',    estado: 'Ativo' },
+    ],
+    'Estado Civil': [
+      { id: 1, valor: 'S',  descricao: 'Solteiro(a)',     estado: 'Ativo' },
+      { id: 2, valor: 'C',  descricao: 'Casado(a)',       estado: 'Ativo' },
+      { id: 3, valor: 'D',  descricao: 'Divorciado(a)',   estado: 'Ativo' },
+      { id: 4, valor: 'V',  descricao: 'Viúvo(a)',        estado: 'Ativo' },
+      { id: 5, valor: 'UF', descricao: 'União de Facto',  estado: 'Ativo' },
+    ],
+    'Tipo de Documento': [
+      { id: 1, valor: 'CNI', descricao: 'Cartão Nacional de Identidade',          estado: 'Ativo' },
+      { id: 2, valor: 'PAS', descricao: 'Passaporte',                             estado: 'Ativo' },
+      { id: 3, valor: 'TR',  descricao: 'Título de Residência',                   estado: 'Ativo' },
+    ],
+    'Finalidade de Certificado': [
+      { id: 1, valor: 'CP', descricao: 'Concurso Público',    estado: 'Ativo' },
+      { id: 2, valor: 'EP', descricao: 'Emprego Privado',     estado: 'Ativo' },
+      { id: 3, valor: 'VE', descricao: 'Visto / Emigração',   estado: 'Ativo' },
+      { id: 4, valor: 'PJ', descricao: 'Processo Judicial',   estado: 'Ativo' },
+      { id: 5, valor: 'UP', descricao: 'Uso Pessoal',         estado: 'Ativo' },
+      { id: 6, valor: 'LA', descricao: 'Licença / Alvará',    estado: 'Ativo' },
+    ],
+    'Sinal Complementar': [
+      { id: 1,  valor: 'ALT', descricao: 'Altura',              estado: 'Ativo' },
+      { id: 2,  valor: 'CF',  descricao: 'Constituição Física', estado: 'Ativo' },
+      { id: 3,  valor: 'CAB', descricao: 'Cabelo',              estado: 'Ativo' },
+      { id: 4,  valor: 'CPL', descricao: 'Cor de Pele',         estado: 'Ativo' },
+      { id: 5,  valor: 'BAR', descricao: 'Barba',               estado: 'Ativo' },
+      { id: 6,  valor: 'BIG', descricao: 'Bigode',              estado: 'Ativo' },
+      { id: 7,  valor: 'OLH', descricao: 'Olhos',               estado: 'Ativo' },
+      { id: 8,  valor: 'RST', descricao: 'Rosto',               estado: 'Ativo' },
+      { id: 9,  valor: 'TAT', descricao: 'Tatuagem',            estado: 'Ativo' },
+      { id: 10, valor: 'CIC', descricao: 'Cicatriz',            estado: 'Ativo' },
+      { id: 11, valor: 'MN',  descricao: 'Marca de Nascença',   estado: 'Ativo' },
+    ],
+  });
 
   // Rehabilitation Modal State
   const [showRehabilitationModal, setShowRehabilitationModal] = useState(false);
@@ -553,7 +648,7 @@ export default function App() {
   const [newFichaSocials, setNewFichaSocials] = useState<any[]>([]);
   const [newFichaNewSocial, setNewFichaNewSocial] = useState({ type: 'Facebook', link: '' });
   const [newFichaReasons, setNewFichaReasons] = useState<any[]>([]);
-  const [newFichaNewReason, setNewFichaNewReason] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+  const [newFichaNewReason, setNewFichaNewReason] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
   const [newFichaObservations, setNewFichaObservations] = useState<{content:string;author:string;date:string}[]>([]);
   const [newFichaNewObs, setNewFichaNewObs] = useState('');
   const [newFichaAttachments, setNewFichaAttachments] = useState<{name:string;type:string}[]>([]);
@@ -883,7 +978,9 @@ export default function App() {
     address: false,
     contact: false,
     nickname: false,
-    social: false
+    social: false,
+    document: false,
+    group: false
   });
 
   const [recognitionFilters, setRecognitionFilters] = useState({
@@ -1098,19 +1195,31 @@ export default function App() {
       console.error('Error fetching person detail:', err);
     }
   };
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [searchFilters, setSearchFilters] = useState({
+    // Normal
     occurrence_number: '',
     registration_number: '',
     unit: '',
-    received_date: '',
     name: '',
     surname: '',
     birth_date: '',
+    alcunha: '',
+    sexo: '',
+    // Avançados
+    date_from: '',
+    date_to: '',
+    nationality: '',
+    doc_number: '',
     island: '',
     municipality: '',
     parish: '',
     locality: '',
-    zone: ''
+    zone: '',
+    auto_type: '',
+    natureza: '',
+    enquadramento: '',
+    tipologia: '',
   });
 
   const fetchPersons = async () => {
@@ -1129,7 +1238,7 @@ export default function App() {
     fetchPersons();
   };
 
-  const handleAddOtherInfo = (type: 'address' | 'contact' | 'nickname' | 'social') => {
+  const handleAddOtherInfo = (type: 'address' | 'contact' | 'nickname' | 'social' | 'document' | 'group') => {
     const today = new Date().toISOString().split('T')[0];
     let newItem: any = {
       id: Date.now(),
@@ -1162,6 +1271,16 @@ export default function App() {
         updatedFicha.socialNetworks = [...(updatedFicha.socialNetworks || []), newItem];
         setShowAddSocial(false);
         setNewSocial({ type: 'Facebook', link: '' });
+      } else if (type === 'document') {
+        newItem = { ...newItem, ...newDocument };
+        updatedFicha.documents = [...(updatedFicha.documents || []), newItem];
+        setShowAddDocument(false);
+        setNewDocument({ type: 'CNI', number: '', issueDate: '', expiryDate: '', issueLocation: '' });
+      } else if (type === 'group') {
+        newItem = { ...newItem, ...newGroup };
+        updatedFicha.groups = [...(updatedFicha.groups || []), newItem];
+        setShowAddGroup(false);
+        setNewGroup({ sigla: '', nome: '', funcao: '' });
       }
 
       setSelectedFicha(updatedFicha);
@@ -1192,7 +1311,7 @@ export default function App() {
     }
   };
 
-  const handleDeactivateOtherInfo = (type: 'address' | 'contact' | 'nickname' | 'social', id: number) => {
+  const handleDeactivateOtherInfo = (type: 'address' | 'contact' | 'nickname' | 'social' | 'document' | 'group', id: number) => {
     const today = new Date().toISOString().split('T')[0];
     const deactivator = user?.name || 'Admin';
 
@@ -1212,7 +1331,15 @@ export default function App() {
           item.id === id ? { ...item, validTo: today, deactivatedBy: deactivator } : item
         );
       } else if (type === 'social') {
-        updatedFicha.socialNetworks = updatedFicha.socialNetworks.map((item: any) => 
+        updatedFicha.socialNetworks = updatedFicha.socialNetworks.map((item: any) =>
+          item.id === id ? { ...item, validTo: today, deactivatedBy: deactivator } : item
+        );
+      } else if (type === 'document') {
+        updatedFicha.documents = updatedFicha.documents.map((item: any) =>
+          item.id === id ? { ...item, validTo: today, deactivatedBy: deactivator } : item
+        );
+      } else if (type === 'group') {
+        updatedFicha.groups = (updatedFicha.groups || []).map((item: any) =>
           item.id === id ? { ...item, validTo: today, deactivatedBy: deactivator } : item
         );
       }
@@ -1242,17 +1369,11 @@ export default function App() {
 
   const handleClearFilters = () => {
     setSearchFilters({
-      occurrence_number: '',
-      registration_number: '',
-      unit: '',
-      name: '',
-      surname: '',
-      birth_date: '',
-      island: '',
-      municipality: '',
-      parish: '',
-      locality: '',
-      zone: ''
+      occurrence_number: '', registration_number: '', unit: '',
+      name: '', surname: '', birth_date: '', alcunha: '', sexo: '',
+      date_from: '', date_to: '', nationality: '', doc_number: '',
+      island: '', municipality: '', parish: '', locality: '', zone: '',
+      auto_type: '', natureza: '', enquadramento: '', tipologia: '',
     });
   };
 
@@ -1597,10 +1718,23 @@ export default function App() {
                       icon={Shield} 
                       description="Decisão sobre comunicações de extravio."
                     />
-                    <MenuCard 
-                      title="Historico Comunicações de Extravio" 
-                      icon={History} 
+                    <MenuCard
+                      title="Historico Comunicações de Extravio"
+                      icon={History}
                       description="Histórico de comunicações de itens extraviados."
+                    />
+                  </div>
+                </div>
+
+                {/* Gestão do Sistema Section */}
+                <div className="space-y-6">
+                  <SectionHeader title="Gestão do Sistema" icon={Settings} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <MenuCard
+                      title="Parametrizações"
+                      icon={Database}
+                      description="Gerir os domínios e valores parametrizáveis do sistema."
+                      onClick={() => setCurrentView('parametrizacoes')}
                     />
                   </div>
                 </div>
@@ -1615,201 +1749,212 @@ export default function App() {
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Cadastro Policial</h2>
                 </div>
 
-                <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
-                  <div className="flex items-center gap-3 mb-8">
+                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center gap-3 px-8 pt-8 pb-6 border-b border-slate-100">
                     <div className="p-2 bg-slate-900 text-white rounded-lg"><Search size={16} /></div>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Filtrar Pesquisa</h3>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex-1">Filtrar Pesquisa</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedFilters(v => !v)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all border-2 ${
+                        showAdvancedFilters
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900'
+                      }`}
+                    >
+                      <SlidersHorizontal size={13} />
+                      {showAdvancedFilters ? 'Filtros Avançados' : 'Filtros Avançados'}
+                    </button>
                   </div>
-                  
-                  <form onSubmit={handleSearch} className="space-y-6">
-                    {/* Linha 1 — Dados do Processo */}
+
+                  <form onSubmit={handleSearch} className="px-8 py-6 space-y-6">
+
+                    {/* ── Dados do Processo ── */}
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-300 pl-3 mb-4">Dados do Processo</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-end">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</label>
-                        <input
-                          type="text"
-                          value={searchFilters.occurrence_number}
-                          onChange={(e) => setSearchFilters({...searchFilters, occurrence_number: e.target.value})}
-                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                          placeholder="Nº Ocorrência"
-                        />
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-900 pl-3 mb-4">Dados do Processo</p>
+                      <div className={`grid grid-cols-1 gap-4 ${showAdvancedFilters ? 'md:grid-cols-3' : 'md:grid-cols-3'}`}>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</label>
+                          <input type="text" value={searchFilters.occurrence_number} onChange={(e) => setSearchFilters({...searchFilters, occurrence_number: e.target.value})} placeholder="Ex: OC-2024-001" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Registo</label>
+                          <input type="text" value={searchFilters.registration_number} onChange={(e) => setSearchFilters({...searchFilters, registration_number: e.target.value})} placeholder="Ex: REG-2024-001" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
+                          <select value={searchFilters.unit} onChange={(e) => setSearchFilters({...searchFilters, unit: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                            <option value="">Todas</option>
+                            <option value="ESF Praia">ESF Praia</option>
+                            <option value="ESF Mindelo">ESF Mindelo</option>
+                            <option value="DP Praia">DP Praia</option>
+                            <option value="DP Mindelo">DP Mindelo</option>
+                          </select>
+                        </div>
+
+                        {/* Avançado: intervalo de data + dados da ocorrência */}
+                        <AnimatePresence>
+                          {showAdvancedFilters && (
+                            <motion.div key="proc-adv" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="contents">
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Receção — De</label>
+                                <input type="date" value={searchFilters.date_from} onChange={(e) => setSearchFilters({...searchFilters, date_from: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Receção — Até</label>
+                                <input type="date" value={searchFilters.date_to} onChange={(e) => setSearchFilters({...searchFilters, date_to: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</label>
+                                <select value={searchFilters.auto_type} onChange={(e) => setSearchFilters({...searchFilters, auto_type: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todos</option>
+                                  <option>Auto de Detenção</option>
+                                  <option>Auto de Notícia</option>
+                                  <option>Auto de Ocorrência</option>
+                                  <option>Auto de Apreensão</option>
+                                  <option>Auto de Busca e Apreensão</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Natureza de Ocorrência</label>
+                                <select value={searchFilters.natureza} onChange={(e) => setSearchFilters({...searchFilters, natureza: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  <option>Crime contra as Pessoas</option>
+                                  <option>Crime contra o Património</option>
+                                  <option>Crime contra o Estado</option>
+                                  <option>Crime contra a Ordem Pública</option>
+                                  <option>Crime de Tráfico</option>
+                                  <option>Contraordenação</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enquadramento</label>
+                                <select value={searchFilters.enquadramento} onChange={(e) => setSearchFilters({...searchFilters, enquadramento: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todos</option>
+                                  <option>Ofensa à Integridade Física — Art. 131º CP</option>
+                                  <option>Ofensa à Integridade Física Grave — Art. 132º CP</option>
+                                  <option>Furto — Art. 195º CP</option>
+                                  <option>Furto Qualificado — Art. 197º CP</option>
+                                  <option>Roubo — Art. 200º CP</option>
+                                  <option>Homicídio — Art. 122º CP</option>
+                                  <option>Tráfico de Estupefacientes — Art. 15º DL 11/2021</option>
+                                  <option>Corrupção — Art. 303º CP</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipologia</label>
+                                <select value={searchFilters.tipologia} onChange={(e) => setSearchFilters({...searchFilters, tipologia: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  <option>Detenção em Flagrante Delito</option>
+                                  <option>Arguido</option>
+                                  <option>Investigado</option>
+                                  <option>Suspeito</option>
+                                  <option>Testemunha</option>
+                                </select>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Registo</label>
-                        <input
-                          type="text"
-                          value={searchFilters.registration_number}
-                          onChange={(e) => setSearchFilters({...searchFilters, registration_number: e.target.value})}
-                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                          placeholder="Nº Registo"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
-                        <select
-                          value={searchFilters.unit}
-                          onChange={(e) => setSearchFilters({...searchFilters, unit: e.target.value})}
-                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
-                        >
-                          <option value="">Selecione...</option>
-                          <option value="ESF">ESF</option>
-                          <option value="DP">DP</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Receção</label>
-                        <input
-                          type="date"
-                          value={searchFilters.received_date}
-                          onChange={(e) => setSearchFilters({...searchFilters, received_date: e.target.value})}
-                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                        />
-                      </div>
-                    </div>
                     </div>
 
-                    {/* Linha 2 — Dados da Pessoa */}
+                    {/* ── Dados da Pessoa ── */}
                     <div className="border-t border-slate-100 pt-5">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-300 pl-3 mb-4">Dados da Pessoa</p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-900 pl-3 mb-4">Dados da Pessoa</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</label>
-                          <input
-                            type="text"
-                            value={searchFilters.name}
-                            onChange={(e) => setSearchFilters({...searchFilters, name: e.target.value})}
-                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                            placeholder="Nome"
-                          />
+                          <input type="text" value={searchFilters.name} onChange={(e) => setSearchFilters({...searchFilters, name: e.target.value})} placeholder="Nome próprio" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apelido</label>
-                          <input
-                            type="text"
-                            value={searchFilters.surname}
-                            onChange={(e) => setSearchFilters({...searchFilters, surname: e.target.value})}
-                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                            placeholder="Apelido"
-                          />
+                          <input type="text" value={searchFilters.surname} onChange={(e) => setSearchFilters({...searchFilters, surname: e.target.value})} placeholder="Apelido" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alcunha</label>
+                          <input type="text" value={searchFilters.alcunha} onChange={(e) => setSearchFilters({...searchFilters, alcunha: e.target.value})} placeholder="Nome de rua" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Nascimento</label>
-                          <input
-                            type="date"
-                            value={searchFilters.birth_date}
-                            onChange={(e) => setSearchFilters({...searchFilters, birth_date: e.target.value})}
-                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                          />
+                          <input type="date" value={searchFilters.birth_date} onChange={(e) => setSearchFilters({...searchFilters, birth_date: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
                         </div>
+
+                        {/* Avançado: documento + nacionalidade */}
+                        <AnimatePresence>
+                          {showAdvancedFilters && (
+                            <motion.div key="pessoa-adv" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="contents">
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Documento</label>
+                                <input type="text" value={searchFilters.doc_number} onChange={(e) => setSearchFilters({...searchFilters, doc_number: e.target.value})} placeholder="CNI, Passaporte, ..." className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nacionalidade</label>
+                                <select value={searchFilters.nationality} onChange={(e) => setSearchFilters({...searchFilters, nationality: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  <option>Cabo-verdiana</option>
+                                  <option>Portuguesa</option>
+                                  <option>Senegalesa</option>
+                                  <option>Guineense</option>
+                                  <option>Nigeriana</option>
+                                  <option>Outra</option>
+                                </select>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </div>
 
-                    {/* Linha 2 — Residência */}
-                    <div className="border-t border-slate-100 pt-5">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-300 pl-3 mb-4">Residência</p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6 items-end">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ilha</label>
-                          <select
-                            value={searchFilters.island}
-                            onChange={(e) => setSearchFilters({...searchFilters, island: e.target.value})}
-                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
-                          >
-                            <option value="">Selecione...</option>
-                            <option value="Santiago">Santiago</option>
-                            <option value="São Vicente">São Vicente</option>
-                            <option value="Sal">Sal</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Concelho</label>
-                          <select
-                            value={searchFilters.municipality}
-                            onChange={(e) => setSearchFilters({...searchFilters, municipality: e.target.value})}
-                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
-                          >
-                            <option value="">Selecione...</option>
-                            <option value="Praia">Praia</option>
-                            <option value="Santa Catarina">Santa Catarina</option>
-                            <option value="Santa Cruz">Santa Cruz</option>
-                            <option value="São Domingos">São Domingos</option>
-                            <option value="São Lourenço dos Órgãos">São Lourenço dos Órgãos</option>
-                            <option value="São Miguel">São Miguel</option>
-                            <option value="São Salvador do Mundo">São Salvador do Mundo</option>
-                            <option value="Tarrafal">Tarrafal</option>
-                            <option value="Ribeira Grande de Santiago">Ribeira Grande de Santiago</option>
-                            <option value="Mindelo">Mindelo</option>
-                            <option value="Santa Catarina do Fogo">Santa Catarina do Fogo</option>
-                            <option value="Sal Rei">Sal Rei</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Freguesia</label>
-                          <select
-                            value={searchFilters.parish}
-                            onChange={(e) => setSearchFilters({...searchFilters, parish: e.target.value})}
-                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
-                          >
-                            <option value="">Selecione...</option>
-                            <option value="N.S Da Graça">N.S Da Graça</option>
-                            <option value="São João Baptista">São João Baptista</option>
-                            <option value="São Nicolau Tolentino">São Nicolau Tolentino</option>
-                            <option value="Santiago Maior">Santiago Maior</option>
-                            <option value="Santa Catarina">Santa Catarina</option>
-                            <option value="São Lourenço dos Órgãos">São Lourenço dos Órgãos</option>
-                            <option value="São Miguel Arcanjo">São Miguel Arcanjo</option>
-                            <option value="São Salvador do Mundo">São Salvador do Mundo</option>
-                            <option value="Santo Amaro Abade">Santo Amaro Abade</option>
-                            <option value="Nossa Senhora do Rosário">Nossa Senhora do Rosário</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localidade</label>
-                          <select
-                            value={searchFilters.locality}
-                            onChange={(e) => setSearchFilters({...searchFilters, locality: e.target.value})}
-                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
-                          >
-                            <option value="">Selecione...</option>
-                            <option value="Cidade Da Praia">Cidade Da Praia</option>
-                            <option value="Palmarejo">Palmarejo</option>
-                            <option value="Achada Santo António">Achada Santo António</option>
-                            <option value="Achada Grande Frente">Achada Grande Frente</option>
-                            <option value="Achada Grande Trás">Achada Grande Trás</option>
-                            <option value="Várzea">Várzea</option>
-                            <option value="Terra Branca">Terra Branca</option>
-                            <option value="Tira Chapéu">Tira Chapéu</option>
-                            <option value="Calabaceira">Calabaceira</option>
-                            <option value="Fazenda">Fazenda</option>
-                            <option value="Mindelo">Mindelo</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zona</label>
-                          <select
-                            value={searchFilters.zone}
-                            onChange={(e) => setSearchFilters({...searchFilters, zone: e.target.value})}
-                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
-                          >
-                            <option value="">Selecione...</option>
-                            <option value="Txadinha">Txadinha</option>
-                            <option value="Monteagarro">Monteagarro</option>
-                            <option value="Achadinha">Achadinha</option>
-                            <option value="Pensamento">Pensamento</option>
-                            <option value="Safende">Safende</option>
-                            <option value="Ponta d'Água">Ponta d'Água</option>
-                            <option value="Eugénio Lima">Eugénio Lima</option>
-                            <option value="Lém Cachorro">Lém Cachorro</option>
-                            <option value="Cruz Vermelha">Cruz Vermelha</option>
-                            <option value="Bairro Craveiro Lopes">Bairro Craveiro Lopes</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
+                    {/* ── Residência (só avançado) ── */}
+                    <AnimatePresence>
+                      {showAdvancedFilters && (
+                        <motion.div key="residencia" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          <div className="border-t border-slate-100 pt-5">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-900 pl-3 mb-4">Residência</p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ilha</label>
+                                <select value={searchFilters.island} onChange={(e) => setSearchFilters({...searchFilters, island: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  {['Santiago','São Vicente','Santo Antão','Fogo','Sal','Boavista','São Nicolau','Brava','Maio','Santa Luzia'].map(i => <option key={i}>{i}</option>)}
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Concelho</label>
+                                <select value={searchFilters.municipality} onChange={(e) => setSearchFilters({...searchFilters, municipality: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todos</option>
+                                  {['Praia','Santa Catarina','Santa Cruz','São Domingos','São Lourenço dos Órgãos','São Miguel','São Salvador do Mundo','Tarrafal','Ribeira Grande de Santiago','Mindelo','Santa Catarina do Fogo','Sal Rei'].map(m => <option key={m}>{m}</option>)}
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Freguesia</label>
+                                <select value={searchFilters.parish} onChange={(e) => setSearchFilters({...searchFilters, parish: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  {['N.S Da Graça','São João Baptista','São Nicolau Tolentino','Santiago Maior','Santa Catarina','São Lourenço dos Órgãos','São Miguel Arcanjo','São Salvador do Mundo','Santo Amaro Abade','Nossa Senhora do Rosário'].map(p => <option key={p}>{p}</option>)}
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localidade</label>
+                                <select value={searchFilters.locality} onChange={(e) => setSearchFilters({...searchFilters, locality: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  {['Cidade Da Praia','Palmarejo','Achada Santo António','Achada Grande Frente','Achada Grande Trás','Várzea','Terra Branca','Tira Chapéu','Calabaceira','Fazenda','Mindelo'].map(l => <option key={l}>{l}</option>)}
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zona</label>
+                                <select value={searchFilters.zone} onChange={(e) => setSearchFilters({...searchFilters, zone: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  {['Txadinha','Monteagarro','Achadinha','Pensamento','Safende',"Ponta d'Água",'Eugénio Lima','Lém Cachorro','Cruz Vermelha','Bairro Craveiro Lopes'].map(z => <option key={z}>{z}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
-                    <div className="flex justify-end gap-3 pt-2">
+                    <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
                       <Button variant="outline" onClick={handleClearFilters}>Limpar</Button>
                       <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
                     </div>
@@ -5205,6 +5350,455 @@ export default function App() {
                 </div>
               </motion.div>
 
+            ) : currentView === 'parametrizacoes' ? (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8 pb-12"
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
+                  <div className="space-y-1">
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Parametrizações</h2>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gestão dos domínios do sistema</p>
+                  </div>
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar</Button>
+                </div>
+
+                {/* Tab bar */}
+                <div className="flex gap-2">
+                  {([['domains', 'Domínios'], ['groups', 'Grupos']] as const).map(([tab, label]) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveParamTab(tab)}
+                      className={`px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+                        activeParamTab === tab ? 'bg-slate-900 text-white' : 'bg-white border-2 border-slate-100 text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── TAB: Domínios ── */}
+                {activeParamTab === 'domains' && (
+                <div className="flex gap-6 items-start">
+
+                  {/* Left sidebar — domain list */}
+                  <div className="w-64 flex-shrink-0 bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+                    <div className="px-4 py-4 border-b-2 border-slate-100 bg-slate-50">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Domínios</p>
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                      {Object.keys(paramDomains).map((domain) => {
+                        const total = (paramDomains[domain] || []).length;
+                        const active = (paramDomains[domain] || []).filter((p: any) => p.estado === 'Ativo').length;
+                        const isSelected = selectedDomain === domain;
+                        return (
+                          <button
+                            key={domain}
+                            onClick={() => { setSelectedDomain(domain); setShowAddParam(false); setEditingParamId(null); }}
+                            className={`w-full text-left px-4 py-3.5 flex items-center justify-between transition-all group ${
+                              isSelected ? 'bg-slate-900' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-white' : 'text-slate-700 group-hover:text-slate-900'}`}>
+                              {domain}
+                            </span>
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
+                              isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                            }`}>
+                              {active}/{total}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Right content */}
+                  <div className="flex-1 bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden min-w-0">
+
+                  {/* Add form */}
+                  <AnimatePresence>
+                    {showAddParam && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-6 py-5 bg-slate-50 border-b-2 border-slate-100 space-y-4">
+                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Novo registo — {selectedDomain}</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</label>
+                              <input
+                                type="text"
+                                value={newParamData.valor}
+                                onChange={(e) => setNewParamData({ ...newParamData, valor: e.target.value })}
+                                placeholder="Ex: Auto de Busca"
+                                className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição</label>
+                              <input
+                                type="text"
+                                value={newParamData.descricao}
+                                onChange={(e) => setNewParamData({ ...newParamData, descricao: e.target.value })}
+                                placeholder="Breve descrição do valor"
+                                className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-3">
+                            <button onClick={() => { setShowAddParam(false); setNewParamData({ valor: '', descricao: '' }); }} className="px-4 py-2 bg-white text-slate-700 border-2 border-slate-200 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all">
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (!newParamData.valor.trim()) return;
+                                setParamDomains(prev => ({
+                                  ...prev,
+                                  [selectedDomain]: [...(prev[selectedDomain] || []), { id: Date.now(), valor: newParamData.valor, descricao: newParamData.descricao, estado: 'Ativo' }]
+                                }));
+                                setNewParamData({ valor: '', descricao: '' });
+                                setShowAddParam(false);
+                              }}
+                              className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all"
+                            >
+                              <Plus size={14} />
+                              Adicionar
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Table header */}
+                  <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100 bg-white">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-black text-slate-900 uppercase tracking-widest">{selectedDomain}</span>
+                      <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+                        {(paramDomains[selectedDomain] || []).length} registos
+                      </span>
+                    </div>
+                    {!showAddParam && (
+                      <button
+                        onClick={() => setShowAddParam(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
+                      >
+                        <Plus size={13} />
+                        Novo Registo
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                          <th className="px-6 py-4 w-8">Nº</th>
+                          <th className="px-6 py-4">Valor</th>
+                          <th className="px-6 py-4">Descrição</th>
+                          <th className="px-6 py-4">Estado</th>
+                          <th className="px-6 py-4 text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {(paramDomains[selectedDomain] || []).map((item: any, idx: number) => (
+                          <tr key={item.id} className={`transition-colors ${item.estado === 'Inativo' ? 'opacity-50 bg-slate-50/50' : 'hover:bg-slate-50'}`}>
+                            <td className="px-6 py-4 text-xs font-black text-slate-400">{(idx + 1).toString().padStart(2, '0')}</td>
+
+                            {/* Valor — inline edit */}
+                            <td className="px-6 py-4">
+                              {editingParamId === item.id ? (
+                                <input
+                                  type="text"
+                                  value={editingParamData.valor}
+                                  onChange={(e) => setEditingParamData({ ...editingParamData, valor: e.target.value })}
+                                  className="w-full px-3 py-1.5 bg-white border-2 border-slate-900 rounded-lg text-sm font-bold text-slate-900 outline-none"
+                                  autoFocus
+                                />
+                              ) : (
+                                <span className="text-sm font-bold text-slate-900">{item.valor}</span>
+                              )}
+                            </td>
+
+                            {/* Descrição — inline edit */}
+                            <td className="px-6 py-4">
+                              {editingParamId === item.id ? (
+                                <input
+                                  type="text"
+                                  value={editingParamData.descricao}
+                                  onChange={(e) => setEditingParamData({ ...editingParamData, descricao: e.target.value })}
+                                  className="w-full px-3 py-1.5 bg-white border-2 border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:border-slate-900"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium text-slate-500">{item.descricao || '---'}</span>
+                              )}
+                            </td>
+
+                            {/* Estado */}
+                            <td className="px-6 py-4">
+                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${item.estado === 'Ativo' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                                {item.estado}
+                              </span>
+                            </td>
+
+                            {/* Ações */}
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-end gap-2">
+                                {editingParamId === item.id ? (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setParamDomains(prev => ({
+                                          ...prev,
+                                          [selectedDomain]: prev[selectedDomain].map((p: any) =>
+                                            p.id === item.id ? { ...p, valor: editingParamData.valor, descricao: editingParamData.descricao } : p
+                                          )
+                                        }));
+                                        setEditingParamId(null);
+                                      }}
+                                      className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
+                                    >
+                                      <Check size={12} />
+                                      Guardar
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingParamId(null)}
+                                      className="px-3 py-1.5 bg-white text-slate-600 border-2 border-slate-200 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-50 transition-all"
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    {item.estado === 'Ativo' && (
+                                      <button
+                                        onClick={() => { setEditingParamId(item.id); setEditingParamData({ valor: item.valor, descricao: item.descricao || '' }); }}
+                                        className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+                                        title="Editar"
+                                      >
+                                        <Edit size={15} />
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => {
+                                        setParamDomains(prev => ({
+                                          ...prev,
+                                          [selectedDomain]: prev[selectedDomain].map((p: any) =>
+                                            p.id === item.id ? { ...p, estado: p.estado === 'Ativo' ? 'Inativo' : 'Ativo' } : p
+                                          )
+                                        }));
+                                      }}
+                                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-colors ${
+                                        item.estado === 'Ativo'
+                                          ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                          : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                                      }`}
+                                    >
+                                      {item.estado === 'Ativo' ? 'Desativar' : 'Ativar'}
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                </div>
+                )} {/* end TAB: Domínios */}
+
+                {/* ── TAB: Grupos ── */}
+                {activeParamTab === 'groups' && (
+                <div className="bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+
+                  {/* Add form */}
+                  <AnimatePresence>
+                    {showAddParamGroup && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="px-6 py-5 bg-slate-50 border-b-2 border-slate-100 space-y-4">
+                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Novo Grupo</p>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sigla</label>
+                              <input type="text" value={newParamGroup.sigla} onChange={(e) => setNewParamGroup({ ...newParamGroup, sigla: e.target.value.toUpperCase() })} placeholder="Ex: TL" maxLength={6} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-black text-slate-900 outline-none focus:border-slate-900 transition-all uppercase" />
+                            </div>
+                            <div className="space-y-1.5 md:col-span-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</label>
+                              <input type="text" value={newParamGroup.nome} onChange={(e) => setNewParamGroup({ ...newParamGroup, nome: e.target.value })} placeholder="Nome completo do grupo" className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                            </div>
+                            <div className="space-y-1.5 md:col-span-3">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Área de Atuação</label>
+                              <input type="text" value={newParamGroup.areaAtuacao} onChange={(e) => setNewParamGroup({ ...newParamGroup, areaAtuacao: e.target.value })} placeholder="Ex: Tráfico de estupefacientes, Furtos, ..." className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                            </div>
+                          </div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-1 border-t border-slate-200">Endereço do Grupo</p>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ilha</label>
+                              <select value={newParamGroup.ilha} onChange={(e) => setNewParamGroup({ ...newParamGroup, ilha: e.target.value })} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                <option value="">-- Selecionar --</option>
+                                {['Santiago','São Vicente','Santo Antão','Fogo','Sal','Boavista','São Nicolau','Brava','Maio','Santa Luzia'].map(i => <option key={i}>{i}</option>)}
+                              </select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cidade</label>
+                              <input type="text" value={newParamGroup.cidade} onChange={(e) => setNewParamGroup({ ...newParamGroup, cidade: e.target.value })} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Freguesia</label>
+                              <input type="text" value={newParamGroup.freguesia} onChange={(e) => setNewParamGroup({ ...newParamGroup, freguesia: e.target.value })} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localidade</label>
+                              <input type="text" value={newParamGroup.localidade} onChange={(e) => setNewParamGroup({ ...newParamGroup, localidade: e.target.value })} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                            </div>
+                            <div className="space-y-1.5 md:col-span-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Referência</label>
+                              <input type="text" value={newParamGroup.referencia} onChange={(e) => setNewParamGroup({ ...newParamGroup, referencia: e.target.value })} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-3">
+                            <button onClick={() => { setShowAddParamGroup(false); setNewParamGroup({ sigla: '', nome: '', areaAtuacao: '', ilha: '', cidade: '', freguesia: '', localidade: '', referencia: '' }); }} className="px-4 py-2 bg-white text-slate-700 border-2 border-slate-200 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all">Cancelar</button>
+                            <button
+                              onClick={() => {
+                                if (!newParamGroup.sigla.trim() || !newParamGroup.nome.trim()) return;
+                                setParamGroups(prev => [...prev, { id: Date.now(), ...newParamGroup, estado: 'Ativo' }]);
+                                setNewParamGroup({ sigla: '', nome: '', areaAtuacao: '', ilha: '', cidade: '', freguesia: '', localidade: '', referencia: '' });
+                                setShowAddParamGroup(false);
+                              }}
+                              className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all"
+                            >
+                              <Plus size={14} /> Adicionar
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Table header */}
+                  <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-black text-slate-900 uppercase tracking-widest">Grupos</span>
+                      <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{paramGroups.length} registos</span>
+                    </div>
+                    {!showAddParamGroup && (
+                      <button onClick={() => setShowAddParamGroup(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all">
+                        <Plus size={13} /> Novo Grupo
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                          <th className="px-6 py-4 w-8">Nº</th>
+                          <th className="px-6 py-4">Sigla</th>
+                          <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Área de Atuação</th>
+                          <th className="px-6 py-4">Endereço</th>
+                          <th className="px-6 py-4">Estado</th>
+                          <th className="px-6 py-4 text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {paramGroups.map((grp: any, idx: number) => (
+                          <tr key={grp.id} className={`transition-colors ${grp.estado === 'Inativo' ? 'opacity-50 bg-slate-50/50' : 'hover:bg-slate-50'}`}>
+                            <td className="px-6 py-4 text-xs font-black text-slate-400">{(idx + 1).toString().padStart(2, '0')}</td>
+                            <td className="px-6 py-4">
+                              {editingParamGroupId === grp.id ? (
+                                <input type="text" value={editingParamGroupData.sigla} onChange={(e) => setEditingParamGroupData({ ...editingParamGroupData, sigla: e.target.value.toUpperCase() })} maxLength={6} className="w-20 px-3 py-1.5 bg-white border-2 border-slate-900 rounded-lg text-sm font-black text-slate-900 outline-none uppercase" autoFocus />
+                              ) : (
+                                <span className="px-2 py-0.5 bg-slate-900 text-white text-[10px] font-black rounded-md">{grp.sigla}</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              {editingParamGroupId === grp.id ? (
+                                <input type="text" value={editingParamGroupData.nome} onChange={(e) => setEditingParamGroupData({ ...editingParamGroupData, nome: e.target.value })} className="w-full px-3 py-1.5 bg-white border-2 border-slate-200 rounded-lg text-sm font-bold text-slate-900 outline-none focus:border-slate-900" />
+                              ) : (
+                                <span className="text-sm font-bold text-slate-900">{grp.nome}</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              {editingParamGroupId === grp.id ? (
+                                <input type="text" value={editingParamGroupData.areaAtuacao} onChange={(e) => setEditingParamGroupData({ ...editingParamGroupData, areaAtuacao: e.target.value })} className="w-full px-3 py-1.5 bg-white border-2 border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:border-slate-900" />
+                              ) : (
+                                <span className="text-sm font-medium text-slate-500">{grp.areaAtuacao || '---'}</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-xs font-medium text-slate-500">
+                              {editingParamGroupId === grp.id ? (
+                                <div className="grid grid-cols-2 gap-2">
+                                  <select value={editingParamGroupData.ilha} onChange={(e) => setEditingParamGroupData({ ...editingParamGroupData, ilha: e.target.value })} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:border-slate-900">
+                                    <option value="">Ilha</option>
+                                    {['Santiago','São Vicente','Santo Antão','Fogo','Sal','Boavista','São Nicolau','Brava','Maio','Santa Luzia'].map(i => <option key={i}>{i}</option>)}
+                                  </select>
+                                  <input type="text" placeholder="Cidade" value={editingParamGroupData.cidade} onChange={(e) => setEditingParamGroupData({ ...editingParamGroupData, cidade: e.target.value })} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:border-slate-900" />
+                                  <input type="text" placeholder="Freguesia" value={editingParamGroupData.freguesia} onChange={(e) => setEditingParamGroupData({ ...editingParamGroupData, freguesia: e.target.value })} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:border-slate-900" />
+                                  <input type="text" placeholder="Localidade" value={editingParamGroupData.localidade} onChange={(e) => setEditingParamGroupData({ ...editingParamGroupData, localidade: e.target.value })} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:border-slate-900" />
+                                  <input type="text" placeholder="Referência" value={editingParamGroupData.referencia} onChange={(e) => setEditingParamGroupData({ ...editingParamGroupData, referencia: e.target.value })} className="col-span-2 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:border-slate-900" />
+                                </div>
+                              ) : (
+                                [grp.localidade, grp.freguesia, grp.cidade, grp.ilha].filter(Boolean).join(', ') || '---'
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${grp.estado === 'Ativo' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>{grp.estado}</span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-end gap-2">
+                                {editingParamGroupId === grp.id ? (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setParamGroups(prev => prev.map(g => g.id === grp.id ? { ...g, ...editingParamGroupData } : g));
+                                        setEditingParamGroupId(null);
+                                      }}
+                                      className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
+                                    >
+                                      <Check size={12} /> Guardar
+                                    </button>
+                                    <button onClick={() => setEditingParamGroupId(null)} className="px-3 py-1.5 bg-white text-slate-600 border-2 border-slate-200 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-50 transition-all">Cancelar</button>
+                                  </>
+                                ) : (
+                                  <>
+                                    {grp.estado === 'Ativo' && (
+                                      <button onClick={() => { setEditingParamGroupId(grp.id); setEditingParamGroupData({ sigla: grp.sigla, nome: grp.nome, areaAtuacao: grp.areaAtuacao || '', ilha: grp.ilha || '', cidade: grp.cidade || '', freguesia: grp.freguesia || '', localidade: grp.localidade || '', referencia: grp.referencia || '' }); }} className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all" title="Editar">
+                                        <Edit size={15} />
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => setParamGroups(prev => prev.map(g => g.id === grp.id ? { ...g, estado: g.estado === 'Ativo' ? 'Inativo' : 'Ativo' } : g))}
+                                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-colors ${grp.estado === 'Ativo' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
+                                    >
+                                      {grp.estado === 'Ativo' ? 'Desativar' : 'Ativar'}
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                )} {/* end TAB: Grupos */}
+
+              </motion.div>
+
             ) : currentView === 'ficha_list' ? (
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
@@ -5766,7 +6360,7 @@ export default function App() {
                                   <Button variant="primary" icon={Plus} onClick={() => {
                                     if (!newFichaNewReason.reason) return;
                                     setNewFichaReasons([...newFichaReasons, { ...newFichaNewReason, id: Date.now(), status: 'Ativo' }]);
-                                    setNewFichaNewReason({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+                                    setNewFichaNewReason({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
                                   }}>Adicionar Motivo</Button>
                                 </div>
                               </div>
@@ -6011,7 +6605,7 @@ export default function App() {
 
                 {/* Accordion: Dados Biográficos */}
                 <div className="space-y-4">
-                  <button 
+                  <button
                     onClick={() => toggleSection('biographic')}
                     className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
                   >
@@ -6019,7 +6613,31 @@ export default function App() {
                       <div className="p-2 bg-slate-900 text-white rounded-lg"><User size={18} /></div>
                       <span className="uppercase tracking-widest text-xs">Dados Biográficos</span>
                     </div>
-                    {expandedSections.biographic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditBiographicData({
+                            name: selectedFicha.name || '',
+                            birthDate: selectedFicha.birthDate || '',
+                            gender: selectedFicha.gender || 'Masculino',
+                            civilStatus: selectedFicha.civilStatus || '',
+                            birthPlace: selectedFicha.birthPlace || '',
+                            nationality: selectedFicha.nationality || '',
+                            fatherName: selectedFicha.fatherName || '',
+                            motherName: selectedFicha.motherName || '',
+                            profession: selectedFicha.profession || '',
+                            nif: selectedFicha.nif || '',
+                          });
+                          setShowEditBiographic(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-200 transition-all"
+                      >
+                        <Edit size={13} />
+                        Editar
+                      </button>
+                      {expandedSections.biographic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </div>
                   </button>
                   
                   <AnimatePresence>
@@ -6032,28 +6650,16 @@ export default function App() {
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                            <DetailField label="Nome Completo" value={selectedFicha.name || 'Bruno Fonseca'} />
-                            <DetailField label="Data Nascimento *" value="15 / 15 / 2010" icon={Calendar} />
-                            <DetailField label="Sexo" value="Masculino" type="select" options={['Masculino', 'Feminino']} />
-                            <DetailField label="Estado Civil" value="Solteiro" type="select" options={['Solteiro', 'Casado']} />
-                            <DetailField label="Naturalidade" value="Cabo Verde" type="select" options={['Cabo Verde']} />
-                            <DetailField label="Nacionalidade" value="Cabo Verde" type="select" options={['Cabo Verde']} />
-                            <DetailField label="Nome Pai" value="" />
-                            <DetailField label="Nome Mãe" value="" />
-                            <DetailField label="Profissão" value="" />
-                            <DetailField label="Alcunha" value="" />
-                          </div>
-
-                          <div className="space-y-6">
-                            <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Identificação</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-                              <DetailField label="NIF" value={selectedFicha.nif || ''} readOnly={false} onChange={(val) => setSelectedFicha({...selectedFicha, nif: val})} />
-                              <DetailField label="Tipo Documento" value={selectedFicha.docType || 'CNI'} type="select" options={['CNI', 'Passaporte']} />
-                              <DetailField label="Número Documento" value="9884565" />
-                              <DetailField label="Data Emissão" value="15 / 10 / 2020" icon={Calendar} />
-                              <DetailField label="Data Validade" value="15 / 10 / 2025" icon={Calendar} />
-                              <DetailField label="Local Emissão" value="" />
-                            </div>
+                            <DetailField label="Nome Completo" value={selectedFicha.name || ''} readOnly={false} onChange={(val) => setSelectedFicha({...selectedFicha, name: val})} />
+                            <DetailField label="Data Nascimento" value={selectedFicha.birthDate || ''} type="date" icon={Calendar} readOnly={false} onChange={(val) => setSelectedFicha({...selectedFicha, birthDate: val})} />
+                            <DetailField label="Sexo" value={selectedFicha.gender || 'Masculino'} type="select" options={['Masculino', 'Feminino']} readOnly={false} onChange={(val) => setSelectedFicha({...selectedFicha, gender: val})} />
+                            <DetailField label="Estado Civil" value={selectedFicha.civilStatus || ''} type="select" options={['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União de facto']} readOnly={false} onChange={(val) => setSelectedFicha({...selectedFicha, civilStatus: val})} />
+                            <DetailField label="Naturalidade" value={selectedFicha.birthPlace || ''} readOnly={false} onChange={(val) => setSelectedFicha({...selectedFicha, birthPlace: val})} />
+                            <DetailField label="Nacionalidade" value={selectedFicha.nationality || ''} readOnly={false} onChange={(val) => setSelectedFicha({...selectedFicha, nationality: val})} />
+                            <DetailField label="Nome Pai" value={selectedFicha.fatherName || ''} readOnly={false} onChange={(val) => setSelectedFicha({...selectedFicha, fatherName: val})} />
+                            <DetailField label="Nome Mãe" value={selectedFicha.motherName || ''} readOnly={false} onChange={(val) => setSelectedFicha({...selectedFicha, motherName: val})} />
+                            <DetailField label="Profissão" value={selectedFicha.profession || ''} readOnly={false} onChange={(val) => setSelectedFicha({...selectedFicha, profession: val})} />
+                            <DetailField label="NIF" value={selectedFicha.nif || ''} readOnly={false} onChange={(val) => setSelectedFicha({...selectedFicha, nif: val})} />
                           </div>
                         </div>
                       </motion.div>
@@ -6063,16 +6669,24 @@ export default function App() {
 
                 {/* Accordion: Sinais Complementares */}
                 <div className="space-y-4">
-                  <button 
+                  <div
                     onClick={() => toggleSection('complementary')}
-                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-900 text-white rounded-lg"><Fingerprint size={18} /></div>
                       <span className="uppercase tracking-widest text-xs">Sinais Complementares</span>
                     </div>
-                    {expandedSections.complementary ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                  </button>
+                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => { setShowComplementaryModal(true); if (!expandedSections.complementary) toggleSection('complementary'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
+                      >
+                        <Plus size={13} /> Adicionar
+                      </button>
+                      {expandedSections.complementary ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </div>
+                  </div>
                   
                   <AnimatePresence>
                     {expandedSections.complementary && (
@@ -6243,6 +6857,259 @@ export default function App() {
                         className="overflow-hidden"
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-12">
+                          {/* Documento de Identificação */}
+                          <div className="space-y-4">
+                            <AnimatePresence>
+                              {showAddDocument && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
+                                >
+                                  <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                                    <h5 className="text-xs font-bold text-slate-700 uppercase">Novo Documento</h5>
+                                    <button onClick={() => setShowAddDocument(false)} className="text-slate-400 hover:text-slate-600"><Trash2 size={14} /></button>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Tipo</label>
+                                      <select value={newDocument.type} onChange={(e) => setNewDocument({...newDocument, type: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors">
+                                        <option value="CNI">CNI</option>
+                                        <option value="Passaporte">Passaporte</option>
+                                        <option value="Título de Residência">Título de Residência</option>
+                                      </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Número</label>
+                                      <input type="text" value={newDocument.number} onChange={(e) => setNewDocument({...newDocument, number: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Local de Emissão</label>
+                                      <input type="text" value={newDocument.issueLocation} onChange={(e) => setNewDocument({...newDocument, issueLocation: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Data de Emissão</label>
+                                      <input type="date" value={newDocument.issueDate} onChange={(e) => setNewDocument({...newDocument, issueDate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Data de Validade</label>
+                                      <input type="date" value={newDocument.expiryDate} onChange={(e) => setNewDocument({...newDocument, expiryDate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-end">
+                                    <button onClick={() => handleAddOtherInfo('document')} className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors">Confirmar Adição</button>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                            <div className="flex justify-between items-center">
+                              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento de Identificação</h4>
+                              <Button variant="outline" icon={showAddDocument ? Trash2 : Plus} onClick={() => setShowAddDocument(!showAddDocument)}>
+                                {showAddDocument ? 'Cancelar' : 'Adicionar Documento'}
+                              </Button>
+                            </div>
+                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                    <th className="px-6 py-4">Nº</th>
+                                    <th className="px-6 py-4">Tipo</th>
+                                    <th className="px-6 py-4">Número</th>
+                                    <th className="px-6 py-4">Emissão</th>
+                                    <th className="px-6 py-4">Validade</th>
+                                    <th className="px-6 py-4">Local Emissão</th>
+                                    <th className="px-6 py-4">Criado em</th>
+                                    <th className="px-6 py-4 text-right">Ação</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {selectedFicha.documents?.filter((d: any) => d.validTo === null).map((doc: any, idx: number) => (
+                                    <tr key={doc.id} className="hover:bg-slate-50 transition-colors">
+                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.type}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-900">{doc.number}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.issueDate}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.expiryDate}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.issueLocation || '---'}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.validFrom}</td>
+                                      <td className="px-6 py-4 text-right">
+                                        {!doc.validTo && (
+                                          <button onClick={() => handleDeactivateOtherInfo('document', doc.id)} className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors">Desativar</button>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            {selectedFicha.documents?.some((d: any) => d.validTo !== null) && (
+                              <div className="space-y-4">
+                                <button onClick={() => setShowOtherInfoHistory({...showOtherInfoHistory, document: !showOtherInfoHistory.document})} className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1">
+                                  {showOtherInfoHistory.document ? 'Ocultar Histórico' : 'Ver Histórico de Documentos'}
+                                  {showOtherInfoHistory.document ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                </button>
+                                <AnimatePresence>
+                                  {showOtherInfoHistory.document && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-2">
+                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
+                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
+                                        <table className="w-full text-left border-collapse">
+                                          <thead>
+                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
+                                              <th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Número</th><th className="px-4 py-3">Emissão</th><th className="px-4 py-3">Validade</th><th className="px-4 py-3">Criado por</th><th className="px-4 py-3">Desativado por</th><th className="px-4 py-3">Desativado em</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {selectedFicha.documents?.filter((d: any) => d.validTo !== null).map((doc: any) => (
+                                              <tr key={doc.id} className="border-b border-slate-100 opacity-60">
+                                                <td className="px-4 py-3 text-xs">{doc.type}</td><td className="px-4 py-3 text-xs">{doc.number}</td><td className="px-4 py-3 text-xs">{doc.issueDate}</td><td className="px-4 py-3 text-xs">{doc.expiryDate}</td><td className="px-4 py-3 text-xs font-medium">{doc.user}</td><td className="px-4 py-3 text-xs font-medium text-red-600">{doc.deactivatedBy || '---'}</td><td className="px-4 py-3 text-xs text-red-600 font-medium">{doc.validTo}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Grupo */}
+                          <div className="space-y-4">
+                            <AnimatePresence>
+                              {showAddGroup && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
+                                >
+                                  <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                                    <h5 className="text-xs font-bold text-slate-700 uppercase">Associar Grupo</h5>
+                                    <button onClick={() => setShowAddGroup(false)} className="text-slate-400 hover:text-slate-600"><Trash2 size={14} /></button>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Sigla</label>
+                                      <select
+                                        value={newGroup.sigla}
+                                        onChange={(e) => {
+                                          const selected = paramGroups.find((g: any) => g.sigla === e.target.value);
+                                          setNewGroup({ ...newGroup, sigla: e.target.value, nome: selected?.nome || '' });
+                                        }}
+                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
+                                      >
+                                        <option value="">-- Selecionar --</option>
+                                        {paramGroups.filter((g: any) => g.estado === 'Ativo').map((g: any) => (
+                                          <option key={g.id} value={g.sigla}>{g.sigla}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Nome</label>
+                                      <input
+                                        type="text"
+                                        value={newGroup.nome}
+                                        readOnly
+                                        className="w-full px-4 py-2.5 bg-slate-100 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-500 outline-none cursor-not-allowed"
+                                        placeholder="Preenchido automaticamente"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Função</label>
+                                      <input type="text" value={newGroup.funcao} onChange={(e) => setNewGroup({ ...newGroup, funcao: e.target.value })} placeholder="Ex: Membro, Líder, Associado" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-end">
+                                    <button onClick={() => handleAddOtherInfo('group')} className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors">Confirmar Adição</button>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+
+                            <div className="flex justify-between items-center">
+                              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Grupo</h4>
+                              <Button variant="outline" icon={showAddGroup ? Trash2 : Plus} onClick={() => setShowAddGroup(!showAddGroup)}>
+                                {showAddGroup ? 'Cancelar' : 'Associar Grupo'}
+                              </Button>
+                            </div>
+
+                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                    <th className="px-6 py-4">Nº</th>
+                                    <th className="px-6 py-4">Sigla</th>
+                                    <th className="px-6 py-4">Nome</th>
+                                    <th className="px-6 py-4">Função</th>
+                                    <th className="px-6 py-4">Criado em</th>
+                                    <th className="px-6 py-4 text-right">Ação</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {(selectedFicha.groups || []).filter((g: any) => !g.validTo).map((grp: any, idx: number) => (
+                                    <tr key={grp.id} className="hover:bg-slate-50 transition-colors">
+                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
+                                      <td className="px-6 py-4">
+                                        <span className="px-2 py-0.5 bg-slate-900 text-white text-[10px] font-black rounded-md">{grp.sigla}</span>
+                                      </td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-900">{grp.nome}</td>
+                                      <td className="px-6 py-4 text-xs font-medium text-slate-600">{grp.funcao || '---'}</td>
+                                      <td className="px-6 py-4 text-xs font-medium text-slate-500">{grp.validFrom}</td>
+                                      <td className="px-6 py-4 text-right">
+                                        <button onClick={() => handleDeactivateOtherInfo('group', grp.id)} className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors">Desativar</button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {(selectedFicha.groups || []).some((g: any) => g.validTo) && (
+                              <div className="space-y-4">
+                                <button onClick={() => setShowOtherInfoHistory({ ...showOtherInfoHistory, group: !showOtherInfoHistory.group })} className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1">
+                                  {showOtherInfoHistory.group ? 'Ocultar Histórico' : 'Ver Histórico de Grupos'}
+                                  {showOtherInfoHistory.group ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                </button>
+                                <AnimatePresence>
+                                  {showOtherInfoHistory.group && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-2">
+                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
+                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
+                                        <table className="w-full text-left border-collapse">
+                                          <thead>
+                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
+                                              <th className="px-4 py-3">Sigla</th>
+                                              <th className="px-4 py-3">Nome</th>
+                                              <th className="px-4 py-3">Função</th>
+                                              <th className="px-4 py-3">Criado por</th>
+                                              <th className="px-4 py-3">Desativado por</th>
+                                              <th className="px-4 py-3">Desativado em</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {(selectedFicha.groups || []).filter((g: any) => g.validTo).map((grp: any) => (
+                                              <tr key={grp.id} className="border-b border-slate-100 opacity-60">
+                                                <td className="px-4 py-3 text-xs font-black">{grp.sigla}</td>
+                                                <td className="px-4 py-3 text-xs">{grp.nome}</td>
+                                                <td className="px-4 py-3 text-xs">{grp.funcao || '---'}</td>
+                                                <td className="px-4 py-3 text-xs font-medium">{grp.user}</td>
+                                                <td className="px-4 py-3 text-xs font-medium text-red-600">{grp.deactivatedBy || '---'}</td>
+                                                <td className="px-4 py-3 text-xs text-red-600 font-medium">{grp.validTo}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+                          </div>
+
                           {/* Endereço */}
                           <div className="space-y-4">
                             <AnimatePresence>
@@ -6916,16 +7783,24 @@ export default function App() {
 
                 {/* Accordion: Motivo do Cadastro */}
                 <div className="space-y-4">
-                  <button 
+                  <div
                     onClick={() => toggleSection('motivo')}
-                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-900 text-white rounded-lg"><HelpCircle size={18} /></div>
                       <span className="uppercase tracking-widest text-xs">Motivo do Cadastro</span>
                     </div>
-                    {expandedSections.motivo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                  </button>
+                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => { setShowAddMotivoInFicha(true); if (!expandedSections.motivo) toggleSection('motivo'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
+                      >
+                        <Plus size={13} /> Adicionar
+                      </button>
+                      {expandedSections.motivo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </div>
+                  </div>
                   
                   <AnimatePresence>
                     {expandedSections.motivo && (
@@ -6936,16 +7811,6 @@ export default function App() {
                         className="overflow-hidden"
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
-                          {/* Add Motivo Form */}
-                          <div className="flex justify-end">
-                            <button
-                              onClick={() => setShowAddMotivoInFicha(v => !v)}
-                              className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-700 transition-all text-xs flex items-center gap-2"
-                            >
-                              <Plus size={14} />
-                              Adicionar Motivo
-                            </button>
-                          </div>
                           <AnimatePresence>
                             {showAddMotivoInFicha && (
                               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -7022,20 +7887,20 @@ export default function App() {
                                       </select>
                                     </div>
                                   </div>
-                                  {/* Linha 3 — Destino */}
+                                  {/* Linha 3 — Unidade */}
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Destino</label>
-                                      <select value={newMotivoInFicha.destination} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, destination: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
+                                      <select value={newMotivoInFicha.unit} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, unit: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
                                         <option value="">Selecione...</option>
-                                        <option>Ministério Público</option>
-                                        <option>Tribunal de Comarca da Praia</option>
-                                        <option>Tribunal de Comarca de São Vicente</option>
-                                        <option>Tribunal de Comarca de Santa Catarina</option>
-                                        <option>Prisão Central da Praia</option>
-                                        <option>Estabelecimento Prisional de São Vicente</option>
-                                        <option>Liberdade Provisória</option>
-                                        <option>Outro</option>
+                                        <option>ESF Praia</option>
+                                        <option>ESF Mindelo</option>
+                                        <option>ESF Santa Catarina</option>
+                                        <option>ESF São Vicente</option>
+                                        <option>DP Praia</option>
+                                        <option>DP Mindelo</option>
+                                        <option>DP Santa Cruz</option>
+                                        <option>DP Tarrafal</option>
                                       </select>
                                     </div>
                                   </div>
@@ -7062,13 +7927,13 @@ export default function App() {
                                     </div>
                                   </div>
                                   <div className="flex justify-end gap-3">
-                                    <button onClick={() => { setShowAddMotivoInFicha(false); setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' }); }} className="px-4 py-2 bg-white text-slate-600 border-2 border-slate-200 font-bold rounded-xl hover:bg-slate-50 transition-all text-xs">Cancelar</button>
+                                    <button onClick={() => { setShowAddMotivoInFicha(false); setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' }); }} className="px-4 py-2 bg-white text-slate-600 border-2 border-slate-200 font-bold rounded-xl hover:bg-slate-50 transition-all text-xs">Cancelar</button>
                                     <button
                                       onClick={() => {
                                         if (!newMotivoInFicha.refNo) return;
                                         const newReg = { ...newMotivoInFicha, id: Date.now(), status: 'Ativo' };
                                         setSelectedFicha((prev: any) => ({ ...prev, registrationReasons: [...(prev.registrationReasons || []), newReg] }));
-                                        setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+                                        setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
                                         setShowAddMotivoInFicha(false);
                                       }}
                                       className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-700 transition-all text-xs flex items-center gap-2"
@@ -7090,7 +7955,7 @@ export default function App() {
                                 <button
                                   onClick={() => {
                                     setEditingMotivoId(reg.id);
-                                    setEditingMotivoData({ type: reg.type, sijNo: reg.sijNo || '', measures: reg.measures || '' });
+                                    setEditingMotivoData({ type: reg.type, sijNo: reg.sijNo || '', unit: reg.unit || '', measures: reg.measures || '' });
                                   }}
                                   className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all z-10"
                                   title="Editar"
@@ -7127,8 +7992,8 @@ export default function App() {
                                     <p className="text-xs font-bold text-slate-800">{reg.tipologia || '---'}</p>
                                   </div>
                                   <div className="space-y-1">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Destino</p>
-                                    <p className="text-xs font-bold text-slate-800">{reg.destination || '---'}</p>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unidade</p>
+                                    <p className="text-xs font-bold text-slate-800">{reg.unit || '---'}</p>
                                   </div>
                                   <div className="space-y-1">
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nº SIJ</p>
@@ -9835,124 +10700,106 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Modal — Editar Motivo de Cadastro */}
+      {/* Modal — Editar Dados Biográficos */}
       <AnimatePresence>
-        {editingMotivoId !== null && (
+        {showEditBiographic && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-2xl w-full max-w-md shadow-2xl border-2 border-slate-100 overflow-hidden"
+              className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl border-2 border-slate-100 overflow-hidden"
             >
               {/* Header */}
               <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/10 rounded-lg"><Edit size={18} className="text-white" /></div>
+                  <div className="p-2 bg-white/10 rounded-lg"><User size={18} className="text-white" /></div>
                   <div>
-                    <h2 className="text-sm font-black text-white uppercase tracking-widest">Editar Registo</h2>
+                    <h2 className="text-sm font-black text-white uppercase tracking-widest">Dados Biográficos</h2>
                     <p className="text-[10px] text-slate-400 font-medium mt-0.5">Ficha N.º {selectedFicha?.number} — {selectedFicha?.name}</p>
                   </div>
                 </div>
-                <button onClick={() => setEditingMotivoId(null)} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                <button onClick={() => setShowEditBiographic(false)} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
                   <X size={18} />
                 </button>
               </div>
 
               {/* Body */}
-              <div className="p-6 space-y-5">
-                {/* Info do registo (readonly) */}
-                {(() => {
-                  const reg = (selectedFicha?.registrationReasons || []).find((r: any) => r.id === editingMotivoId);
-                  return reg ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</p>
-                        <p className="text-sm font-black text-slate-900">{reg.refNo || '---'}</p>
-                      </div>
-                      <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Destino</p>
-                        <p className="text-sm font-black text-slate-900">{reg.destination || '---'}</p>
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-
-                {/* Tipo */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Tipo</label>
-                  <div className="flex gap-3">
-                    {['Criminal', 'Policial'].map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => setEditingMotivoData({ ...editingMotivoData, type: t })}
-                        className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest border-2 transition-all ${
-                          editingMotivoData.type === t
-                            ? t === 'Criminal'
-                              ? 'bg-purple-600 border-purple-600 text-white shadow-md'
-                              : 'bg-blue-600 border-blue-600 text-white shadow-md'
-                            : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400'
-                        }`}
-                      >
-                        {t}
-                      </button>
-                    ))}
+              <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Nome Completo */}
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome Completo</label>
+                    <input type="text" value={editBiographicData.name || ''} onChange={(e) => setEditBiographicData({...editBiographicData, name: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
                   </div>
-                </div>
-
-                {/* Nº SIJ */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Nº SIJ</label>
-                  <input
-                    type="text"
-                    value={editingMotivoData.sijNo}
-                    onChange={(e) => setEditingMotivoData({ ...editingMotivoData, sijNo: e.target.value })}
-                    placeholder="Ex: SIJ-2024-0001"
-                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all"
-                  />
-                </div>
-
-                {/* Medidas Aplicadas */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Medidas Aplicadas</label>
-                  <select
-                    value={editingMotivoData.measures}
-                    onChange={(e) => setEditingMotivoData({ ...editingMotivoData, measures: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all appearance-none"
-                  >
-                    <option value="">Selecione...</option>
-                    <option>Prisão Preventiva</option>
-                    <option>Termo de Identidade e Residência</option>
-                    <option>Liberdade Provisória</option>
-                    <option>Obrigação de Apresentação Periódica</option>
-                    <option>Proibição de Contacto</option>
-                    <option>Suspensão de Pena</option>
-                    <option>Multa</option>
-                    <option>Sem medidas aplicadas</option>
-                    <option>Outro</option>
-                  </select>
+                  {/* Data Nascimento */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data de Nascimento</label>
+                    <input type="date" value={editBiographicData.birthDate || ''} onChange={(e) => setEditBiographicData({...editBiographicData, birthDate: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                  </div>
+                  {/* Sexo */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sexo</label>
+                    <select value={editBiographicData.gender || ''} onChange={(e) => setEditBiographicData({...editBiographicData, gender: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all appearance-none">
+                      <option value="Masculino">Masculino</option>
+                      <option value="Feminino">Feminino</option>
+                    </select>
+                  </div>
+                  {/* Estado Civil */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado Civil</label>
+                    <select value={editBiographicData.civilStatus || ''} onChange={(e) => setEditBiographicData({...editBiographicData, civilStatus: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all appearance-none">
+                      <option value="">Selecione...</option>
+                      <option>Solteiro(a)</option>
+                      <option>Casado(a)</option>
+                      <option>Divorciado(a)</option>
+                      <option>Viúvo(a)</option>
+                      <option>União de facto</option>
+                    </select>
+                  </div>
+                  {/* Naturalidade */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Naturalidade</label>
+                    <input type="text" value={editBiographicData.birthPlace || ''} onChange={(e) => setEditBiographicData({...editBiographicData, birthPlace: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                  </div>
+                  {/* Nacionalidade */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nacionalidade</label>
+                    <input type="text" value={editBiographicData.nationality || ''} onChange={(e) => setEditBiographicData({...editBiographicData, nationality: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                  </div>
+                  {/* Nome Pai */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Pai</label>
+                    <input type="text" value={editBiographicData.fatherName || ''} onChange={(e) => setEditBiographicData({...editBiographicData, fatherName: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                  </div>
+                  {/* Nome Mãe */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome da Mãe</label>
+                    <input type="text" value={editBiographicData.motherName || ''} onChange={(e) => setEditBiographicData({...editBiographicData, motherName: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                  </div>
+                  {/* Profissão */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Profissão</label>
+                    <input type="text" value={editBiographicData.profession || ''} onChange={(e) => setEditBiographicData({...editBiographicData, profession: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                  </div>
+                  {/* NIF */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">NIF</label>
+                    <input type="text" value={editBiographicData.nif || ''} onChange={(e) => setEditBiographicData({...editBiographicData, nif: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                  </div>
                 </div>
               </div>
 
               {/* Footer */}
               <div className="px-6 py-4 border-t-2 border-slate-100 flex items-center justify-end gap-3">
-                <button
-                  onClick={() => setEditingMotivoId(null)}
-                  className="px-4 py-2 bg-white text-slate-700 border-2 border-slate-200 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all"
-                >
+                <button onClick={() => setShowEditBiographic(false)} className="px-4 py-2 bg-white text-slate-700 border-2 border-slate-200 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all">
                   Cancelar
                 </button>
                 <button
                   onClick={() => {
-                    setSelectedFicha((prev: any) => ({
-                      ...prev,
-                      registrationReasons: (prev.registrationReasons || []).map((r: any) =>
-                        r.id === editingMotivoId
-                          ? { ...r, type: editingMotivoData.type, sijNo: editingMotivoData.sijNo, measures: editingMotivoData.measures }
-                          : r
-                      )
-                    }));
-                    setEditingMotivoId(null);
+                    setSelectedFicha((prev: any) => ({ ...prev, ...editBiographicData }));
+                    setFichas((prev: any[]) => prev.map(f => f.id === selectedFicha?.id ? { ...f, ...editBiographicData } : f));
+                    setShowEditBiographic(false);
                   }}
                   className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all"
                 >
@@ -9963,6 +10810,149 @@ export default function App() {
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      {/* Modal — Editar Motivo de Cadastro */}
+      <AnimatePresence>
+        {editingMotivoId !== null && (() => {
+          const reg = (selectedFicha?.registrationReasons || []).find((r: any) => r.id === editingMotivoId);
+          if (!reg) return null;
+          return (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
+              >
+                {/* Header */}
+                <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Motivo de Cadastro</p>
+                    <h2 className="text-sm font-black text-white">{reg.refNo} — {reg.date}</h2>
+                  </div>
+                  <button onClick={() => setEditingMotivoId(null)} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Contexto readonly — strip compacto */}
+                <div className="grid grid-cols-3 divide-x divide-slate-100 border-b-2 border-slate-100 bg-slate-50">
+                  {[
+                    { label: 'Tipo de Auto', value: reg.auto_type },
+                    { label: 'Natureza', value: reg.natureza },
+                    { label: 'Tipologia', value: reg.tipologia },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="px-4 py-3 space-y-0.5">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+                      <p className="text-xs font-bold text-slate-700 leading-tight">{value || '---'}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Campos editáveis */}
+                <div className="p-6 space-y-5">
+                  {/* Tipo */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo</label>
+                    <div className="flex gap-2">
+                      {['Criminal', 'Policial'].map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => setEditingMotivoData({ ...editingMotivoData, type: t })}
+                          className={`flex-1 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest border-2 transition-all ${
+                            editingMotivoData.type === t
+                              ? t === 'Criminal'
+                                ? 'bg-purple-600 border-purple-600 text-white'
+                                : 'bg-blue-600 border-blue-600 text-white'
+                              : 'bg-white border-slate-200 text-slate-400 hover:border-slate-400 hover:text-slate-700'
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Nº SIJ + Unidade */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº SIJ</label>
+                      <input
+                        type="text"
+                        value={editingMotivoData.sijNo}
+                        onChange={(e) => setEditingMotivoData({ ...editingMotivoData, sijNo: e.target.value })}
+                        placeholder="Ex: SIJ-2024-0001"
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
+                      <select
+                        value={editingMotivoData.unit}
+                        onChange={(e) => setEditingMotivoData({ ...editingMotivoData, unit: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all appearance-none"
+                      >
+                        <option value="">Selecione...</option>
+                        <option>ESF Praia</option>
+                        <option>ESF Mindelo</option>
+                        <option>ESF Santa Catarina</option>
+                        <option>ESF São Vicente</option>
+                        <option>DP Praia</option>
+                        <option>DP Mindelo</option>
+                        <option>DP Santa Cruz</option>
+                        <option>DP Tarrafal</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Medidas Aplicadas */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medidas Aplicadas</label>
+                    <select
+                      value={editingMotivoData.measures}
+                      onChange={(e) => setEditingMotivoData({ ...editingMotivoData, measures: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all appearance-none"
+                    >
+                      <option value="">Selecione...</option>
+                      <option>Prisão Preventiva</option>
+                      <option>Termo de Identidade e Residência</option>
+                      <option>Liberdade Provisória</option>
+                      <option>Obrigação de Apresentação Periódica</option>
+                      <option>Proibição de Contacto</option>
+                      <option>Suspensão de Pena</option>
+                      <option>Multa</option>
+                      <option>Sem medidas aplicadas</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t-2 border-slate-100 flex items-center justify-end gap-3 bg-slate-50">
+                  <button onClick={() => setEditingMotivoId(null)} className="px-4 py-2 bg-white text-slate-700 border-2 border-slate-200 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-100 transition-all">
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedFicha((prev: any) => ({
+                        ...prev,
+                        registrationReasons: (prev.registrationReasons || []).map((r: any) =>
+                          r.id === editingMotivoId
+                            ? { ...r, type: editingMotivoData.type, sijNo: editingMotivoData.sijNo, unit: editingMotivoData.unit, measures: editingMotivoData.measures }
+                            : r
+                        )
+                      }));
+                      setEditingMotivoId(null);
+                    }}
+                    className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all"
+                  >
+                    <Check size={14} /> Guardar
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Detalhes do Histórico de Fotografias Modal */}
