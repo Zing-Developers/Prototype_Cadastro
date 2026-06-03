@@ -203,7 +203,7 @@ export default function App() {
       naturality: 'Cabo Verde', nationality: 'Cabo Verde', father_name: 'António Fonseca', mother_name: 'Maria Fonseca', profession: 'Estudante', 
       doc_type: 'BI', doc_number: '001234567LA041', doc_issue_date: '2020-01-01', doc_expiry_date: '2030-01-01', doc_issue_location: 'Praia',
       phone: '9884565', email: 'bruno@email.cv', island: 'Santiago', municipality: 'Praia', parish: 'N.S. Da Graça', locality: 'Cidade Da Praia', zone: 'Txadinha', reference_point: 'Perto da Escola',
-      nif: '200123456', status: 'Por Registar', sent_by: 'Carlos Mascarenha', sent_date: '2023-03-20', sent_unit: 'ESF Praia', completed_by: null, completed_date: null, completed_unit: null,
+      nif: '200123456', status: 'Por Associar', sent_by: 'Carlos Mascarenha', sent_date: '2023-03-20', sent_unit: 'ESF Praia', completed_by: null, completed_date: null, completed_unit: null,
       records: [
         {id: 1, person_id: 1, date: '2023-05-12T14:32:00', reason: 'Furto qualificado em residência', ref_note: 'REF-2023-045', measures: 'Termo de Identidade e Residência', type: 'Criminal', auto_type: 'Auto de Notícia', natureza: 'Crime contra o Património', enquadramento: 'Furto Qualificado — Art. 197º CP', created_by: 'Carlos Mascarenha', sent_by: 'João Andrade', unit: 'ESF Praia'}
       ],
@@ -1201,6 +1201,7 @@ export default function App() {
     occurrence_number: '',
     registration_number: '',
     unit: '',
+    estado: '',
     name: '',
     surname: '',
     birth_date: '',
@@ -1369,8 +1370,8 @@ export default function App() {
 
   const handleClearFilters = () => {
     setSearchFilters({
-      occurrence_number: '', registration_number: '', unit: '',
-      name: '', surname: '', birth_date: '', alcunha: '', sexo: '',
+      occurrence_number: '', registration_number: '', unit: '', estado: '',
+      name: '', surname: '', birth_date: '', sexo: '',
       date_from: '', date_to: '', nationality: '', doc_number: '',
       island: '', municipality: '', parish: '', locality: '', zone: '',
       auto_type: '', natureza: '', enquadramento: '', tipologia: '',
@@ -1453,7 +1454,7 @@ export default function App() {
       const newPerson = {
         id: Date.now(),
         ...formData,
-        status: 'Por Registar'
+        status: 'Por Associar'
       };
       setPersons(prev => [newPerson, ...prev]);
       
@@ -1792,6 +1793,18 @@ export default function App() {
                             <option value="DP Mindelo">DP Mindelo</option>
                           </select>
                         </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Receção</label>
+                          <input type="date" value={searchFilters.date_from} onChange={(e) => setSearchFilters({...searchFilters, date_from: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</label>
+                          <select value={searchFilters.estado} onChange={(e) => setSearchFilters({...searchFilters, estado: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                            <option value="">Todos</option>
+                            <option value="Por Associar">Por Associar</option>
+                            <option value="Concluído">Concluído</option>
+                          </select>
+                        </div>
 
                         {/* Avançado: intervalo de data + dados da ocorrência */}
                         <AnimatePresence>
@@ -1870,10 +1883,6 @@ export default function App() {
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apelido</label>
                           <input type="text" value={searchFilters.surname} onChange={(e) => setSearchFilters({...searchFilters, surname: e.target.value})} placeholder="Apelido" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alcunha</label>
-                          <input type="text" value={searchFilters.alcunha} onChange={(e) => setSearchFilters({...searchFilters, alcunha: e.target.value})} placeholder="Nome de rua" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Nascimento</label>
@@ -1978,6 +1987,7 @@ export default function App() {
                           <th className="px-6 py-4">Apelido</th>
                           <th className="px-6 py-4">Data Nascimento</th>
                           <th className="px-6 py-4">Ilha</th>
+                          <th className="px-6 py-4">Estado</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
@@ -1996,11 +2006,16 @@ export default function App() {
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.full_name ? p.full_name.split(' ').slice(1).join(' ') || '---' : '---'}</td>
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : '---'}</td>
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.island || '---'}</td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${p.status === 'Concluído' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                  {p.status || 'Por Associar'}
+                                </span>
+                              </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic font-medium">Nenhum registro encontrado na base de dados</td>
+                            <td colSpan={9} className="px-6 py-12 text-center text-slate-400 italic font-medium">Nenhum registro encontrado na base de dados</td>
                           </tr>
                         )}
                       </tbody>
