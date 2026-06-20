@@ -1212,6 +1212,7 @@ export default function App() {
     date_to: '',
     nationality: '',
     doc_number: '',
+    nif: '',
     island: '',
     municipality: '',
     parish: '',
@@ -1793,10 +1794,12 @@ export default function App() {
                             <option value="DP Mindelo">DP Mindelo</option>
                           </select>
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Receção</label>
-                          <input type="date" value={searchFilters.date_from} onChange={(e) => setSearchFilters({...searchFilters, date_from: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
-                        </div>
+                        {!showAdvancedFilters && (
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Receção</label>
+                            <input type="date" value={searchFilters.date_from} onChange={(e) => setSearchFilters({...searchFilters, date_from: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                          </div>
+                        )}
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</label>
                           <select value={searchFilters.estado} onChange={(e) => setSearchFilters({...searchFilters, estado: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
@@ -1896,6 +1899,10 @@ export default function App() {
                               <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Documento</label>
                                 <input type="text" value={searchFilters.doc_number} onChange={(e) => setSearchFilters({...searchFilters, doc_number: e.target.value})} placeholder="CNI, Passaporte, ..." className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">NIF</label>
+                                <input type="text" value={searchFilters.nif} onChange={(e) => setSearchFilters({...searchFilters, nif: e.target.value})} placeholder="Nº de Identificação Fiscal" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nacionalidade</label>
@@ -8498,7 +8505,8 @@ export default function App() {
                                   </div>
 
                                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                    <DetailField label="Nome Completo" value={`${associatedPerson.name} ${associatedPerson.surname}`} />
+                                    <DetailField label="Nome" value={associatedPerson.name || ''} />
+                                    <DetailField label="Apelido" value={associatedPerson.surname || ''} />
                                     <DetailField label="Data Nascimento *" value={new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
                                     <DetailField label="Sexo" value={associatedPerson.gender} type="select" options={['Masculino', 'Feminino', 'Outro']} />
                                     <DetailField label="Estado Civil" value={associatedPerson.maritalStatus} type="select" options={['Solteiro', 'Casado', 'Divorciado', 'Viúvo']} />
@@ -8575,6 +8583,13 @@ export default function App() {
                                 <div className="bg-white border-2 border-blue-100 shadow-blue-50 rounded-2xl p-8 space-y-8 shadow-sm mt-2 relative">
                                   <div className="absolute top-4 right-8 flex items-center gap-3">
                                     <button
+                                      onClick={() => setSuggestedFicha(null)}
+                                      className="px-4 py-1.5 bg-red-50 text-red-600 border border-red-200 font-bold rounded-xl hover:bg-red-600 hover:text-white transition-all text-xs flex items-center gap-2"
+                                    >
+                                      <X size={13} />
+                                      Rejeitar Match
+                                    </button>
+                                    <button
                                       onClick={() => {
                                         setAssociatedPerson(suggestedFicha);
                                         setSuggestedFicha(null);
@@ -8608,8 +8623,9 @@ export default function App() {
                                         </div>
                                       </div>
 
-                                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                        <DetailField label="Nome Completo" value={`${suggestedFicha.name} ${suggestedFicha.surname}`} />
+                                      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                                        <DetailField label="Nome" value={suggestedFicha.name || ''} />
+                                        <DetailField label="Apelido" value={suggestedFicha.surname || ''} />
                                         <DetailField label="Data Nascimento *" value={new Date(suggestedFicha.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
                                         <DetailField label="Sexo" value={suggestedFicha.gender} />
                                         <DetailField label="Estado Civil" value={suggestedFicha.maritalStatus} />
@@ -8690,7 +8706,8 @@ export default function App() {
                             <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Dados provenientes do SIGO — não editáveis</p>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                          <DetailField label="Nome Completo" value={selectedPerson.full_name} />
+                          <DetailField label="Nome" value={selectedPerson.full_name ? selectedPerson.full_name.split(' ')[0] : ''} />
+                          <DetailField label="Apelido" value={selectedPerson.full_name ? selectedPerson.full_name.split(' ').slice(1).join(' ') : ''} />
                           <DetailField label="Data Nascimento *" value={selectedPerson.birth_date ? new Date(selectedPerson.birth_date).toLocaleDateString('pt-BR') : '---'} icon={Calendar} />
                           <DetailField label="Sexo" value={selectedPerson.gender} />
                           <DetailField label="Estado Civil" value={selectedPerson.marital_status} />
