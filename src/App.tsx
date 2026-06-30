@@ -425,7 +425,7 @@ export default function App() {
   const [editBiographicData, setEditBiographicData] = useState<any>({});
 
   // Parametrizações
-  const [activeParamTab, setActiveParamTab] = useState<'domains' | 'groups'>('domains');
+  const [activeParamTab, setActiveParamTab] = useState<'domains' | 'characteristics' | 'groups'>('domains');
   const [selectedDomain, setSelectedDomain] = useState('Medidas Aplicadas');
   const [showAddParam, setShowAddParam] = useState(false);
   const [newParamData, setNewParamData] = useState({ valor: '', descricao: '' });
@@ -491,20 +491,80 @@ export default function App() {
       { id: 5, valor: 'UP', descricao: 'Uso Pessoal',         estado: 'Ativo' },
       { id: 6, valor: 'LA', descricao: 'Licença / Alvará',    estado: 'Ativo' },
     ],
-    'Sinal Complementar': [
-      { id: 1,  valor: 'ALT', descricao: 'Altura',              estado: 'Ativo' },
-      { id: 2,  valor: 'CF',  descricao: 'Constituição Física', estado: 'Ativo' },
-      { id: 3,  valor: 'CAB', descricao: 'Cabelo',              estado: 'Ativo' },
-      { id: 4,  valor: 'CPL', descricao: 'Cor de Pele',         estado: 'Ativo' },
-      { id: 5,  valor: 'BAR', descricao: 'Barba',               estado: 'Ativo' },
-      { id: 6,  valor: 'BIG', descricao: 'Bigode',              estado: 'Ativo' },
-      { id: 7,  valor: 'OLH', descricao: 'Olhos',               estado: 'Ativo' },
-      { id: 8,  valor: 'RST', descricao: 'Rosto',               estado: 'Ativo' },
-      { id: 9,  valor: 'TAT', descricao: 'Tatuagem',            estado: 'Ativo' },
-      { id: 10, valor: 'CIC', descricao: 'Cicatriz',            estado: 'Ativo' },
-      { id: 11, valor: 'MN',  descricao: 'Marca de Nascença',   estado: 'Ativo' },
-    ],
   });
+
+  // Características (two-level: characteristic + characteristic_type)
+  const [characteristics, setCharacteristics] = useState<any[]>([
+    { id: 1,  code: 'CAB', name: 'Cabelo',              value_type: 'LIST',    order: 1,  status: true },
+    { id: 2,  code: 'OLH', name: 'Olhos',               value_type: 'LIST',    order: 2,  status: true },
+    { id: 3,  code: 'ALT', name: 'Altura',              value_type: 'NUMERIC', order: 3,  status: true },
+    { id: 4,  code: 'CF',  name: 'Constituição Física', value_type: 'LIST',    order: 4,  status: true },
+    { id: 5,  code: 'CPL', name: 'Cor de Pele',         value_type: 'LIST',    order: 5,  status: true },
+    { id: 6,  code: 'BAR', name: 'Barba',               value_type: 'LIST',    order: 6,  status: true },
+    { id: 7,  code: 'BIG', name: 'Bigode',              value_type: 'LIST',    order: 7,  status: true },
+    { id: 8,  code: 'RST', name: 'Rosto',               value_type: 'LIST',    order: 8,  status: true },
+    { id: 9,  code: 'TAT', name: 'Tatuagem',            value_type: 'TEXT',    order: 9,  status: true },
+    { id: 10, code: 'CIC', name: 'Cicatriz',            value_type: 'TEXT',    order: 10, status: true },
+    { id: 11, code: 'MN',  name: 'Marca de Nascença',   value_type: 'TEXT',    order: 11, status: true },
+  ]);
+  const [characteristicTypes, setCharacteristicTypes] = useState<Record<number, any[]>>({
+    1:  [ // Cabelo
+      { id: 101, code: 'CRE', description: 'Crespo',   order: 1, status: true },
+      { id: 102, code: 'LIS', description: 'Liso',     order: 2, status: true },
+      { id: 103, code: 'OND', description: 'Ondulado', order: 3, status: true },
+      { id: 104, code: 'CAR', description: 'Careca',   order: 4, status: true },
+    ],
+    2:  [ // Olhos
+      { id: 201, code: 'CAS', description: 'Castanhos', order: 1, status: true },
+      { id: 202, code: 'AZU', description: 'Azuis',     order: 2, status: true },
+      { id: 203, code: 'VER', description: 'Verdes',    order: 3, status: true },
+      { id: 204, code: 'PRE', description: 'Pretos',    order: 4, status: true },
+    ],
+    3:  [], // Altura (NUMERIC — sem tipos)
+    4:  [ // Constituição Física
+      { id: 401, code: 'ATL', description: 'Atlética', order: 1, status: true },
+      { id: 402, code: 'MAG', description: 'Magro',    order: 2, status: true },
+      { id: 403, code: 'OBE', description: 'Obeso',    order: 3, status: true },
+      { id: 404, code: 'FOR', description: 'Forte',    order: 4, status: true },
+    ],
+    5:  [ // Cor de Pele
+      { id: 501, code: 'CLA', description: 'Clara',   order: 1, status: true },
+      { id: 502, code: 'MED', description: 'Média',   order: 2, status: true },
+      { id: 503, code: 'ESC', description: 'Escura',  order: 3, status: true },
+      { id: 504, code: 'NEG', description: 'Negra',   order: 4, status: true },
+    ],
+    6:  [ // Barba
+      { id: 601, code: 'CAV', description: 'Cavanhaque',    order: 1, status: true },
+      { id: 602, code: 'BLC', description: 'Barba Comprida',order: 2, status: true },
+      { id: 603, code: 'BCT', description: 'Barba Curta',   order: 3, status: true },
+      { id: 604, code: 'SEM', description: 'Sem Barba',     order: 4, status: true },
+    ],
+    7:  [ // Bigode
+      { id: 701, code: 'SIM', description: 'Sim',    order: 1, status: true },
+      { id: 702, code: 'NAO', description: 'Não',    order: 2, status: true },
+      { id: 703, code: 'FIN', description: 'Fino',   order: 3, status: true },
+      { id: 704, code: 'GRS', description: 'Grosso', order: 4, status: true },
+    ],
+    8:  [ // Rosto
+      { id: 801, code: 'OVL', description: 'Oval',              order: 1, status: true },
+      { id: 802, code: 'RED', description: 'Redondo',           order: 2, status: true },
+      { id: 803, code: 'QUA', description: 'Quadrado',          order: 3, status: true },
+      { id: 804, code: 'COR', description: 'Em Forma de Coração',order: 4, status: true },
+      { id: 805, code: 'OBL', description: 'Oblongo',           order: 5, status: true },
+    ],
+    9:  [],  // Tatuagem (TEXT)
+    10: [],  // Cicatriz (TEXT)
+    11: [],  // Marca de Nascença (TEXT)
+  });
+  const [selectedCharacteristic, setSelectedCharacteristic] = useState<number>(1);
+  const [showAddCharacteristic, setShowAddCharacteristic] = useState(false);
+  const [newCharacteristic, setNewCharacteristic] = useState({ code: '', name: '', value_type: 'LIST', order: '' });
+  const [editingCharacteristicId, setEditingCharacteristicId] = useState<number | null>(null);
+  const [editingCharacteristic, setEditingCharacteristic] = useState({ code: '', name: '', value_type: 'LIST', order: '' });
+  const [showAddCharType, setShowAddCharType] = useState(false);
+  const [newCharType, setNewCharType] = useState({ code: '', description: '', order: '' });
+  const [editingCharTypeId, setEditingCharTypeId] = useState<number | null>(null);
+  const [editingCharType, setEditingCharType] = useState({ code: '', description: '', order: '' });
 
   // Rehabilitation Modal State
   const [showRehabilitationModal, setShowRehabilitationModal] = useState(false);
@@ -1151,7 +1211,7 @@ export default function App() {
   });
   const [certAnalysisHasSearched, setCertAnalysisHasSearched] = useState(false);
 
-  const characteristicTypes: Record<string, string[]> = {
+  const legacyCharacteristicTypes: Record<string, string[]> = {
     'Barba': ['Cavanhaque', 'Barba Comprida', 'Barba Curta', 'Sem Barba'],
     'Boca': ['Pequena', 'Média', 'Grande', 'Lábios Grossos', 'Lábios Finos'],
     'Naris': ['Arqueado', 'Chato', 'Aquilino', 'Reto'],
@@ -5389,7 +5449,7 @@ export default function App() {
 
                 {/* Tab bar */}
                 <div className="flex gap-2">
-                  {([['domains', 'Domínios'], ['groups', 'Grupos']] as const).map(([tab, label]) => (
+                  {([['domains', 'Domínios'], ['characteristics', 'Características'], ['groups', 'Grupos']] as const).map(([tab, label]) => (
                     <button
                       key={tab}
                       onClick={() => setActiveParamTab(tab)}
@@ -5638,6 +5698,282 @@ export default function App() {
                 </div>
                 </div>
                 )} {/* end TAB: Domínios */}
+
+                {/* ── TAB: Características ── */}
+                {activeParamTab === 'characteristics' && (
+                <div className="flex gap-6 items-start">
+
+                  {/* Left: characteristics list */}
+                  <div className="w-72 flex-shrink-0 bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+                    <div className="px-4 py-4 border-b-2 border-slate-100 bg-slate-50 flex items-center justify-between">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Características</p>
+                      <button
+                        onClick={() => { setShowAddCharacteristic(v => !v); setEditingCharacteristicId(null); }}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
+                      >
+                        <Plus size={11} /> Nova
+                      </button>
+                    </div>
+
+                    {/* Add characteristic form */}
+                    <AnimatePresence>
+                      {showAddCharacteristic && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          <div className="px-4 py-4 bg-slate-50 border-b border-slate-100 space-y-3">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Código</label>
+                                <input type="text" value={newCharacteristic.code} onChange={e => setNewCharacteristic(p => ({ ...p, code: e.target.value.toUpperCase() }))} placeholder="CAB" maxLength={10} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none focus:border-slate-900 uppercase transition-all" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordem</label>
+                                <input type="number" value={newCharacteristic.order} onChange={e => setNewCharacteristic(p => ({ ...p, order: e.target.value }))} placeholder="1" className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</label>
+                              <input type="text" value={newCharacteristic.name} onChange={e => setNewCharacteristic(p => ({ ...p, name: e.target.value }))} placeholder="Ex: Cabelo" className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Valor</label>
+                              <select value={newCharacteristic.value_type} onChange={e => setNewCharacteristic(p => ({ ...p, value_type: e.target.value }))} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                <option value="LIST">LIST</option>
+                                <option value="NUMERIC">NUMERIC</option>
+                                <option value="TEXT">TEXT</option>
+                                <option value="BOOLEAN">BOOLEAN</option>
+                              </select>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => { setShowAddCharacteristic(false); setNewCharacteristic({ code: '', name: '', value_type: 'LIST', order: '' }); }} className="flex-1 px-3 py-1.5 bg-white text-slate-600 border-2 border-slate-200 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-50 transition-all">Cancelar</button>
+                              <button
+                                onClick={() => {
+                                  if (!newCharacteristic.code.trim() || !newCharacteristic.name.trim()) return;
+                                  const newId = Date.now();
+                                  setCharacteristics(prev => [...prev, { id: newId, code: newCharacteristic.code.trim(), name: newCharacteristic.name.trim(), value_type: newCharacteristic.value_type, order: parseInt(newCharacteristic.order) || prev.length + 1, status: true }]);
+                                  setCharacteristicTypes(prev => ({ ...prev, [newId]: [] }));
+                                  setNewCharacteristic({ code: '', name: '', value_type: 'LIST', order: '' });
+                                  setShowAddCharacteristic(false);
+                                  setSelectedCharacteristic(newId);
+                                }}
+                                className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
+                              >
+                                <Check size={12} /> Guardar
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <div className="divide-y divide-slate-50 max-h-[600px] overflow-y-auto">
+                      {characteristics.sort((a, b) => a.order - b.order).map(char => {
+                        const types = characteristicTypes[char.id] || [];
+                        const isSelected = selectedCharacteristic === char.id;
+                        if (editingCharacteristicId === char.id) return (
+                          <div key={char.id} className="px-4 py-3 bg-blue-50 space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <input type="text" value={editingCharacteristic.code} onChange={e => setEditingCharacteristic(p => ({ ...p, code: e.target.value.toUpperCase() }))} maxLength={10} className="px-2 py-1.5 bg-white border-2 border-slate-900 rounded-lg text-xs font-black text-slate-900 outline-none uppercase" />
+                              <input type="number" value={editingCharacteristic.order} onChange={e => setEditingCharacteristic(p => ({ ...p, order: e.target.value }))} className="px-2 py-1.5 bg-white border-2 border-slate-200 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-slate-900" />
+                            </div>
+                            <input type="text" value={editingCharacteristic.name} onChange={e => setEditingCharacteristic(p => ({ ...p, name: e.target.value }))} className="w-full px-2 py-1.5 bg-white border-2 border-slate-200 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-slate-900" />
+                            <select value={editingCharacteristic.value_type} onChange={e => setEditingCharacteristic(p => ({ ...p, value_type: e.target.value }))} className="w-full px-2 py-1.5 bg-white border-2 border-slate-200 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-slate-900">
+                              <option value="LIST">LIST</option>
+                              <option value="NUMERIC">NUMERIC</option>
+                              <option value="TEXT">TEXT</option>
+                              <option value="BOOLEAN">BOOLEAN</option>
+                            </select>
+                            <div className="flex gap-2">
+                              <button onClick={() => setEditingCharacteristicId(null)} className="flex-1 px-2 py-1 bg-white text-slate-600 border border-slate-200 font-black text-[10px] uppercase rounded-lg">Cancelar</button>
+                              <button
+                                onClick={() => {
+                                  setCharacteristics(prev => prev.map(c => c.id === char.id ? { ...c, code: editingCharacteristic.code, name: editingCharacteristic.name, value_type: editingCharacteristic.value_type, order: parseInt(editingCharacteristic.order) || c.order } : c));
+                                  setEditingCharacteristicId(null);
+                                }}
+                                className="flex-1 px-2 py-1 bg-slate-900 text-white font-black text-[10px] uppercase rounded-lg hover:bg-slate-700 flex items-center justify-center gap-1"
+                              >
+                                <Check size={11} /> Guardar
+                              </button>
+                            </div>
+                          </div>
+                        );
+                        return (
+                          <button
+                            key={char.id}
+                            onClick={() => { setSelectedCharacteristic(char.id); setShowAddCharType(false); setEditingCharTypeId(null); }}
+                            className={`w-full text-left px-4 py-3 flex items-center justify-between transition-all group ${isSelected ? 'bg-slate-900' : !char.status ? 'opacity-40 hover:bg-slate-50' : 'hover:bg-slate-50'}`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{char.code}</span>
+                                <span className={`text-xs font-bold truncate ${isSelected ? 'text-white' : 'text-slate-700'}`}>{char.name}</span>
+                              </div>
+                              <span className={`text-[9px] font-black mt-0.5 block ${isSelected ? 'text-white/60' : 'text-slate-400'}`}>{char.value_type} · {types.length} tipos</span>
+                            </div>
+                            {isSelected && char.status && (
+                              <button
+                                onClick={e => { e.stopPropagation(); setEditingCharacteristicId(char.id); setEditingCharacteristic({ code: char.code, name: char.name, value_type: char.value_type, order: String(char.order) }); }}
+                                className="ml-2 p-1 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                              >
+                                <Edit size={13} />
+                              </button>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Right: characteristic_types */}
+                  <div className="flex-1 bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden min-w-0">
+                    {(() => {
+                      const char = characteristics.find(c => c.id === selectedCharacteristic);
+                      if (!char) return null;
+                      const types = characteristicTypes[char.id] || [];
+                      const isListType = char.value_type === 'LIST' || char.value_type === 'BOOLEAN';
+                      return (
+                        <>
+                          {/* Add type form */}
+                          <AnimatePresence>
+                            {showAddCharType && isListType && (
+                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                <div className="px-6 py-5 bg-slate-50 border-b-2 border-slate-100 space-y-4">
+                                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Novo Tipo — {char.name}</p>
+                                  <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-1.5">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Código</label>
+                                      <input type="text" value={newCharType.code} onChange={e => setNewCharType(p => ({ ...p, code: e.target.value.toUpperCase() }))} placeholder="Ex: CRE" maxLength={10} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-black text-slate-900 outline-none focus:border-slate-900 uppercase transition-all" />
+                                    </div>
+                                    <div className="space-y-1.5 col-span-2">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição</label>
+                                      <input type="text" value={newCharType.description} onChange={e => setNewCharType(p => ({ ...p, description: e.target.value }))} placeholder="Ex: Crespo" className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-end gap-3">
+                                    <button onClick={() => { setShowAddCharType(false); setNewCharType({ code: '', description: '', order: '' }); }} className="px-4 py-2 bg-white text-slate-700 border-2 border-slate-200 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all">Cancelar</button>
+                                    <button
+                                      onClick={() => {
+                                        if (!newCharType.code.trim() || !newCharType.description.trim()) return;
+                                        const newTypeId = Date.now();
+                                        setCharacteristicTypes(prev => ({ ...prev, [char.id]: [...(prev[char.id] || []), { id: newTypeId, code: newCharType.code.trim(), description: newCharType.description.trim(), order: (prev[char.id] || []).length + 1, status: true }] }));
+                                        setNewCharType({ code: '', description: '', order: '' });
+                                        setShowAddCharType(false);
+                                      }}
+                                      className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all"
+                                    >
+                                      <Plus size={14} /> Adicionar
+                                    </button>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+
+                          {/* Table header */}
+                          <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100 bg-white">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-black text-slate-900 uppercase tracking-widest">{char.name}</span>
+                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${char.value_type === 'LIST' ? 'bg-blue-50 text-blue-600' : char.value_type === 'NUMERIC' ? 'bg-amber-50 text-amber-600' : char.value_type === 'BOOLEAN' ? 'bg-purple-50 text-purple-600' : 'bg-slate-100 text-slate-500'}`}>{char.value_type}</span>
+                              <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{types.length} tipos</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setCharacteristics(prev => prev.map(c => c.id === char.id ? { ...c, status: !c.status } : c))}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-colors ${char.status ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
+                              >
+                                {char.status ? 'Desativar' : 'Ativar'}
+                              </button>
+                              {isListType && !showAddCharType && (
+                                <button onClick={() => setShowAddCharType(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all">
+                                  <Plus size={13} /> Novo Tipo
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {!isListType ? (
+                            <div className="px-6 py-12 text-center">
+                              <p className="text-sm font-bold text-slate-400">Tipo de valor <span className="font-black text-slate-600">{char.value_type}</span> — não requer lista de tipos.</p>
+                              <p className="text-xs text-slate-400 mt-1">O valor será inserido diretamente na ficha.</p>
+                            </div>
+                          ) : types.length === 0 ? (
+                            <div className="px-6 py-12 text-center">
+                              <p className="text-sm font-bold text-slate-400">Sem tipos definidos.</p>
+                            </div>
+                          ) : (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                    <th className="px-6 py-4 w-8">Nº</th>
+                                    <th className="px-6 py-4">Código</th>
+                                    <th className="px-6 py-4">Descrição</th>
+                                    <th className="px-6 py-4">Estado</th>
+                                    <th className="px-6 py-4 text-right">Ações</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {types.sort((a: any, b: any) => a.order - b.order).map((t: any, idx: number) => (
+                                    <tr key={t.id} className={`transition-colors ${!t.status ? 'opacity-50 bg-slate-50/50' : 'hover:bg-slate-50'}`}>
+                                      <td className="px-6 py-4 text-xs font-black text-slate-400">{(idx + 1).toString().padStart(2, '0')}</td>
+                                      <td className="px-6 py-4">
+                                        {editingCharTypeId === t.id ? (
+                                          <input type="text" value={editingCharType.code} onChange={e => setEditingCharType(p => ({ ...p, code: e.target.value.toUpperCase() }))} maxLength={10} className="w-24 px-3 py-1.5 bg-white border-2 border-slate-900 rounded-lg text-xs font-black text-slate-900 outline-none uppercase" autoFocus />
+                                        ) : (
+                                          <span className="text-xs font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded">{t.code}</span>
+                                        )}
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        {editingCharTypeId === t.id ? (
+                                          <input type="text" value={editingCharType.description} onChange={e => setEditingCharType(p => ({ ...p, description: e.target.value }))} className="w-full px-3 py-1.5 bg-white border-2 border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:border-slate-900" />
+                                        ) : (
+                                          <span className="text-sm font-medium text-slate-600">{t.description}</span>
+                                        )}
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${t.status ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>{t.status ? 'Ativo' : 'Inativo'}</span>
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        <div className="flex items-center justify-end gap-2">
+                                          {editingCharTypeId === t.id ? (
+                                            <>
+                                              <button
+                                                onClick={() => {
+                                                  setCharacteristicTypes(prev => ({ ...prev, [char.id]: prev[char.id].map((x: any) => x.id === t.id ? { ...x, code: editingCharType.code, description: editingCharType.description } : x) }));
+                                                  setEditingCharTypeId(null);
+                                                }}
+                                                className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
+                                              >
+                                                <Check size={12} /> Guardar
+                                              </button>
+                                              <button onClick={() => setEditingCharTypeId(null)} className="px-3 py-1.5 bg-white text-slate-600 border-2 border-slate-200 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-50 transition-all">Cancelar</button>
+                                            </>
+                                          ) : (
+                                            <>
+                                              {t.status && (
+                                                <button onClick={() => { setEditingCharTypeId(t.id); setEditingCharType({ code: t.code, description: t.description, order: String(t.order) }); }} className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all" title="Editar"><Edit size={15} /></button>
+                                              )}
+                                              <button
+                                                onClick={() => setCharacteristicTypes(prev => ({ ...prev, [char.id]: prev[char.id].map((x: any) => x.id === t.id ? { ...x, status: !x.status } : x) }))}
+                                                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-colors ${t.status ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
+                                              >
+                                                {t.status ? 'Desativar' : 'Ativar'}
+                                              </button>
+                                            </>
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+                )} {/* end TAB: Características */}
 
                 {/* ── TAB: Grupos ── */}
                 {activeParamTab === 'groups' && (
@@ -10072,7 +10408,7 @@ export default function App() {
                         })}
                       >
                         <option value="">Escolher</option>
-                        {Object.keys(characteristicTypes).map(name => (
+                        {Object.keys(legacyCharacteristicTypes).map(name => (
                           <option key={name} value={name}>{name}</option>
                         ))}
                       </select>
@@ -10105,7 +10441,7 @@ export default function App() {
                           disabled={!currentCharacteristic.name}
                         >
                           <option value="">Escolher</option>
-                          {currentCharacteristic.name && characteristicTypes[currentCharacteristic.name].map(type => (
+                          {currentCharacteristic.name && legacyCharacteristicTypes[currentCharacteristic.name].map(type => (
                             <option key={type} value={type}>{type}</option>
                           ))}
                         </select>
