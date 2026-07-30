@@ -199,13 +199,13 @@ export default function App() {
   const [persons, setPersons] = useState<any[]>([
     {
       id: 1,
-      process_number: '0001', occurrence_number: 'OC-2023-001', unit: 'ESF', full_name: 'Bruno Fonseca', birth_date: '2010-05-15', gender: 'Masculino', marital_status: 'Solteiro', received_date: '2023-03-19',
+      process_number: 'PRE-1000/N/2026', occurrence_number: 'PN17022025000705/EPASA', unit: 'ESF', full_name: 'Bruno Fonseca', birth_date: '2010-05-15', gender: 'Masculino', marital_status: 'Solteiro', received_date: '2023-03-19',
       naturality: 'Cabo Verde', nationality: 'Cabo Verde', father_name: 'António Fonseca', mother_name: 'Maria Fonseca', profession: 'Estudante', 
       doc_type: 'BI', doc_number: '001234567LA041', doc_issue_date: '2020-01-01', doc_expiry_date: '2030-01-01', doc_issue_location: 'Praia',
       phone: '9884565', email: 'bruno@email.cv', island: 'Santiago', municipality: 'Praia', parish: 'N.S. Da Graça', locality: 'Cidade Da Praia', zone: 'Txadinha', reference_point: 'Perto da Escola',
       nif: '200123456', status: 'Por Associar', sent_by: 'Carlos Mascarenha', sent_date: '2023-03-20', sent_unit: 'ESF Praia', completed_by: null, completed_date: null, completed_unit: null,
       records: [
-        {id: 1, person_id: 1, date: '2023-05-12T14:32:00', reason: 'Furto qualificado em residência', ref_note: 'REF-2023-045', measures: 'Termo de Identidade e Residência', type: 'Criminal', auto_type: 'Auto de Notícia', natureza: 'Crime contra o Património', enquadramento: 'Furto Qualificado — Art. 197º CP', created_by: 'Carlos Mascarenha', sent_by: 'João Andrade', unit: 'ESF Praia'}
+        {id: 1, person_id: 1, date: '2023-05-12T14:32:00', date_start: '2023-05-12T14:32:00', date_end: '2023-05-12T16:10:00', detention_date: '2023-05-12', reason: 'Furto qualificado em residência', ref_note: 'REF-2023-045', measures: 'Termo de Identidade e Residência', type: 'Criminal', auto_type: 'Auto de Notícia', natureza: 'Crime contra o Património', enquadramento: 'Furto Qualificado — Art. 197º CP', created_by: 'Carlos Mascarenha', sent_by: 'João Andrade', comando: 'Comando Regional Santiago Sul', unit: 'ESF Praia'}
       ],
       observations: [
         {id: 1, person_id: 1, author: 'Carlos Mascarenha', date: '2023-03-20', content: 'Pedido de registo enviado após abordagem e identificação do indivíduo. Documentação entregue à esquadra para instrução do processo.'}
@@ -215,7 +215,7 @@ export default function App() {
   const [fichas, setFichas] = useState<any[]>([
     {
       id: 1,
-      number: '0006',
+      number: 'FICAD-102/N-PR/2026',
       name: 'Bruno Fonseca',
       birthDate: '1998-04-29',
       gender: 'Masculino',
@@ -359,7 +359,6 @@ export default function App() {
   const [associateSearchFilters, setAssociateSearchFilters] = useState({
     number: '',
     name: '',
-    surname: '',
     birthDate: '',
     docNumber: ''
   });
@@ -392,6 +391,7 @@ export default function App() {
   const [savedContacts, setSavedContacts] = useState<any[]>([]);
   const [savedNicknames, setSavedNicknames] = useState<any[]>([]);
   const [savedSocialNetworks, setSavedSocialNetworks] = useState<any[]>([]);
+  const [savedDocuments, setSavedDocuments] = useState<any[]>([]);
   const [otherNotes, setOtherNotes] = useState('');
   const [currentCharacteristic, setCurrentCharacteristic] = useState({
     name: '',
@@ -1261,9 +1261,9 @@ export default function App() {
     occurrence_number: '',
     registration_number: '',
     unit: '',
+    comando: '',
     estado: '',
     name: '',
-    surname: '',
     birth_date: '',
     alcunha: '',
     sexo: '',
@@ -1369,6 +1369,11 @@ export default function App() {
         setSavedSocialNetworks([...savedSocialNetworks, newItem]);
         setShowAddSocial(false);
         setNewSocial({ type: 'Facebook', link: '' });
+      } else if (type === 'document') {
+        newItem = { ...newItem, ...newDocument };
+        setSavedDocuments([...savedDocuments, newItem]);
+        setShowAddDocument(false);
+        setNewDocument({ type: 'CNI', number: '', issueDate: '', expiryDate: '', issueLocation: '' });
       }
     }
   };
@@ -1422,7 +1427,11 @@ export default function App() {
           item.id === id ? { ...item, validTo: today, deactivatedBy: deactivator } : item
         ));
       } else if (type === 'social') {
-        setSavedSocialNetworks(savedSocialNetworks.map((item: any) => 
+        setSavedSocialNetworks(savedSocialNetworks.map((item: any) =>
+          item.id === id ? { ...item, validTo: today, deactivatedBy: deactivator } : item
+        ));
+      } else if (type === 'document') {
+        setSavedDocuments(savedDocuments.map((item: any) =>
           item.id === id ? { ...item, validTo: today, deactivatedBy: deactivator } : item
         ));
       }
@@ -1431,8 +1440,8 @@ export default function App() {
 
   const handleClearFilters = () => {
     setSearchFilters({
-      occurrence_number: '', registration_number: '', unit: '', estado: '',
-      name: '', surname: '', birth_date: '', sexo: '',
+      occurrence_number: '', registration_number: '', unit: '', comando: '', estado: '',
+      name: '', birth_date: '', sexo: '',
       date_from: '', date_to: '', nationality: '', doc_number: '',
       island: '', municipality: '', parish: '', locality: '', zone: '',
       auto_type: '', natureza: '', enquadramento: '', tipologia: '',
@@ -1842,8 +1851,20 @@ export default function App() {
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Registo</label>
-                          <input type="text" value={searchFilters.registration_number} onChange={(e) => setSearchFilters({...searchFilters, registration_number: e.target.value})} placeholder="Ex: REG-2024-001" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                          <input type="text" value={searchFilters.registration_number} onChange={(e) => setSearchFilters({...searchFilters, registration_number: e.target.value})} placeholder="Ex: PRE-1000/N/2026" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
                         </div>
+                        {showAdvancedFilters && (
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comando</label>
+                            <select value={searchFilters.comando} onChange={(e) => setSearchFilters({...searchFilters, comando: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                              <option value="">Todos</option>
+                              <option value="Comando Regional Santiago Sul">Comando Regional Santiago Sul</option>
+                              <option value="Comando Regional Santiago Norte">Comando Regional Santiago Norte</option>
+                              <option value="Comando Regional Barlavento">Comando Regional Barlavento</option>
+                              <option value="Comando Regional Sotavento">Comando Regional Sotavento</option>
+                            </select>
+                          </div>
+                        )}
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
                           <select value={searchFilters.unit} onChange={(e) => setSearchFilters({...searchFilters, unit: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
@@ -1940,12 +1961,8 @@ export default function App() {
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-900 pl-3 mb-4">Dados da Pessoa</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</label>
-                          <input type="text" value={searchFilters.name} onChange={(e) => setSearchFilters({...searchFilters, name: e.target.value})} placeholder="Nome próprio" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apelido</label>
-                          <input type="text" value={searchFilters.surname} onChange={(e) => setSearchFilters({...searchFilters, surname: e.target.value})} placeholder="Apelido" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome Completo</label>
+                          <input type="text" value={searchFilters.name} onChange={(e) => setSearchFilters({...searchFilters, name: e.target.value})} placeholder="Nome e apelido" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Nascimento</label>
@@ -2050,8 +2067,7 @@ export default function App() {
                           <th className="px-6 py-4">Nº Registo</th>
                           <th className="px-6 py-4">Unidade</th>
                           <th className="px-6 py-4">Data Receção</th>
-                          <th className="px-6 py-4">Nome</th>
-                          <th className="px-6 py-4">Apelido</th>
+                          <th className="px-6 py-4">Nome Completo</th>
                           <th className="px-6 py-4">Data Nascimento</th>
                           <th className="px-6 py-4">Ilha</th>
                           <th className="px-6 py-4">Estado</th>
@@ -2069,8 +2085,7 @@ export default function App() {
                               <td className="px-6 py-4 text-sm font-bold text-slate-700">{p.process_number || '---'}</td>
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.unit || '---'}</td>
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.received_date ? new Date(p.received_date).toLocaleDateString('pt-BR') : '---'}</td>
-                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{p.full_name ? p.full_name.split(' ')[0] : '---'}</td>
-                              <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.full_name ? p.full_name.split(' ').slice(1).join(' ') || '---' : '---'}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{p.full_name || '---'}</td>
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : '---'}</td>
                               <td className="px-6 py-4 text-sm font-medium text-slate-600">{p.island || '---'}</td>
                               <td className="px-6 py-4">
@@ -2082,7 +2097,7 @@ export default function App() {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={9} className="px-6 py-12 text-center text-slate-400 italic font-medium">Nenhum registro encontrado na base de dados</td>
+                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic font-medium">Nenhum registro encontrado na base de dados</td>
                           </tr>
                         )}
                       </tbody>
@@ -3906,7 +3921,7 @@ export default function App() {
 
                                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                     <DetailField label="Nome Completo" value={`${associatedPerson.name}${associatedPerson.surname ? ' ' + associatedPerson.surname : ''}`} />
-                                    <DetailField label="Data Nascimento *" value={new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
+                                    <DetailField label="Data Nascimento" value={new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
                                     <DetailField label="Sexo" value={associatedPerson.gender} />
                                     <DetailField label="Estado Civil" value={associatedPerson.maritalStatus || associatedPerson.civilStatus} />
                                   </div>
@@ -4074,7 +4089,7 @@ export default function App() {
                                       </div>
                                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                         <DetailField label="Nome Completo" value={`${suggestedFicha.name}${suggestedFicha.surname ? ' ' + suggestedFicha.surname : ''}`} />
-                                        <DetailField label="Data Nascimento *" value={new Date(suggestedFicha.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
+                                        <DetailField label="Data Nascimento" value={new Date(suggestedFicha.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
                                         <DetailField label="Sexo" value={suggestedFicha.gender} />
                                         <DetailField label="Estado Civil" value={suggestedFicha.maritalStatus || suggestedFicha.civilStatus} />
                                       </div>
@@ -4140,7 +4155,7 @@ export default function App() {
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8 mt-1">
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                             <DetailField label="Nome Completo" value={selectedAnalysisCertificate.biographic.fullName} />
-                            <DetailField label="Data Nascimento *" value={selectedAnalysisCertificate.biographic.birthDate} icon={Calendar} />
+                            <DetailField label="Data Nascimento" value={selectedAnalysisCertificate.biographic.birthDate} icon={Calendar} />
                             <DetailField label="Sexo" value={selectedAnalysisCertificate.biographic.gender} />
                             <DetailField label="Estado Civil" value={selectedAnalysisCertificate.biographic.civilStatus} />
                           </div>
@@ -6189,7 +6204,7 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Número Ficha</label>
-                      <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" placeholder="Ex: 0001" />
+                      <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" placeholder="Ex: FICAD-102/N-PR/2026" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Indivíduo</label>
@@ -6262,7 +6277,8 @@ export default function App() {
                 const saveHandler = () => {
                   if (!newFichaData.name) return;
                   const newId = fichas.length + 1;
-                  const newNum = String(newId).padStart(6, '0');
+                  const councilCode = (newFichaAddresses[0]?.council || 'Praia').slice(0, 2).toUpperCase();
+                  const newNum = `FICAD-${newId}/N-${councilCode}/${new Date().getFullYear()}`;
                   const newFicha: any = {
                     id: newId, number: newNum,
                     name: newFichaData.name, birthDate: newFichaData.birthDate,
@@ -8841,9 +8857,8 @@ export default function App() {
                                   </div>
 
                                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                    <DetailField label="Nome" value={associatedPerson.name || ''} />
-                                    <DetailField label="Apelido" value={associatedPerson.surname || ''} />
-                                    <DetailField label="Data Nascimento *" value={new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
+                                    <DetailField label="Nome Completo" value={`${associatedPerson.name}${associatedPerson.surname ? ' ' + associatedPerson.surname : ''}`} />
+                                    <DetailField label="Data Nascimento" value={new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
                                     <DetailField label="Sexo" value={associatedPerson.gender} type="select" options={['Masculino', 'Feminino', 'Outro']} />
                                     <DetailField label="Estado Civil" value={associatedPerson.maritalStatus} type="select" options={['Solteiro', 'Casado', 'Divorciado', 'Viúvo']} />
                                     <DetailField label="Naturalidade" value="Cabo Verde" type="select" options={['Cabo Verde', 'Angola', 'Portugal']} />
@@ -8959,10 +8974,9 @@ export default function App() {
                                         </div>
                                       </div>
 
-                                      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-                                        <DetailField label="Nome" value={suggestedFicha.name || ''} />
-                                        <DetailField label="Apelido" value={suggestedFicha.surname || ''} />
-                                        <DetailField label="Data Nascimento *" value={new Date(suggestedFicha.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
+                                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                        <DetailField label="Nome Completo" value={`${suggestedFicha.name}${suggestedFicha.surname ? ' ' + suggestedFicha.surname : ''}`} />
+                                        <DetailField label="Data Nascimento" value={new Date(suggestedFicha.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
                                         <DetailField label="Sexo" value={suggestedFicha.gender} />
                                         <DetailField label="Estado Civil" value={suggestedFicha.maritalStatus} />
                                       </div>
@@ -9042,9 +9056,8 @@ export default function App() {
                             <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Dados provenientes do SIGO — não editáveis</p>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                          <DetailField label="Nome" value={selectedPerson.full_name ? selectedPerson.full_name.split(' ')[0] : ''} />
-                          <DetailField label="Apelido" value={selectedPerson.full_name ? selectedPerson.full_name.split(' ').slice(1).join(' ') : ''} />
-                          <DetailField label="Data Nascimento *" value={selectedPerson.birth_date ? new Date(selectedPerson.birth_date).toLocaleDateString('pt-BR') : '---'} icon={Calendar} />
+                          <DetailField label="Nome Completo" value={selectedPerson.full_name || ''} />
+                          <DetailField label="Data Nascimento" value={selectedPerson.birth_date ? new Date(selectedPerson.birth_date).toLocaleDateString('pt-BR') : '---'} icon={Calendar} />
                           <DetailField label="Sexo" value={selectedPerson.gender} />
                           <DetailField label="Estado Civil" value={selectedPerson.marital_status} />
                           <DetailField label="Naturalidade" value={selectedPerson.naturality} />
@@ -9052,19 +9065,8 @@ export default function App() {
                           <DetailField label="Nome Pai" value={selectedPerson.father_name} />
                           <DetailField label="Nome Mãe" value={selectedPerson.mother_name} />
                           <DetailField label="Profissão" value={selectedPerson.profession} />
-                        </div>
-
-                        {/* Documento Identificação */}
-                        <div className="space-y-4 mt-8">
-                          <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Identificação</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-                            <DetailField label="NIF" value={selectedPerson.nif || ''} />
-                            <DetailField label="Tipo Documento" value={selectedPerson.doc_type} />
-                            <DetailField label="Número Documento" value={selectedPerson.doc_number} />
-                            <DetailField label="Data Emissão" value={selectedPerson.doc_issue_date ? new Date(selectedPerson.doc_issue_date).toLocaleDateString('pt-BR') : '---'} icon={Calendar} />
-                            <DetailField label="Data Validade" value={selectedPerson.doc_expiry_date ? new Date(selectedPerson.doc_expiry_date).toLocaleDateString('pt-BR') : '---'} icon={Calendar} />
-                            <DetailField label="Local Emissão" value={selectedPerson.doc_issue_location} />
-                          </div>
+                          <DetailField label="NIF" value={selectedPerson.nif || ''} />
+                          <DetailField label="Alcunha" value={(selectedFicha?.nicknames || savedNicknames)?.filter((n: any) => n.validTo === null).map((n: any) => n.value).join(', ') || ''} />
                         </div>
 
                       </div>
@@ -9420,7 +9422,6 @@ export default function App() {
                                     </Button>
                                   )}
                                 </div>
-                                {/* Formulário — só em novo cadastro */}
                                 <AnimatePresence>
                                   {isNewRegistration && showAddContact && (
                                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
@@ -9455,7 +9456,7 @@ export default function App() {
                                         <th className="px-6 py-4">Nº</th>
                                         <th className="px-6 py-4">Tipo</th>
                                         <th className="px-6 py-4">Informação</th>
-                                        {isNewRegistration && <th className="px-6 py-4 text-right">Ação</th>}
+                                        <th className="px-6 py-4 text-right">Ação</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
@@ -9465,7 +9466,7 @@ export default function App() {
                                           <td className="px-6 py-4 text-xs font-black text-slate-900">01</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-600">Telemóvel</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-800">{selectedPerson.phone}</td>
-                                          {isNewRegistration && <td className="px-6 py-4 text-right text-slate-300 text-xs">—</td>}
+                                          <td className="px-6 py-4 text-right text-slate-300 text-xs">—</td>
                                         </tr>
                                       )}
                                       {/* Email SIGO — sem ações */}
@@ -9474,11 +9475,11 @@ export default function App() {
                                           <td className="px-6 py-4 text-xs font-black text-slate-900">{selectedPerson?.phone ? '02' : '01'}</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-600">Email</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-800">{selectedPerson.email}</td>
-                                          {isNewRegistration && <td className="px-6 py-4 text-right text-slate-300 text-xs">—</td>}
+                                          <td className="px-6 py-4 text-right text-slate-300 text-xs">—</td>
                                         </tr>
                                       )}
-                                      {/* Contactos manuais — só em novo cadastro */}
-                                      {isNewRegistration && savedContacts?.filter((c: any) => c.validTo === null).map((contact: any, idx: number) => (
+                                      {/* Contactos manuais */}
+                                      {savedContacts?.filter((c: any) => c.validTo === null).map((contact: any, idx: number) => (
                                         <tr key={contact.id} className="hover:bg-slate-50 transition-colors group">
                                           <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + (selectedPerson?.phone ? 1 : 0) + (selectedPerson?.email ? 1 : 0) + 1).toString().padStart(2, '0')}</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-600">{contact.type}</td>
@@ -9493,81 +9494,106 @@ export default function App() {
                                 </div>
                               </div>
 
-                              {isNewRegistration && (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                {/* Alcunhas */}
-                                <div className="space-y-4">
-                                  <AnimatePresence>
-                                    {showAddNickname && (
-                                      <motion.div 
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
-                                      >
-                                        <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                                          <h5 className="text-xs font-bold text-slate-700 uppercase">Nova Alcunha</h5>
-                                          <button onClick={() => setShowAddNickname(false)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
+                              {/* Documento de Identificação */}
+                              <div className="space-y-4">
+                                <AnimatePresence>
+                                  {isNewRegistration && showAddDocument && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
+                                    >
+                                      <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                                        <h5 className="text-xs font-bold text-slate-700 uppercase">Novo Documento</h5>
+                                        <button onClick={() => setShowAddDocument(false)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
+                                      </div>
+                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="space-y-1">
+                                          <label className="text-[10px] font-bold text-slate-500 uppercase">Tipo</label>
+                                          <select value={newDocument.type} onChange={(e) => setNewDocument({...newDocument, type: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors">
+                                            <option value="CNI">CNI</option>
+                                            <option value="Passaporte">Passaporte</option>
+                                            <option value="Título de Residência">Título de Residência</option>
+                                          </select>
                                         </div>
                                         <div className="space-y-1">
-                                          <label className="text-[10px] font-bold text-slate-500 uppercase">Alcunha</label>
-                                          <input 
-                                            type="text" 
-                                            value={newNickname.value}
-                                            onChange={(e) => setNewNickname({value: e.target.value})}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                          />
+                                          <label className="text-[10px] font-bold text-slate-500 uppercase">Número</label>
+                                          <input type="text" value={newDocument.number} onChange={(e) => setNewDocument({...newDocument, number: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
                                         </div>
-                                        <div className="flex justify-end">
-                                          <button 
-                                            onClick={() => handleAddOtherInfo('nickname')}
-                                            className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors"
-                                          >
-                                            Confirmar Adição
-                                          </button>
+                                        <div className="space-y-1">
+                                          <label className="text-[10px] font-bold text-slate-500 uppercase">Local de Emissão</label>
+                                          <input type="text" value={newDocument.issueLocation} onChange={(e) => setNewDocument({...newDocument, issueLocation: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
                                         </div>
-                                      </motion.div>
-                                    )}
-                                  </AnimatePresence>
-
-                                  <div className="flex justify-between items-center">
-                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Alcunhas</h4>
-                                    <Button 
-                                      variant="outline" 
-                                      icon={showAddNickname ? X : Plus} 
-                                      onClick={() => setShowAddNickname(!showAddNickname)}
-                                    >
-                                      {showAddNickname ? 'Cancelar' : 'Adicionar Alcunha'}
+                                        <div className="space-y-1">
+                                          <label className="text-[10px] font-bold text-slate-500 uppercase">Data de Emissão</label>
+                                          <input type="date" value={newDocument.issueDate} onChange={(e) => setNewDocument({...newDocument, issueDate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
+                                        </div>
+                                        <div className="space-y-1">
+                                          <label className="text-[10px] font-bold text-slate-500 uppercase">Data de Validade</label>
+                                          <input type="date" value={newDocument.expiryDate} onChange={(e) => setNewDocument({...newDocument, expiryDate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
+                                        </div>
+                                      </div>
+                                      <div className="flex justify-end">
+                                        <button onClick={() => handleAddOtherInfo('document')} className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors">Confirmar Adição</button>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                                <div className="flex justify-between items-center">
+                                  <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento de Identificação</h4>
+                                  {isNewRegistration && (
+                                    <Button variant="outline" icon={showAddDocument ? X : Plus} onClick={() => setShowAddDocument(!showAddDocument)}>
+                                      {showAddDocument ? 'Cancelar' : 'Adicionar Documento'}
                                     </Button>
-                                  </div>
-
-                                  <div className="border-2 border-slate-50 rounded-2xl overflow-hidden">
-                                    <table className="w-full text-left border-collapse">
-                                      <thead>
-                                        <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                          <th className="px-6 py-3">Alcunha</th>
-                                          <th className="px-6 py-3 text-right">Ação</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-slate-50">
-                                        {(selectedFicha?.nicknames || savedNicknames)?.filter((n: any) => n.validTo === null).map((nickname: any) => (
-                                          <tr key={nickname.id}>
-                                            <td className="px-6 py-3 text-xs font-bold text-slate-700">{nickname.value}</td>
-                                            <td className="px-6 py-3 text-right">
-                                              <button 
-                                                onClick={() => handleDeactivateOtherInfo('nickname', nickname.id)}
-                                                className="text-red-500 hover:text-red-700"
-                                              >
-                                                <Trash2 size={16} />
-                                              </button>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
+                                  )}
                                 </div>
+                                <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
+                                  <table className="w-full text-left border-collapse">
+                                    <thead>
+                                      <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                        <th className="px-6 py-4">Nº</th>
+                                        <th className="px-6 py-4">Tipo</th>
+                                        <th className="px-6 py-4">Número</th>
+                                        <th className="px-6 py-4">Emissão</th>
+                                        <th className="px-6 py-4">Validade</th>
+                                        <th className="px-6 py-4">Local Emissão</th>
+                                        <th className="px-6 py-4 text-right">Ação</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                      {/* Documento SIGO — sem ações */}
+                                      {selectedPerson?.doc_number && (
+                                        <tr className="bg-blue-50/40">
+                                          <td className="px-6 py-4 text-xs font-black text-slate-900">01</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{selectedPerson.doc_type || '---'}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-900">{selectedPerson.doc_number}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{selectedPerson.doc_issue_date ? new Date(selectedPerson.doc_issue_date).toLocaleDateString('pt-BR') : '---'}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{selectedPerson.doc_expiry_date ? new Date(selectedPerson.doc_expiry_date).toLocaleDateString('pt-BR') : '---'}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{selectedPerson.doc_issue_location || '---'}</td>
+                                          <td className="px-6 py-4 text-right text-slate-300 text-xs">—</td>
+                                        </tr>
+                                      )}
+                                      {savedDocuments?.filter((d: any) => d.validTo === null).map((doc: any, idx: number) => (
+                                        <tr key={doc.id} className="hover:bg-slate-50 transition-colors">
+                                          <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + (selectedPerson?.doc_number ? 1 : 0) + 1).toString().padStart(2, '0')}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.type}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-900">{doc.number}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.issueDate}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.expiryDate}</td>
+                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.issueLocation || '---'}</td>
+                                          <td className="px-6 py-4 text-right">
+                                            <button onClick={() => handleDeactivateOtherInfo('document', doc.id)} className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors">Remover</button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
 
+                              {isNewRegistration && (
+                              <div className="grid grid-cols-1">
                                 {/* Redes Sociais */}
                                 <div className="space-y-4">
                                   <AnimatePresence>
@@ -9692,13 +9718,32 @@ export default function App() {
                               {/* Campos fora da tabela */}
                               <div className="px-6 py-5 grid grid-cols-2 md:grid-cols-3 gap-6 border-b border-slate-100">
                                 <div className="space-y-1">
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data e Hora</p>
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data e Hora — Início</p>
                                   <p className="text-sm font-bold text-slate-800">
-                                    {new Date(r.date).toLocaleDateString('pt-BR')}
+                                    {new Date(r.date_start || r.date).toLocaleDateString('pt-BR')}
                                   </p>
                                   <p className="text-xs font-medium text-slate-400">
-                                    {new Date(r.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    {new Date(r.date_start || r.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                   </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data e Hora — Fim</p>
+                                  {r.date_end ? (
+                                    <>
+                                      <p className="text-sm font-bold text-slate-800">
+                                        {new Date(r.date_end).toLocaleDateString('pt-BR')}
+                                      </p>
+                                      <p className="text-xs font-medium text-slate-400">
+                                        {new Date(r.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                      </p>
+                                    </>
+                                  ) : (
+                                    <p className="text-sm font-bold text-slate-800">---</p>
+                                  )}
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data da Detenção</p>
+                                  <p className="text-sm font-bold text-slate-800">{r.detention_date ? new Date(r.detention_date).toLocaleDateString('pt-BR') : '---'}</p>
                                 </div>
                                 <div className="space-y-1">
                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</p>
@@ -9725,6 +9770,10 @@ export default function App() {
                                     </div>
                                     <p className="text-sm font-bold text-slate-800">{r.sent_by || '---'}</p>
                                   </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comando</p>
+                                  <p className="text-sm font-bold text-slate-800">{r.comando || '---'}</p>
                                 </div>
                                 <div className="space-y-1">
                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</p>
@@ -9938,9 +9987,10 @@ export default function App() {
                             setSelectedPerson(updatedPerson);
                             
                             // Add to Fichas list
+                            const councilCode = (updatedPerson.municipality || 'Praia').slice(0, 2).toUpperCase();
                             const newFicha = {
                               id: Date.now(),
-                              number: updatedPerson.process_number || '---',
+                              number: `FICAD-${fichas.length + 1}/N-${councilCode}/${new Date().getFullYear()}`,
                               name: updatedPerson.full_name,
                               birthDate: updatedPerson.birth_date,
                               island: updatedPerson.island
@@ -10072,7 +10122,7 @@ export default function App() {
                 </div>
 
                 <div className="p-6 space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase">Numero Cadastro</label>
                       <input 
@@ -10083,21 +10133,12 @@ export default function App() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase">Nome</label>
-                      <input 
-                        type="text" 
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Nome Completo</label>
+                      <input
+                        type="text"
                         className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
                         value={associateSearchFilters.name}
                         onChange={(e) => setAssociateSearchFilters({...associateSearchFilters, name: e.target.value})}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase">Apelido</label>
-                      <input 
-                        type="text" 
-                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                        value={associateSearchFilters.surname}
-                        onChange={(e) => setAssociateSearchFilters({...associateSearchFilters, surname: e.target.value})}
                       />
                     </div>
                     <div className="space-y-1">
@@ -10128,7 +10169,6 @@ export default function App() {
                         setAssociateSearchFilters({
                           number: '',
                           name: '',
-                          surname: '',
                           birthDate: '',
                           docNumber: ''
                         });
@@ -10146,7 +10186,6 @@ export default function App() {
                           const fullName = `${ficha.name}${ficha.surname ? ' ' + ficha.surname : ''}`.toLowerCase();
                           if (f.number && !ficha.number.includes(f.number)) return false;
                           if (f.name && !fullName.includes(f.name.toLowerCase())) return false;
-                          if (f.surname && ficha.surname && !ficha.surname.toLowerCase().includes(f.surname.toLowerCase())) return false;
                           if (f.birthDate && ficha.birthDate !== f.birthDate) return false;
                           if (f.docNumber && ficha.docNumber && !ficha.docNumber.toLowerCase().includes(f.docNumber.toLowerCase())) return false;
                           return true;
@@ -10168,8 +10207,7 @@ export default function App() {
                           <thead>
                             <tr className="text-[11px] font-bold text-slate-900 uppercase tracking-wider border-b-2 border-slate-200">
                               <th className="px-4 py-3">Nº Ficha</th>
-                              <th className="px-4 py-3">Nome</th>
-                              <th className="px-4 py-3">Apelido</th>
+                              <th className="px-4 py-3">Nome Completo</th>
                               <th className="px-4 py-3">Data Nascimento</th>
                               <th className="px-4 py-3">Sexo</th>
                               <th className="px-4 py-3">Estado Civil</th>
@@ -10181,8 +10219,7 @@ export default function App() {
                               associateResults.map((r) => (
                                 <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                                   <td className="px-4 py-4 text-sm font-medium text-slate-700">{r.number}</td>
-                                  <td className="px-4 py-4 text-sm text-slate-700">{r.name}</td>
-                                  <td className="px-4 py-4 text-sm text-slate-700">{r.surname}</td>
+                                  <td className="px-4 py-4 text-sm text-slate-700">{r.name}{r.surname ? ' ' + r.surname : ''}</td>
                                   <td className="px-4 py-4 text-sm text-slate-700">{new Date(r.birthDate).toLocaleDateString('pt-BR')}</td>
                                   <td className="px-4 py-4 text-sm text-slate-700">{r.gender}</td>
                                   <td className="px-4 py-4 text-sm text-slate-700">{r.maritalStatus}</td>
@@ -10201,7 +10238,7 @@ export default function App() {
                               ))
                             ) : (
                               <tr>
-                                <td colSpan={7} className="px-4 py-8 text-center text-slate-400 italic">Nenhum registro encontrado</td>
+                                <td colSpan={6} className="px-4 py-8 text-center text-slate-400 italic">Nenhum registro encontrado</td>
                               </tr>
                             )}
                           </tbody>
@@ -12208,7 +12245,7 @@ export default function App() {
                     value={formData.process_number}
                     onChange={(e) => setFormData({...formData, process_number: e.target.value})}
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Ex: 0006"
+                    placeholder="Ex: PRE-1000/N/2026"
                   />
                 </div>
 
