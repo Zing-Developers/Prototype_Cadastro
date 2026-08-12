@@ -6812,13 +6812,6 @@ export default function App() {
                         {newFichaExpanded.biometric && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                             <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
-                              {/* Impressões Digitais */}
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Impressões Digitais</h4>
-                                  <Button variant="outline" icon={Fingerprint}>Scan Fingerprint</Button>
-                                </div>
-                              </div>
                               {/* Fotografias */}
                               <div className="space-y-3">
                                 <div className="flex items-center justify-between">
@@ -8471,7 +8464,6 @@ export default function App() {
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
                           <div className="flex justify-end gap-3">
-                            <Button variant="outline" icon={Fingerprint}>Scan Fingerprint</Button>
                             <Button variant="outline" icon={Plus}>Anexar Fotografia</Button>
                           </div>
 
@@ -9188,11 +9180,7 @@ export default function App() {
                           >
                             <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm mt-2">
                               <div className="flex justify-end gap-3 mb-6">
-                                <button className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2">
-                                  <Fingerprint size={16} />
-                                  Scan Fingerprint
-                                </button>
-                                <button 
+                                <button
                                   onClick={() => {
                                     setTempPhotos([...savedPhotos]);
                                     setShowPhotoModal(true);
@@ -11881,6 +11869,16 @@ export default function App() {
                         <option value="Tatuagem">Tatuagem</option>
                         <option value="Piercings">Piercings</option>
                         <option value="Marcas de Nascença">Marcas de Nascença</option>
+                        <option value="Dedo Polegar Direito">Dedo Polegar Direito</option>
+                        <option value="Dedo Indicador Direito">Dedo Indicador Direito</option>
+                        <option value="Dedo Médio Direito">Dedo Médio Direito</option>
+                        <option value="Dedo Anelar Direito">Dedo Anelar Direito</option>
+                        <option value="Dedo Mindinho Direito">Dedo Mindinho Direito</option>
+                        <option value="Dedo Polegar Esquerdo">Dedo Polegar Esquerdo</option>
+                        <option value="Dedo Indicador Esquerdo">Dedo Indicador Esquerdo</option>
+                        <option value="Dedo Médio Esquerdo">Dedo Médio Esquerdo</option>
+                        <option value="Dedo Anelar Esquerdo">Dedo Anelar Esquerdo</option>
+                        <option value="Dedo Mindinho Esquerdo">Dedo Mindinho Esquerdo</option>
                       </select>
                     </div>
                     
