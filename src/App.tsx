@@ -230,6 +230,7 @@ export default function App() {
       docExpiryDate: '2030-01-01',
       photo: getPortraitUrl('bruno_fonseca', 'men'),
       island: 'Santiago',
+      estado: 'Completo',
       complementaryGroups: [
         {
           id: 1,
@@ -274,13 +275,11 @@ export default function App() {
       ],
       contacts: [
         { id: 1, createdAt: '2024-02-24', validFrom: '2024-02-24', validTo: null, user: 'Paulo', type: 'Telemovel', info: '9843347' },
-        { id: 2, createdAt: '2024-02-24', validFrom: '2024-02-24', validTo: null, user: 'Paulo', type: 'Email', info: 'joai@gmail.com' }
+        { id: 2, createdAt: '2024-02-24', validFrom: '2024-02-24', validTo: null, user: 'Paulo', type: 'Email', info: 'joai@gmail.com' },
+        { id: 3, createdAt: '2024-02-24', validFrom: '2024-02-24', validTo: null, user: 'Paulo', type: 'Facebook', info: 'facebook.com/bruno' }
       ],
       nicknames: [
         { id: 1, createdAt: '2024-02-24', validFrom: '2024-02-24', validTo: null, user: 'Paulo', value: 'Manxedo' }
-      ],
-      socialNetworks: [
-        { id: 1, createdAt: '2024-02-24', validFrom: '2024-02-24', validTo: null, user: 'Paulo', type: 'Facebook', link: 'facebook.com/bruno' }
       ],
       documents: [
         { id: 1, createdAt: '2024-02-24', validFrom: '2024-02-24', validTo: null, user: 'Paulo', type: 'CNI', number: '001234567LA041', issueDate: '2020-01-01', expiryDate: '2030-01-01', issueLocation: 'Praia' }
@@ -289,7 +288,7 @@ export default function App() {
         { id: 1, createdAt: '2023-05-12', validFrom: '2023-05-12', validTo: null, user: 'Carlos Mascarenha', sigla: 'TL', nome: 'Thug Life', funcao: 'Membro', areaAtuacao: 'Tráfico de estupefacientes', ilha: 'Santiago', cidade: 'Praia', freguesia: 'Achada Santo António', localidade: 'Achada Santo António', referencia: 'Zona do Mercado' }
       ],
       registrationReasons: [
-        { id: 1, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1042', unit: 'ESF Praia', measures: 'Prisão Preventiva', type: 'Criminal', auto_type: 'Auto de Detenção', natureza: 'Crime contra as Pessoas', enquadramento: 'Ofensa à Integridade Física — Art. 131º CP', tipologia: 'Detenção em Flagrante Delito', status: 'Ativo',
+        { id: 1, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1042', unit: 'ESF Praia', comando: 'Comando Regional Santiago Sul', measures: 'Prisão Preventiva', type: 'Criminal', auto_type: 'Auto de Detenção', natureza: 'Crime contra as Pessoas', enquadramento: 'Ofensa à Integridade Física — Art. 131º CP', tipologia: 'Detenção em Flagrante Delito', status: 'Ativo',
           rehabilitationDetails: {
             reason: 'O indivíduo cumpriu a pena e demonstrou bom comportamento nos últimos 5 anos, sem novos registros criminais.',
             attachments: [
@@ -300,15 +299,15 @@ export default function App() {
             requestedBy: 'Bruno Fonseca'
           }
         },
-        { id: 2, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1078', unit: 'ESF Mindelo', measures: 'Termo de Identidade e Residência', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Desordem Pública — Art. 279º CP', tipologia: 'Arguido', status: 'Ativo' },
-        { id: 3, date: '15/03/2023', reason: 'Suspeito de furto qualificado', refNo: 'OC-2023-0821', unit: 'DP Praia', measures: 'Liberdade Provisória', type: 'Criminal', auto_type: 'Auto de Notícia', natureza: 'Crime contra o Património', enquadramento: 'Furto Qualificado — Art. 197º CP', tipologia: 'Suspeito de Crime', status: 'Ativo',
+        { id: 2, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1078', unit: 'ESF Mindelo', comando: 'Comando Regional Barlavento', measures: 'Termo de Identidade e Residência', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Desordem Pública — Art. 279º CP', tipologia: 'Arguido', status: 'Ativo' },
+        { id: 3, date: '15/03/2023', reason: 'Suspeito de furto qualificado', refNo: 'OC-2023-0821', unit: 'DP Praia', comando: 'Comando Regional Santiago Sul', measures: 'Liberdade Provisória', type: 'Criminal', auto_type: 'Auto de Notícia', natureza: 'Crime contra o Património', enquadramento: 'Furto Qualificado — Art. 197º CP', tipologia: 'Suspeito de Crime', status: 'Ativo',
           rejectedRehabilitation: {
             reason: 'O período mínimo de 3 anos após a condenação ainda não foi cumprido. A reabilitação só poderá ser solicitada novamente após 15/03/2026.',
             rejectedAt: '02/01/2025',
             rejectedBy: 'Carlos Mendes'
           }
         },
-        { id: 4, date: '20/06/2021', reason: 'Desordem pública e resistência à autoridade', refNo: 'OC-2021-0345', unit: 'ESF Praia', measures: 'Multa', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Resistência à Autoridade — Art. 283º CP', tipologia: 'Arguido', status: 'Reabilitado',
+        { id: 4, date: '20/06/2021', reason: 'Desordem pública e resistência à autoridade', refNo: 'OC-2021-0345', unit: 'ESF Praia', comando: 'Comando Regional Santiago Sul', measures: 'Multa', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Resistência à Autoridade — Art. 283º CP', tipologia: 'Arguido', status: 'Reabilitado',
           rehabilitationDetails: {
             reason: 'O indivíduo cumpriu integralmente as obrigações impostas, pagou a multa e não registou novos incidentes nos últimos 4 anos. A reabilitação é amplamente justificada.',
             attachments: [
@@ -390,7 +389,6 @@ export default function App() {
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [savedContacts, setSavedContacts] = useState<any[]>([]);
   const [savedNicknames, setSavedNicknames] = useState<any[]>([]);
-  const [savedSocialNetworks, setSavedSocialNetworks] = useState<any[]>([]);
   const [savedDocuments, setSavedDocuments] = useState<any[]>([]);
   const [otherNotes, setOtherNotes] = useState('');
   const [currentCharacteristic, setCurrentCharacteristic] = useState({
@@ -408,7 +406,6 @@ export default function App() {
   const [showAddAddress, setShowAddAddress] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddNickname, setShowAddNickname] = useState(false);
-  const [showAddSocial, setShowAddSocial] = useState(false);
   const [showAddDocument, setShowAddDocument] = useState(false);
   const [newDocument, setNewDocument] = useState({ type: 'CNI', number: '', issueDate: '', expiryDate: '', issueLocation: '' });
   const [showAddGroup, setShowAddGroup] = useState(false);
@@ -425,7 +422,7 @@ export default function App() {
   const [editBiographicData, setEditBiographicData] = useState<any>({});
 
   // Parametrizações
-  const [activeParamTab, setActiveParamTab] = useState<'domains' | 'characteristics' | 'groups'>('domains');
+  const [activeParamTab, setActiveParamTab] = useState<'domains' | 'groups'>('domains');
   const [selectedDomain, setSelectedDomain] = useState('Medidas Aplicadas');
   const [showAddParam, setShowAddParam] = useState(false);
   const [newParamData, setNewParamData] = useState({ valor: '', descricao: '' });
@@ -453,35 +450,10 @@ export default function App() {
       { id: 7, valor: 'ML',  descricao: 'Multa',                                estado: 'Ativo' },
       { id: 8, valor: 'SMA', descricao: 'Sem Medidas Aplicadas',                estado: 'Ativo' },
     ],
-    'Tipo de Contacto': [
-      { id: 1, valor: 'TM', descricao: 'Telemóvel',                       estado: 'Ativo' },
-      { id: 2, valor: 'TF', descricao: 'Telefone Fixo',                   estado: 'Ativo' },
-      { id: 3, valor: 'EM', descricao: 'Email',                           estado: 'Ativo' },
-    ],
     'Tipo de Endereço': [
       { id: 1, valor: 'RES', descricao: 'Residência',  estado: 'Ativo' },
       { id: 2, valor: 'TRB', descricao: 'Trabalho',    estado: 'Ativo' },
       { id: 3, valor: 'OUT', descricao: 'Outro',        estado: 'Ativo' },
-    ],
-    'Rede Social': [
-      { id: 1, valor: 'FB', descricao: 'Facebook',    estado: 'Ativo' },
-      { id: 2, valor: 'IG', descricao: 'Instagram',   estado: 'Ativo' },
-      { id: 3, valor: 'TW', descricao: 'Twitter / X', estado: 'Ativo' },
-      { id: 4, valor: 'LI', descricao: 'LinkedIn',    estado: 'Ativo' },
-      { id: 5, valor: 'TT', descricao: 'TikTok',      estado: 'Ativo' },
-      { id: 6, valor: 'WA', descricao: 'WhatsApp',    estado: 'Ativo' },
-    ],
-    'Estado Civil': [
-      { id: 1, valor: 'S',  descricao: 'Solteiro(a)',     estado: 'Ativo' },
-      { id: 2, valor: 'C',  descricao: 'Casado(a)',       estado: 'Ativo' },
-      { id: 3, valor: 'D',  descricao: 'Divorciado(a)',   estado: 'Ativo' },
-      { id: 4, valor: 'V',  descricao: 'Viúvo(a)',        estado: 'Ativo' },
-      { id: 5, valor: 'UF', descricao: 'União de Facto',  estado: 'Ativo' },
-    ],
-    'Tipo de Documento': [
-      { id: 1, valor: 'CNI', descricao: 'Cartão Nacional de Identidade',          estado: 'Ativo' },
-      { id: 2, valor: 'PAS', descricao: 'Passaporte',                             estado: 'Ativo' },
-      { id: 3, valor: 'TR',  descricao: 'Título de Residência',                   estado: 'Ativo' },
     ],
     'Finalidade de Certificado': [
       { id: 1, valor: 'CP', descricao: 'Concurso Público',    estado: 'Ativo' },
@@ -491,80 +463,41 @@ export default function App() {
       { id: 5, valor: 'UP', descricao: 'Uso Pessoal',         estado: 'Ativo' },
       { id: 6, valor: 'LA', descricao: 'Licença / Alvará',    estado: 'Ativo' },
     ],
+    'Tipo de Fotografia': [
+      { id: 1,  valor: 'FRT', descricao: 'Frontal',               estado: 'Ativo' },
+      { id: 2,  valor: 'PFE', descricao: 'Perfil Esquerdo',        estado: 'Ativo' },
+      { id: 3,  valor: 'PFD', descricao: 'Perfil Direito',         estado: 'Ativo' },
+      { id: 4,  valor: 'TAT', descricao: 'Tatuagem',                estado: 'Ativo' },
+      { id: 5,  valor: 'PIE', descricao: 'Piercings',                estado: 'Ativo' },
+      { id: 6,  valor: 'MDN', descricao: 'Marcas de Nascença',       estado: 'Ativo' },
+      { id: 7,  valor: 'DPD', descricao: 'Dedo Polegar Direito',     estado: 'Ativo' },
+      { id: 8,  valor: 'DID', descricao: 'Dedo Indicador Direito',   estado: 'Ativo' },
+      { id: 9,  valor: 'DMD', descricao: 'Dedo Médio Direito',       estado: 'Ativo' },
+      { id: 10, valor: 'DAD', descricao: 'Dedo Anelar Direito',      estado: 'Ativo' },
+      { id: 11, valor: 'DND', descricao: 'Dedo Mindinho Direito',    estado: 'Ativo' },
+      { id: 12, valor: 'DPE', descricao: 'Dedo Polegar Esquerdo',    estado: 'Ativo' },
+      { id: 13, valor: 'DIE', descricao: 'Dedo Indicador Esquerdo',  estado: 'Ativo' },
+      { id: 14, valor: 'DME', descricao: 'Dedo Médio Esquerdo',      estado: 'Ativo' },
+      { id: 15, valor: 'DAE', descricao: 'Dedo Anelar Esquerdo',     estado: 'Ativo' },
+      { id: 16, valor: 'DNE', descricao: 'Dedo Mindinho Esquerdo',   estado: 'Ativo' },
+    ],
+    'Motivo Cadastro Documento': [
+      { id: 1, valor: 'VP',  descricao: 'Encontrado na Via Pública',            estado: 'Ativo' },
+      { id: 2, valor: 'TER', descricao: 'Entregue por Terceiro',                estado: 'Ativo' },
+      { id: 3, valor: 'OPE', descricao: 'Recolhido em Operação Policial',       estado: 'Ativo' },
+      { id: 4, valor: 'INP', descricao: 'Extraviado em Instituição Pública',    estado: 'Ativo' },
+      { id: 5, valor: 'OUT', descricao: 'Outro',                                estado: 'Ativo' },
+    ],
+    'Motivo Solicitação Certificado Cadastro': [
+      { id: 1, valor: 'CP', descricao: 'Concurso Público',    estado: 'Ativo' },
+      { id: 2, valor: 'EP', descricao: 'Emprego Privado',     estado: 'Ativo' },
+      { id: 3, valor: 'VE', descricao: 'Visto / Emigração',   estado: 'Ativo' },
+      { id: 4, valor: 'PJ', descricao: 'Processo Judicial',   estado: 'Ativo' },
+      { id: 5, valor: 'UP', descricao: 'Uso Pessoal',         estado: 'Ativo' },
+      { id: 6, valor: 'LA', descricao: 'Licença / Alvará',    estado: 'Ativo' },
+    ],
   });
 
-  // Características (two-level: characteristic + characteristic_type)
-  const [characteristics, setCharacteristics] = useState<any[]>([
-    { id: 1,  code: 'CAB', name: 'Cabelo',              value_type: 'LIST',    order: 1,  status: true },
-    { id: 2,  code: 'OLH', name: 'Olhos',               value_type: 'LIST',    order: 2,  status: true },
-    { id: 3,  code: 'ALT', name: 'Altura',              value_type: 'NUMERIC', order: 3,  status: true },
-    { id: 4,  code: 'CF',  name: 'Constituição Física', value_type: 'LIST',    order: 4,  status: true },
-    { id: 5,  code: 'CPL', name: 'Cor de Pele',         value_type: 'LIST',    order: 5,  status: true },
-    { id: 6,  code: 'BAR', name: 'Barba',               value_type: 'LIST',    order: 6,  status: true },
-    { id: 7,  code: 'BIG', name: 'Bigode',              value_type: 'LIST',    order: 7,  status: true },
-    { id: 8,  code: 'RST', name: 'Rosto',               value_type: 'LIST',    order: 8,  status: true },
-    { id: 9,  code: 'TAT', name: 'Tatuagem',            value_type: 'TEXT',    order: 9,  status: true },
-    { id: 10, code: 'CIC', name: 'Cicatriz',            value_type: 'TEXT',    order: 10, status: true },
-    { id: 11, code: 'MN',  name: 'Marca de Nascença',   value_type: 'TEXT',    order: 11, status: true },
-  ]);
-  const [characteristicTypes, setCharacteristicTypes] = useState<Record<number, any[]>>({
-    1:  [ // Cabelo
-      { id: 101, code: 'CRE', description: 'Crespo',   order: 1, status: true },
-      { id: 102, code: 'LIS', description: 'Liso',     order: 2, status: true },
-      { id: 103, code: 'OND', description: 'Ondulado', order: 3, status: true },
-      { id: 104, code: 'CAR', description: 'Careca',   order: 4, status: true },
-    ],
-    2:  [ // Olhos
-      { id: 201, code: 'CAS', description: 'Castanhos', order: 1, status: true },
-      { id: 202, code: 'AZU', description: 'Azuis',     order: 2, status: true },
-      { id: 203, code: 'VER', description: 'Verdes',    order: 3, status: true },
-      { id: 204, code: 'PRE', description: 'Pretos',    order: 4, status: true },
-    ],
-    3:  [], // Altura (NUMERIC — sem tipos)
-    4:  [ // Constituição Física
-      { id: 401, code: 'ATL', description: 'Atlética', order: 1, status: true },
-      { id: 402, code: 'MAG', description: 'Magro',    order: 2, status: true },
-      { id: 403, code: 'OBE', description: 'Obeso',    order: 3, status: true },
-      { id: 404, code: 'FOR', description: 'Forte',    order: 4, status: true },
-    ],
-    5:  [ // Cor de Pele
-      { id: 501, code: 'CLA', description: 'Clara',   order: 1, status: true },
-      { id: 502, code: 'MED', description: 'Média',   order: 2, status: true },
-      { id: 503, code: 'ESC', description: 'Escura',  order: 3, status: true },
-      { id: 504, code: 'NEG', description: 'Negra',   order: 4, status: true },
-    ],
-    6:  [ // Barba
-      { id: 601, code: 'CAV', description: 'Cavanhaque',    order: 1, status: true },
-      { id: 602, code: 'BLC', description: 'Barba Comprida',order: 2, status: true },
-      { id: 603, code: 'BCT', description: 'Barba Curta',   order: 3, status: true },
-      { id: 604, code: 'SEM', description: 'Sem Barba',     order: 4, status: true },
-    ],
-    7:  [ // Bigode
-      { id: 701, code: 'SIM', description: 'Sim',    order: 1, status: true },
-      { id: 702, code: 'NAO', description: 'Não',    order: 2, status: true },
-      { id: 703, code: 'FIN', description: 'Fino',   order: 3, status: true },
-      { id: 704, code: 'GRS', description: 'Grosso', order: 4, status: true },
-    ],
-    8:  [ // Rosto
-      { id: 801, code: 'OVL', description: 'Oval',              order: 1, status: true },
-      { id: 802, code: 'RED', description: 'Redondo',           order: 2, status: true },
-      { id: 803, code: 'QUA', description: 'Quadrado',          order: 3, status: true },
-      { id: 804, code: 'COR', description: 'Em Forma de Coração',order: 4, status: true },
-      { id: 805, code: 'OBL', description: 'Oblongo',           order: 5, status: true },
-    ],
-    9:  [],  // Tatuagem (TEXT)
-    10: [],  // Cicatriz (TEXT)
-    11: [],  // Marca de Nascença (TEXT)
-  });
-  const [selectedCharacteristic, setSelectedCharacteristic] = useState<number>(1);
-  const [showAddCharacteristic, setShowAddCharacteristic] = useState(false);
-  const [newCharacteristic, setNewCharacteristic] = useState({ code: '', name: '', value_type: 'LIST', order: '' });
-  const [editingCharacteristicId, setEditingCharacteristicId] = useState<number | null>(null);
-  const [editingCharacteristic, setEditingCharacteristic] = useState({ code: '', name: '', value_type: 'LIST', order: '' });
-  const [showAddCharType, setShowAddCharType] = useState(false);
-  const [newCharType, setNewCharType] = useState({ code: '', description: '', order: '' });
-  const [editingCharTypeId, setEditingCharTypeId] = useState<number | null>(null);
-  const [editingCharType, setEditingCharType] = useState({ code: '', description: '', order: '' });
 
   // Rehabilitation Modal State
   const [showRehabilitationModal, setShowRehabilitationModal] = useState(false);
@@ -705,8 +638,6 @@ export default function App() {
   const [newFichaNewContact, setNewFichaNewContact] = useState({ type: 'Telemovel', info: '' });
   const [newFichaNicknames, setNewFichaNicknames] = useState<string[]>([]);
   const [newFichaNewNickname, setNewFichaNewNickname] = useState('');
-  const [newFichaSocials, setNewFichaSocials] = useState<any[]>([]);
-  const [newFichaNewSocial, setNewFichaNewSocial] = useState({ type: 'Facebook', link: '' });
   const [newFichaReasons, setNewFichaReasons] = useState<any[]>([]);
   const [newFichaNewReason, setNewFichaNewReason] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
   const [newFichaObservations, setNewFichaObservations] = useState<{content:string;author:string;date:string}[]>([]);
@@ -907,6 +838,27 @@ export default function App() {
     organicUnit: ''
   });
   const [docSearchResults, setDocSearchResults] = useState<any[] | null>(null);
+  const [fichaSearchFilters, setFichaSearchFilters] = useState({
+    number: '',
+    name: '',
+    birthDate: '',
+    estado: '',
+    comando: '',
+    unit: '',
+    auto_type: '',
+    natureza: '',
+    enquadramento: '',
+    tipologia: '',
+    tipo: '',
+    doc_number: '',
+    island: '',
+    municipality: '',
+    parish: '',
+    locality: '',
+    zone: ''
+  });
+  const [fichaSearchResults, setFichaSearchResults] = useState<any[] | null>(null);
+  const [showFichaAdvancedFilters, setShowFichaAdvancedFilters] = useState(false);
   const [mockDocuments, setMockDocuments] = useState<any[]>([
     {
       id: '001',
@@ -1038,7 +990,6 @@ export default function App() {
     address: false,
     contact: false,
     nickname: false,
-    social: false,
     document: false,
     group: false
   });
@@ -1090,10 +1041,6 @@ export default function App() {
     value: ''
   });
 
-  const [newSocial, setNewSocial] = useState({
-    type: 'Facebook',
-    link: ''
-  });
 
   const handleConfirmRehabilitation = () => {
     if (!rehabilitationReason.trim()) {
@@ -1300,7 +1247,7 @@ export default function App() {
     fetchPersons();
   };
 
-  const handleAddOtherInfo = (type: 'address' | 'contact' | 'nickname' | 'social' | 'document' | 'group') => {
+  const handleAddOtherInfo = (type: 'address' | 'contact' | 'nickname' | 'document' | 'group') => {
     const today = new Date().toISOString().split('T')[0];
     let newItem: any = {
       id: Date.now(),
@@ -1328,11 +1275,6 @@ export default function App() {
         updatedFicha.nicknames = [...(updatedFicha.nicknames || []), newItem];
         setShowAddNickname(false);
         setNewNickname({ value: '' });
-      } else if (type === 'social') {
-        newItem = { ...newItem, ...newSocial };
-        updatedFicha.socialNetworks = [...(updatedFicha.socialNetworks || []), newItem];
-        setShowAddSocial(false);
-        setNewSocial({ type: 'Facebook', link: '' });
       } else if (type === 'document') {
         newItem = { ...newItem, ...newDocument };
         updatedFicha.documents = [...(updatedFicha.documents || []), newItem];
@@ -1364,11 +1306,6 @@ export default function App() {
         setSavedNicknames([...savedNicknames, newItem]);
         setShowAddNickname(false);
         setNewNickname({ value: '' });
-      } else if (type === 'social') {
-        newItem = { ...newItem, ...newSocial };
-        setSavedSocialNetworks([...savedSocialNetworks, newItem]);
-        setShowAddSocial(false);
-        setNewSocial({ type: 'Facebook', link: '' });
       } else if (type === 'document') {
         newItem = { ...newItem, ...newDocument };
         setSavedDocuments([...savedDocuments, newItem]);
@@ -1378,7 +1315,7 @@ export default function App() {
     }
   };
 
-  const handleDeactivateOtherInfo = (type: 'address' | 'contact' | 'nickname' | 'social' | 'document' | 'group', id: number) => {
+  const handleDeactivateOtherInfo = (type: 'address' | 'contact' | 'nickname' | 'document' | 'group', id: number) => {
     const today = new Date().toISOString().split('T')[0];
     const deactivator = user?.name || 'Admin';
 
@@ -1395,10 +1332,6 @@ export default function App() {
         );
       } else if (type === 'nickname') {
         updatedFicha.nicknames = updatedFicha.nicknames.map((item: any) => 
-          item.id === id ? { ...item, validTo: today, deactivatedBy: deactivator } : item
-        );
-      } else if (type === 'social') {
-        updatedFicha.socialNetworks = updatedFicha.socialNetworks.map((item: any) =>
           item.id === id ? { ...item, validTo: today, deactivatedBy: deactivator } : item
         );
       } else if (type === 'document') {
@@ -1424,10 +1357,6 @@ export default function App() {
         ));
       } else if (type === 'nickname') {
         setSavedNicknames(savedNicknames.map((item: any) => 
-          item.id === id ? { ...item, validTo: today, deactivatedBy: deactivator } : item
-        ));
-      } else if (type === 'social') {
-        setSavedSocialNetworks(savedSocialNetworks.map((item: any) =>
           item.id === id ? { ...item, validTo: today, deactivatedBy: deactivator } : item
         ));
       } else if (type === 'document') {
@@ -1703,9 +1632,9 @@ export default function App() {
                 <div className="space-y-6">
                   <SectionHeader title="Cadastro" icon={Users} />
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <MenuCard 
-                      title="Pessoa" 
-                      icon={User} 
+                    <MenuCard
+                      title="Pré Cadastro"
+                      icon={User}
                       description="Gerenciar registros biográficos e dados pessoais de indivíduos."
                       onClick={() => setCurrentView('person_list')}
                     />
@@ -1727,20 +1656,10 @@ export default function App() {
                       description="Processar solicitações de reabilitação e limpeza de histórico."
                       onClick={() => setCurrentView('rehabilitation_list')}
                     />
-                    <MenuCard 
-                      title="Documentos" 
-                      icon={FileText} 
+                    <MenuCard
+                      title="Gestão de Documentos"
+                      icon={FileText}
                       description="Gestão de documentos oficiais e ofícios do sistema."
-                      onClick={() => {
-                        setDocStep(1);
-                        setIsReadOnlyView(false);
-                        setCurrentView('document_registration');
-                      }}
-                    />
-                    <MenuCard 
-                      title="Pesquisa Documentos" 
-                      icon={Search} 
-                      description="Localizar documentos emitidos e histórico de solicitações."
                       onClick={() => setCurrentView('document_search')}
                     />
                   </div>
@@ -1817,7 +1736,7 @@ export default function App() {
                 className="space-y-8"
               >
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Cadastro Policial</h2>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Pré Cadastro</h2>
                 </div>
 
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
@@ -2904,15 +2823,15 @@ export default function App() {
                     <Button 
                       variant="outline" 
                       icon={ArrowLeft}
-                      onClick={() => docStep > 1 ? setDocStep(docStep - 1) : setCurrentView('dashboard')}
+                      onClick={() => docStep > 1 ? setDocStep(docStep - 1) : setCurrentView('document_search')}
                     >
                       Voltar
                     </Button>
                     <div className="flex gap-4">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="text-purple-600 border-purple-200 hover:bg-purple-50"
-                        onClick={() => setCurrentView('dashboard')}
+                        onClick={() => setCurrentView('document_search')}
                       >
                         Cancelar
                       </Button>
@@ -3187,14 +3106,8 @@ export default function App() {
                   )}
 
                   <div className="flex items-center justify-between pt-6 border-t-2 border-slate-100">
-                    <Button variant="outline" icon={ArrowLeft} onClick={() => {
-                      if (isReadOnlyView) {
-                        setCurrentView('document_search');
-                      } else {
-                        setCurrentView('dashboard');
-                      }
-                    }}>
-                      {isReadOnlyView ? 'Voltar para Pesquisa' : 'Voltar ao Início'}
+                    <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('document_search')}>
+                      Voltar para Gestão de Documentos
                     </Button>
                     {!registeredDoc.levantamento && (
                       <Button
@@ -3215,14 +3128,22 @@ export default function App() {
                 className="space-y-8"
               >
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Pesquisa Documento</h2>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Gestão de Documentos</h2>
+                  <div className="flex gap-3">
+                    <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar ao Início</Button>
+                    <Button variant="primary" icon={Plus} onClick={() => {
+                      setDocStep(1);
+                      setIsReadOnlyView(false);
+                      setCurrentView('document_registration');
+                    }}>Cadastro Documento</Button>
+                  </div>
                 </div>
 
                 <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo Documento</label>
-                      <select 
+                      <select
                         value={docSearchFilters.type}
                         onChange={(e) => setDocSearchFilters({...docSearchFilters, type: e.target.value})}
                         className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
@@ -3374,10 +3295,6 @@ export default function App() {
                     </div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Página 1 de 1</span>
                   </div>
-                </div>
-
-                <div className="flex justify-start">
-                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar ao Início</Button>
                 </div>
               </motion.div>
             ) : currentView === 'certificate_list' ? (
@@ -5464,7 +5381,7 @@ export default function App() {
 
                 {/* Tab bar */}
                 <div className="flex gap-2">
-                  {([['domains', 'Domínios'], ['characteristics', 'Características'], ['groups', 'Grupos']] as const).map(([tab, label]) => (
+                  {([['domains', 'Domínios'], ['groups', 'Grupos']] as const).map(([tab, label]) => (
                     <button
                       key={tab}
                       onClick={() => setActiveParamTab(tab)}
@@ -5714,281 +5631,6 @@ export default function App() {
                 </div>
                 )} {/* end TAB: Domínios */}
 
-                {/* ── TAB: Características ── */}
-                {activeParamTab === 'characteristics' && (
-                <div className="flex gap-6 items-start">
-
-                  {/* Left: characteristics list */}
-                  <div className="w-72 flex-shrink-0 bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-                    <div className="px-4 py-4 border-b-2 border-slate-100 bg-slate-50 flex items-center justify-between">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Características</p>
-                      <button
-                        onClick={() => { setShowAddCharacteristic(v => !v); setEditingCharacteristicId(null); }}
-                        className="flex items-center gap-1 px-2.5 py-1 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
-                      >
-                        <Plus size={11} /> Nova
-                      </button>
-                    </div>
-
-                    {/* Add characteristic form */}
-                    <AnimatePresence>
-                      {showAddCharacteristic && (
-                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                          <div className="px-4 py-4 bg-slate-50 border-b border-slate-100 space-y-3">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Código</label>
-                                <input type="text" value={newCharacteristic.code} onChange={e => setNewCharacteristic(p => ({ ...p, code: e.target.value.toUpperCase() }))} placeholder="CAB" maxLength={10} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none focus:border-slate-900 uppercase transition-all" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordem</label>
-                                <input type="number" value={newCharacteristic.order} onChange={e => setNewCharacteristic(p => ({ ...p, order: e.target.value }))} placeholder="1" className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                              </div>
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</label>
-                              <input type="text" value={newCharacteristic.name} onChange={e => setNewCharacteristic(p => ({ ...p, name: e.target.value }))} placeholder="Ex: Cabelo" className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Valor</label>
-                              <select value={newCharacteristic.value_type} onChange={e => setNewCharacteristic(p => ({ ...p, value_type: e.target.value }))} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                <option value="LIST">LIST</option>
-                                <option value="NUMERIC">NUMERIC</option>
-                                <option value="TEXT">TEXT</option>
-                                <option value="BOOLEAN">BOOLEAN</option>
-                              </select>
-                            </div>
-                            <div className="flex gap-2">
-                              <button onClick={() => { setShowAddCharacteristic(false); setNewCharacteristic({ code: '', name: '', value_type: 'LIST', order: '' }); }} className="flex-1 px-3 py-1.5 bg-white text-slate-600 border-2 border-slate-200 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-50 transition-all">Cancelar</button>
-                              <button
-                                onClick={() => {
-                                  if (!newCharacteristic.code.trim() || !newCharacteristic.name.trim()) return;
-                                  const newId = Date.now();
-                                  setCharacteristics(prev => [...prev, { id: newId, code: newCharacteristic.code.trim(), name: newCharacteristic.name.trim(), value_type: newCharacteristic.value_type, order: parseInt(newCharacteristic.order) || prev.length + 1, status: true }]);
-                                  setCharacteristicTypes(prev => ({ ...prev, [newId]: [] }));
-                                  setNewCharacteristic({ code: '', name: '', value_type: 'LIST', order: '' });
-                                  setShowAddCharacteristic(false);
-                                  setSelectedCharacteristic(newId);
-                                }}
-                                className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
-                              >
-                                <Check size={12} /> Guardar
-                              </button>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    <div className="divide-y divide-slate-50 max-h-[600px] overflow-y-auto">
-                      {characteristics.sort((a, b) => a.order - b.order).map(char => {
-                        const types = characteristicTypes[char.id] || [];
-                        const isSelected = selectedCharacteristic === char.id;
-                        if (editingCharacteristicId === char.id) return (
-                          <div key={char.id} className="px-4 py-3 bg-blue-50 space-y-2">
-                            <div className="grid grid-cols-2 gap-2">
-                              <input type="text" value={editingCharacteristic.code} onChange={e => setEditingCharacteristic(p => ({ ...p, code: e.target.value.toUpperCase() }))} maxLength={10} className="px-2 py-1.5 bg-white border-2 border-slate-900 rounded-lg text-xs font-black text-slate-900 outline-none uppercase" />
-                              <input type="number" value={editingCharacteristic.order} onChange={e => setEditingCharacteristic(p => ({ ...p, order: e.target.value }))} className="px-2 py-1.5 bg-white border-2 border-slate-200 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-slate-900" />
-                            </div>
-                            <input type="text" value={editingCharacteristic.name} onChange={e => setEditingCharacteristic(p => ({ ...p, name: e.target.value }))} className="w-full px-2 py-1.5 bg-white border-2 border-slate-200 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-slate-900" />
-                            <select value={editingCharacteristic.value_type} onChange={e => setEditingCharacteristic(p => ({ ...p, value_type: e.target.value }))} className="w-full px-2 py-1.5 bg-white border-2 border-slate-200 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-slate-900">
-                              <option value="LIST">LIST</option>
-                              <option value="NUMERIC">NUMERIC</option>
-                              <option value="TEXT">TEXT</option>
-                              <option value="BOOLEAN">BOOLEAN</option>
-                            </select>
-                            <div className="flex gap-2">
-                              <button onClick={() => setEditingCharacteristicId(null)} className="flex-1 px-2 py-1 bg-white text-slate-600 border border-slate-200 font-black text-[10px] uppercase rounded-lg">Cancelar</button>
-                              <button
-                                onClick={() => {
-                                  setCharacteristics(prev => prev.map(c => c.id === char.id ? { ...c, code: editingCharacteristic.code, name: editingCharacteristic.name, value_type: editingCharacteristic.value_type, order: parseInt(editingCharacteristic.order) || c.order } : c));
-                                  setEditingCharacteristicId(null);
-                                }}
-                                className="flex-1 px-2 py-1 bg-slate-900 text-white font-black text-[10px] uppercase rounded-lg hover:bg-slate-700 flex items-center justify-center gap-1"
-                              >
-                                <Check size={11} /> Guardar
-                              </button>
-                            </div>
-                          </div>
-                        );
-                        return (
-                          <button
-                            key={char.id}
-                            onClick={() => { setSelectedCharacteristic(char.id); setShowAddCharType(false); setEditingCharTypeId(null); }}
-                            className={`w-full text-left px-4 py-3 flex items-center justify-between transition-all group ${isSelected ? 'bg-slate-900' : !char.status ? 'opacity-40 hover:bg-slate-50' : 'hover:bg-slate-50'}`}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{char.code}</span>
-                                <span className={`text-xs font-bold truncate ${isSelected ? 'text-white' : 'text-slate-700'}`}>{char.name}</span>
-                              </div>
-                              <span className={`text-[9px] font-black mt-0.5 block ${isSelected ? 'text-white/60' : 'text-slate-400'}`}>{char.value_type} · {types.length} tipos</span>
-                            </div>
-                            {isSelected && char.status && (
-                              <button
-                                onClick={e => { e.stopPropagation(); setEditingCharacteristicId(char.id); setEditingCharacteristic({ code: char.code, name: char.name, value_type: char.value_type, order: String(char.order) }); }}
-                                className="ml-2 p-1 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                              >
-                                <Edit size={13} />
-                              </button>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Right: characteristic_types */}
-                  <div className="flex-1 bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden min-w-0">
-                    {(() => {
-                      const char = characteristics.find(c => c.id === selectedCharacteristic);
-                      if (!char) return null;
-                      const types = characteristicTypes[char.id] || [];
-                      const isListType = char.value_type === 'LIST' || char.value_type === 'BOOLEAN';
-                      return (
-                        <>
-                          {/* Add type form */}
-                          <AnimatePresence>
-                            {showAddCharType && isListType && (
-                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                <div className="px-6 py-5 bg-slate-50 border-b-2 border-slate-100 space-y-4">
-                                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Novo Tipo — {char.name}</p>
-                                  <div className="grid grid-cols-3 gap-4">
-                                    <div className="space-y-1.5">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Código</label>
-                                      <input type="text" value={newCharType.code} onChange={e => setNewCharType(p => ({ ...p, code: e.target.value.toUpperCase() }))} placeholder="Ex: CRE" maxLength={10} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-black text-slate-900 outline-none focus:border-slate-900 uppercase transition-all" />
-                                    </div>
-                                    <div className="space-y-1.5 col-span-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição</label>
-                                      <input type="text" value={newCharType.description} onChange={e => setNewCharType(p => ({ ...p, description: e.target.value }))} placeholder="Ex: Crespo" className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                                    </div>
-                                  </div>
-                                  <div className="flex justify-end gap-3">
-                                    <button onClick={() => { setShowAddCharType(false); setNewCharType({ code: '', description: '', order: '' }); }} className="px-4 py-2 bg-white text-slate-700 border-2 border-slate-200 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all">Cancelar</button>
-                                    <button
-                                      onClick={() => {
-                                        if (!newCharType.code.trim() || !newCharType.description.trim()) return;
-                                        const newTypeId = Date.now();
-                                        setCharacteristicTypes(prev => ({ ...prev, [char.id]: [...(prev[char.id] || []), { id: newTypeId, code: newCharType.code.trim(), description: newCharType.description.trim(), order: (prev[char.id] || []).length + 1, status: true }] }));
-                                        setNewCharType({ code: '', description: '', order: '' });
-                                        setShowAddCharType(false);
-                                      }}
-                                      className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-700 transition-all"
-                                    >
-                                      <Plus size={14} /> Adicionar
-                                    </button>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-
-                          {/* Table header */}
-                          <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100 bg-white">
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm font-black text-slate-900 uppercase tracking-widest">{char.name}</span>
-                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${char.value_type === 'LIST' ? 'bg-blue-50 text-blue-600' : char.value_type === 'NUMERIC' ? 'bg-amber-50 text-amber-600' : char.value_type === 'BOOLEAN' ? 'bg-purple-50 text-purple-600' : 'bg-slate-100 text-slate-500'}`}>{char.value_type}</span>
-                              <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{types.length} tipos</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => setCharacteristics(prev => prev.map(c => c.id === char.id ? { ...c, status: !c.status } : c))}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-colors ${char.status ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
-                              >
-                                {char.status ? 'Desativar' : 'Ativar'}
-                              </button>
-                              {isListType && !showAddCharType && (
-                                <button onClick={() => setShowAddCharType(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all">
-                                  <Plus size={13} /> Novo Tipo
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {!isListType ? (
-                            <div className="px-6 py-12 text-center">
-                              <p className="text-sm font-bold text-slate-400">Tipo de valor <span className="font-black text-slate-600">{char.value_type}</span> — não requer lista de tipos.</p>
-                              <p className="text-xs text-slate-400 mt-1">O valor será inserido diretamente na ficha.</p>
-                            </div>
-                          ) : types.length === 0 ? (
-                            <div className="px-6 py-12 text-center">
-                              <p className="text-sm font-bold text-slate-400">Sem tipos definidos.</p>
-                            </div>
-                          ) : (
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-left border-collapse">
-                                <thead>
-                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                    <th className="px-6 py-4 w-8">Nº</th>
-                                    <th className="px-6 py-4">Código</th>
-                                    <th className="px-6 py-4">Descrição</th>
-                                    <th className="px-6 py-4">Estado</th>
-                                    <th className="px-6 py-4 text-right">Ações</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                  {types.sort((a: any, b: any) => a.order - b.order).map((t: any, idx: number) => (
-                                    <tr key={t.id} className={`transition-colors ${!t.status ? 'opacity-50 bg-slate-50/50' : 'hover:bg-slate-50'}`}>
-                                      <td className="px-6 py-4 text-xs font-black text-slate-400">{(idx + 1).toString().padStart(2, '0')}</td>
-                                      <td className="px-6 py-4">
-                                        {editingCharTypeId === t.id ? (
-                                          <input type="text" value={editingCharType.code} onChange={e => setEditingCharType(p => ({ ...p, code: e.target.value.toUpperCase() }))} maxLength={10} className="w-24 px-3 py-1.5 bg-white border-2 border-slate-900 rounded-lg text-xs font-black text-slate-900 outline-none uppercase" autoFocus />
-                                        ) : (
-                                          <span className="text-xs font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded">{t.code}</span>
-                                        )}
-                                      </td>
-                                      <td className="px-6 py-4">
-                                        {editingCharTypeId === t.id ? (
-                                          <input type="text" value={editingCharType.description} onChange={e => setEditingCharType(p => ({ ...p, description: e.target.value }))} className="w-full px-3 py-1.5 bg-white border-2 border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:border-slate-900" />
-                                        ) : (
-                                          <span className="text-sm font-medium text-slate-600">{t.description}</span>
-                                        )}
-                                      </td>
-                                      <td className="px-6 py-4">
-                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${t.status ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>{t.status ? 'Ativo' : 'Inativo'}</span>
-                                      </td>
-                                      <td className="px-6 py-4">
-                                        <div className="flex items-center justify-end gap-2">
-                                          {editingCharTypeId === t.id ? (
-                                            <>
-                                              <button
-                                                onClick={() => {
-                                                  setCharacteristicTypes(prev => ({ ...prev, [char.id]: prev[char.id].map((x: any) => x.id === t.id ? { ...x, code: editingCharType.code, description: editingCharType.description } : x) }));
-                                                  setEditingCharTypeId(null);
-                                                }}
-                                                className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
-                                              >
-                                                <Check size={12} /> Guardar
-                                              </button>
-                                              <button onClick={() => setEditingCharTypeId(null)} className="px-3 py-1.5 bg-white text-slate-600 border-2 border-slate-200 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-50 transition-all">Cancelar</button>
-                                            </>
-                                          ) : (
-                                            <>
-                                              {t.status && (
-                                                <button onClick={() => { setEditingCharTypeId(t.id); setEditingCharType({ code: t.code, description: t.description, order: String(t.order) }); }} className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all" title="Editar"><Edit size={15} /></button>
-                                              )}
-                                              <button
-                                                onClick={() => setCharacteristicTypes(prev => ({ ...prev, [char.id]: prev[char.id].map((x: any) => x.id === t.id ? { ...x, status: !x.status } : x) }))}
-                                                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-colors ${t.status ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
-                                              >
-                                                {t.status ? 'Desativar' : 'Ativar'}
-                                              </button>
-                                            </>
-                                          )}
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-                )} {/* end TAB: Características */}
 
                 {/* ── TAB: Grupos ── */}
                 {activeParamTab === 'groups' && (
@@ -6186,7 +5828,6 @@ export default function App() {
                     setNewFichaAddresses([]); setNewFichaNewAddress({ type: 'Residência', island: '', county: '', parish: '', locality: '', zone: '', reference: '' });
                     setNewFichaContacts([]); setNewFichaNewContact({ type: 'Telemovel', info: '' });
                     setNewFichaNicknames([]); setNewFichaNewNickname('');
-                    setNewFichaSocials([]); setNewFichaNewSocial({ type: 'Facebook', link: '' });
                     setNewFichaReasons([]); setNewFichaNewReason({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' });
                     setNewFichaObservations([]); setNewFichaNewObs('');
                     setNewFichaAttachments([]); setNewFichaNewAttach({ name: '', type: 'Documento' });
@@ -6195,33 +5836,228 @@ export default function App() {
                   }}>Nova Ficha</Button>
                 </div>
 
-                <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
-                  <div className="flex items-center gap-3 mb-8">
+                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                  <div className="flex items-center gap-3 px-8 pt-8 pb-6 border-b border-slate-100">
                     <div className="p-2 bg-slate-900 text-white rounded-lg"><Search size={16} /></div>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Localizar Ficha</h3>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex-1">Localizar Ficha</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowFichaAdvancedFilters(v => !v)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all border-2 ${
+                        showFichaAdvancedFilters
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900'
+                      }`}
+                    >
+                      <SlidersHorizontal size={13} />
+                      Filtros Avançados
+                    </button>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Número Ficha</label>
-                      <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" placeholder="Ex: FICAD-102/N-PR/2026" />
+
+                  <div className="px-8 py-6 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Número Ficha</label>
+                        <input type="text" value={fichaSearchFilters.number} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, number: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" placeholder="Ex: FICAD-102/N-PR/2026" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Indivíduo</label>
+                        <input type="text" value={fichaSearchFilters.name} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, name: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" placeholder="Nome completo" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Nascimento</label>
+                        <input type="date" value={fichaSearchFilters.birthDate} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, birthDate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</label>
+                        <select value={fichaSearchFilters.estado} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, estado: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                          <option value="">Todos</option>
+                          <option value="Completo">Completo</option>
+                          <option value="Por Completar">Por Completar</option>
+                        </select>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Indivíduo</label>
-                      <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" placeholder="Nome completo" />
+
+                    <AnimatePresence>
+                      {showFichaAdvancedFilters && (
+                        <motion.div key="ficha-adv" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-6">
+                          <div className="border-t border-slate-100 pt-5">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-900 pl-3 mb-4">Dados do Motivo de Cadastro</p>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comando</label>
+                                <select value={fichaSearchFilters.comando} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, comando: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todos</option>
+                                  <option value="Comando Regional Santiago Sul">Comando Regional Santiago Sul</option>
+                                  <option value="Comando Regional Santiago Norte">Comando Regional Santiago Norte</option>
+                                  <option value="Comando Regional Barlavento">Comando Regional Barlavento</option>
+                                  <option value="Comando Regional Sotavento">Comando Regional Sotavento</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
+                                <select value={fichaSearchFilters.unit} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, unit: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  <option value="ESF Praia">ESF Praia</option>
+                                  <option value="ESF Mindelo">ESF Mindelo</option>
+                                  <option value="DP Praia">DP Praia</option>
+                                  <option value="DP Mindelo">DP Mindelo</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</label>
+                                <select value={fichaSearchFilters.auto_type} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, auto_type: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todos</option>
+                                  <option>Auto de Detenção</option>
+                                  <option>Auto de Notícia</option>
+                                  <option>Auto de Ocorrência</option>
+                                  <option>Auto de Apreensão</option>
+                                  <option>Auto de Busca e Apreensão</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Crime</label>
+                                <select value={fichaSearchFilters.tipo} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, tipo: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todos</option>
+                                  <option value="Criminal">Criminal</option>
+                                  <option value="Policial">Policial</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Natureza de Ocorrência</label>
+                                <select value={fichaSearchFilters.natureza} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, natureza: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  <option>Crime contra as Pessoas</option>
+                                  <option>Crime contra o Património</option>
+                                  <option>Crime contra o Estado</option>
+                                  <option>Crime contra a Ordem Pública</option>
+                                  <option>Crime de Tráfico</option>
+                                  <option>Contraordenação</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enquadramento</label>
+                                <select value={fichaSearchFilters.enquadramento} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, enquadramento: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todos</option>
+                                  <option>Ofensa à Integridade Física — Art. 131º CP</option>
+                                  <option>Ofensa à Integridade Física Grave — Art. 132º CP</option>
+                                  <option>Furto — Art. 195º CP</option>
+                                  <option>Furto Qualificado — Art. 197º CP</option>
+                                  <option>Roubo — Art. 200º CP</option>
+                                  <option>Homicídio — Art. 122º CP</option>
+                                  <option>Tráfico de Estupefacientes — Art. 15º DL 11/2021</option>
+                                  <option>Corrupção — Art. 303º CP</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipologia</label>
+                                <select value={fichaSearchFilters.tipologia} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, tipologia: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  <option>Detenção em Flagrante Delito</option>
+                                  <option>Arguido</option>
+                                  <option>Investigado</option>
+                                  <option>Suspeito</option>
+                                  <option>Testemunha</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Documento</label>
+                                <input type="text" value={fichaSearchFilters.doc_number} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, doc_number: e.target.value})} placeholder="CNI, Passaporte, ..." className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="border-t border-slate-100 pt-5">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-4 border-slate-900 pl-3 mb-4">Residência</p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ilha</label>
+                                <select value={fichaSearchFilters.island} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, island: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  {['Santiago','São Vicente','Santo Antão','Fogo','Sal','Boavista','São Nicolau','Brava','Maio','Santa Luzia'].map(i => <option key={i}>{i}</option>)}
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Concelho</label>
+                                <select value={fichaSearchFilters.municipality} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, municipality: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todos</option>
+                                  {['Praia','Santa Catarina','Santa Cruz','São Domingos','São Lourenço dos Órgãos','São Miguel','São Salvador do Mundo','Tarrafal','Ribeira Grande de Santiago','Mindelo','Santa Catarina do Fogo','Sal Rei'].map(m => <option key={m}>{m}</option>)}
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Freguesia</label>
+                                <select value={fichaSearchFilters.parish} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, parish: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  {['N.S Da Graça','São João Baptista','São Nicolau Tolentino','Santiago Maior','Santa Catarina','São Lourenço dos Órgãos','São Miguel Arcanjo','São Salvador do Mundo','Santo Amaro Abade','Nossa Senhora do Rosário'].map(p => <option key={p}>{p}</option>)}
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localidade</label>
+                                <select value={fichaSearchFilters.locality} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, locality: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  {['Cidade Da Praia','Palmarejo','Achada Santo António','Achada Grande Frente','Achada Grande Trás','Várzea','Terra Branca','Tira Chapéu','Calabaceira','Fazenda','Mindelo'].map(l => <option key={l}>{l}</option>)}
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zona</label>
+                                <select value={fichaSearchFilters.zone} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, zone: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+                                  <option value="">Todas</option>
+                                  {['Txadinha','Monteagarro','Achadinha','Pensamento','Safende',"Ponta d'Água",'Eugénio Lima','Lém Cachorro','Cruz Vermelha','Bairro Craveiro Lopes'].map(z => <option key={z}>{z}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+                      <Button variant="outline" onClick={() => {
+                        setFichaSearchFilters({
+                          number: '', name: '', birthDate: '', estado: '',
+                          comando: '', unit: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '', tipo: '', doc_number: '',
+                          island: '', municipality: '', parish: '', locality: '', zone: ''
+                        });
+                        setFichaSearchResults(null);
+                      }}>Limpar</Button>
+                      <Button variant="primary" icon={Search} onClick={() => {
+                        const f = fichaSearchFilters;
+                        const results = fichas.filter((ficha) => {
+                          if (f.number && !ficha.number.toLowerCase().includes(f.number.toLowerCase())) return false;
+                          if (f.name && !ficha.name.toLowerCase().includes(f.name.toLowerCase())) return false;
+                          if (f.birthDate && ficha.birthDate !== f.birthDate) return false;
+                          if (f.estado && (ficha.estado || 'Por Completar') !== f.estado) return false;
+                          if (f.doc_number && !(ficha.docNumber || '').toLowerCase().includes(f.doc_number.toLowerCase())) return false;
+
+                          const reasons = ficha.registrationReasons || [];
+                          if (f.comando && !reasons.some((r: any) => r.comando === f.comando)) return false;
+                          if (f.unit && !reasons.some((r: any) => r.unit === f.unit)) return false;
+                          if (f.auto_type && !reasons.some((r: any) => r.auto_type === f.auto_type)) return false;
+                          if (f.tipo && !reasons.some((r: any) => r.type === f.tipo)) return false;
+                          if (f.natureza && !reasons.some((r: any) => r.natureza === f.natureza)) return false;
+                          if (f.enquadramento && !reasons.some((r: any) => r.enquadramento === f.enquadramento)) return false;
+                          if (f.tipologia && !reasons.some((r: any) => r.tipologia === f.tipologia)) return false;
+
+                          const addresses = ficha.addresses || [];
+                          const matchesAddress = (key: string, val: string) => !val || addresses.some((a: any) => a[key] === val) || (key === 'island' && ficha.island === val);
+                          if (f.island && !matchesAddress('island', f.island)) return false;
+                          if (f.municipality && !addresses.some((a: any) => a.council === f.municipality)) return false;
+                          if (f.parish && !addresses.some((a: any) => a.parish === f.parish)) return false;
+                          if (f.locality && !addresses.some((a: any) => a.locality === f.locality)) return false;
+                          if (f.zone && !addresses.some((a: any) => a.zone === f.zone)) return false;
+
+                          return true;
+                        });
+                        setFichaSearchResults(results);
+                      }}>Pesquisar</Button>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Nascimento</label>
-                      <input type="date" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
-                    </div>
-                    <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Fichas Registradas</h3>
-                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {fichas.length.toString().padStart(2, '0')}</span>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {(fichaSearchResults !== null ? fichaSearchResults : fichas).length.toString().padStart(2, '0')}</span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -6231,12 +6067,13 @@ export default function App() {
                           <th className="px-6 py-4">Nome Completo</th>
                           <th className="px-6 py-4">Data Nascimento</th>
                           <th className="px-6 py-4">Ilha</th>
+                          <th className="px-6 py-4">Estado</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {fichas.map((f, idx) => (
-                          <tr 
-                            key={f.id} 
+                        {(fichaSearchResults !== null ? fichaSearchResults : fichas).map((f, idx) => (
+                          <tr
+                            key={f.id}
                             className="hover:bg-slate-50 cursor-pointer transition-colors group"
                             onClick={() => {
                               setSelectedFicha(f);
@@ -6247,6 +6084,11 @@ export default function App() {
                             <td className="px-6 py-4 text-sm font-bold text-slate-900">{f.name}</td>
                             <td className="px-6 py-4 text-sm font-medium text-slate-600">{f.birthDate ? new Date(f.birthDate).toLocaleDateString('pt-BR') : '---'}</td>
                             <td className="px-6 py-4 text-sm font-medium text-slate-600">{f.island}</td>
+                            <td className="px-6 py-4">
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${(f.estado || 'Por Completar') === 'Completo' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                {f.estado || 'Por Completar'}
+                              </span>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -6280,7 +6122,7 @@ export default function App() {
                   const councilCode = (newFichaAddresses[0]?.council || 'Praia').slice(0, 2).toUpperCase();
                   const newNum = `FICAD-${newId}/N-${councilCode}/${new Date().getFullYear()}`;
                   const newFicha: any = {
-                    id: newId, number: newNum,
+                    id: newId, number: newNum, estado: 'Por Completar',
                     name: newFichaData.name, birthDate: newFichaData.birthDate,
                     island: newFichaAddresses[0]?.island || newFichaData.birthPlace || '',
                     birthPlace: newFichaData.birthPlace, gender: newFichaData.gender,
@@ -6293,7 +6135,6 @@ export default function App() {
                     addresses: newFichaAddresses,
                     contacts: newFichaContacts,
                     nicknames: newFichaNicknames.map((v, i) => ({ id: i+1, createdAt: today, validFrom: today, validTo: null, user: user?.name || 'Admin', value: v })),
-                    socialNetworks: newFichaSocials,
                     complementaryGroups: newFichaChars.length > 0 ? [{ id: 1, createdAt: today, validFrom: today, validTo: null, user: user?.name || 'Admin', otherNotes: '', characteristics: newFichaChars }] : [],
                     registrationReasons: newFichaReasons,
                     observations: newFichaObservations,
@@ -6439,7 +6280,7 @@ export default function App() {
 
                     {/* ── Accordion: Outras Informações ── */}
                     <div className="space-y-3">
-                      {nfAccordion('outras', 'Outras Informações', Info, newFichaAddresses.length + newFichaContacts.length + newFichaNicknames.length + newFichaSocials.length)}
+                      {nfAccordion('outras', 'Outras Informações', Info, newFichaAddresses.length + newFichaContacts.length + newFichaNicknames.length)}
                       <AnimatePresence>
                         {newFichaExpanded.outras && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -6516,7 +6357,7 @@ export default function App() {
                                   <div className="w-40 space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo</label>
                                     <select value={newFichaNewContact.type} onChange={(e) => setNewFichaNewContact({...newFichaNewContact, type: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                      {['Telemovel','Email','Telefone fixo','WhatsApp','Outro'].map(o => <option key={o}>{o}</option>)}
+                                      {['Telemovel','Email','Telefone fixo','Facebook','Instagram','Twitter / X','LinkedIn','TikTok','WhatsApp','Outro'].map(o => <option key={o}>{o}</option>)}
                                     </select>
                                   </div>
                                   <div className="flex-1 space-y-2">
@@ -6558,39 +6399,6 @@ export default function App() {
                                       <span key={i} className="flex items-center gap-2 bg-slate-100 text-slate-800 text-xs font-black px-3 py-1.5 rounded-full">
                                         {n}<button onClick={() => setNewFichaNicknames(newFichaNicknames.filter((_,j)=>j!==i))} className="text-slate-400 hover:text-red-600 transition-colors"><X size={12} /></button>
                                       </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Redes Sociais */}
-                              <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Redes Sociais</h4>
-                                <div className="flex gap-4 items-end">
-                                  <div className="w-40 space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Plataforma</label>
-                                    <select value={newFichaNewSocial.type} onChange={(e) => setNewFichaNewSocial({...newFichaNewSocial, type: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                      {['Facebook','Instagram','TikTok','Twitter/X','Snapchat','YouTube','Outra'].map(o => <option key={o}>{o}</option>)}
-                                    </select>
-                                  </div>
-                                  <div className="flex-1 space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Link / Username</label>
-                                    <input type="text" value={newFichaNewSocial.link} onChange={(e) => setNewFichaNewSocial({...newFichaNewSocial, link: e.target.value})} placeholder="Ex: facebook.com/nome ou @username" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                                  </div>
-                                  <Button variant="primary" icon={Plus} onClick={() => {
-                                    if (!newFichaNewSocial.link) return;
-                                    setNewFichaSocials([...newFichaSocials, { ...newFichaNewSocial, id: Date.now(), validFrom: today, validTo: null, user: user?.name || 'Admin' }]);
-                                    setNewFichaNewSocial({ type: newFichaNewSocial.type, link: '' });
-                                  }}>Adicionar</Button>
-                                </div>
-                                {newFichaSocials.length > 0 && (
-                                  <div className="space-y-2">
-                                    {newFichaSocials.map((s, i) => (
-                                      <div key={i} className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
-                                        <span className="text-[10px] font-black text-slate-500 uppercase w-28">{s.type}</span>
-                                        <span className="text-sm font-bold text-slate-900 flex-1">{s.link}</span>
-                                        <button onClick={() => setNewFichaSocials(newFichaSocials.filter((_,j)=>j!==i))} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
-                                      </div>
                                     ))}
                                   </div>
                                 )}
@@ -6961,7 +6769,12 @@ export default function App() {
                 <div className="flex justify-between items-center border-b-2 border-slate-100 pb-4">
                   <div className="space-y-1">
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Ficha de Cadastro</h2>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registro Individual N.º {selectedFicha.number}</p>
+                    <div className="flex items-center gap-3">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registro Individual N.º {selectedFicha.number}</p>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${(selectedFicha.estado || 'Por Completar') === 'Completo' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                        {selectedFicha.estado || 'Por Completar'}
+                      </span>
+                    </div>
                   </div>
                   <Button variant="success" icon={FileText} onClick={() => {
                     const reasons = selectedFicha.registrationReasons || [];
@@ -7734,6 +7547,12 @@ export default function App() {
                                         <option value="Telemóvel">Telemóvel</option>
                                         <option value="Telefone">Telefone</option>
                                         <option value="Email">Email</option>
+                                        <option value="Facebook">Facebook</option>
+                                        <option value="Instagram">Instagram</option>
+                                        <option value="Twitter / X">Twitter / X</option>
+                                        <option value="LinkedIn">LinkedIn</option>
+                                        <option value="TikTok">TikTok</option>
+                                        <option value="WhatsApp">WhatsApp</option>
                                       </select>
                                     </div>
                                     <div className="space-y-1">
@@ -7846,158 +7665,6 @@ export default function App() {
                                                 <td className="px-4 py-3 text-xs font-medium text-red-600">{contact.deactivatedBy || '---'}</td>
                                                 <td className="px-4 py-3 text-xs">{contact.validFrom}</td>
                                                 <td className="px-4 py-3 text-xs text-red-600 font-medium">{contact.validTo}</td>
-                                              </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Redes Sociais */}
-                          <div className="space-y-4">
-                            <AnimatePresence>
-                              {showAddSocial && (
-                                <motion.div 
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
-                                >
-                                  <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                                    <h5 className="text-xs font-bold text-slate-700 uppercase">Nova Rede Social</h5>
-                                    <button onClick={() => setShowAddSocial(false)} className="text-slate-400 hover:text-slate-600"><Trash2 size={14} /></button>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Tipo</label>
-                                      <select 
-                                        value={newSocial.type}
-                                        onChange={(e) => setNewSocial({...newSocial, type: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                      >
-                                        <option value="Facebook">Facebook</option>
-                                        <option value="Instagram">Instagram</option>
-                                        <option value="Twitter">Twitter / X</option>
-                                        <option value="LinkedIn">LinkedIn</option>
-                                        <option value="TikTok">TikTok</option>
-                                        <option value="Outro">Outro</option>
-                                      </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Link / Username</label>
-                                      <input 
-                                        type="text" 
-                                        value={newSocial.link}
-                                        onChange={(e) => setNewSocial({...newSocial, link: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                      />
-                                    </div>
-                                  </div>
-                                  <div className="flex justify-end">
-                                    <button 
-                                      onClick={() => handleAddOtherInfo('social')}
-                                      className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors"
-                                    >
-                                      Confirmar Adição
-                                    </button>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-
-                            <div className="flex justify-between items-center">
-                              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Redes Sociais</h4>
-                              <Button 
-                                variant="outline" 
-                                icon={showAddSocial ? Trash2 : Plus} 
-                                onClick={() => setShowAddSocial(!showAddSocial)}
-                              >
-                                {showAddSocial ? 'Cancelar' : 'Adicionar Rede Social'}
-                              </Button>
-                            </div>
-
-                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
-                              <table className="w-full text-left border-collapse">
-                                <thead>
-                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                    <th className="px-6 py-4">N º</th>
-                                    <th className="px-6 py-4">Utilizador</th>
-                                    <th className="px-6 py-4">Tipo</th>
-                                    <th className="px-6 py-4">Link</th>
-                                    <th className="px-6 py-4">Criado em</th>
-                                    <th className="px-6 py-4 text-right">Ação</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                  {selectedFicha.socialNetworks?.filter((s: any) => s.validTo === null).map((social: any, idx: number) => (
-                                    <tr key={social.id} className="hover:bg-slate-50 transition-colors group">
-                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{social.user}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{social.type}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-blue-600 hover:underline cursor-pointer">{social.link}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{social.validFrom}</td>
-                                      <td className="px-6 py-4 text-right">
-                                        {!social.validTo && (
-                                          <button 
-                                            onClick={() => handleDeactivateOtherInfo('social', social.id)}
-                                            className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors"
-                                          >
-                                            Desativar
-                                          </button>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-
-                            {/* Social History */}
-                            {selectedFicha.socialNetworks?.some((s: any) => s.validTo !== null) && (
-                              <div className="space-y-4">
-                                <button 
-                                  onClick={() => setShowOtherInfoHistory({...showOtherInfoHistory, social: !showOtherInfoHistory.social})}
-                                  className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
-                                >
-                                  {showOtherInfoHistory.social ? 'Ocultar Histórico' : 'Ver Histórico de Redes Sociais'}
-                                  {showOtherInfoHistory.social ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                </button>
-
-                                <AnimatePresence>
-                                  {showOtherInfoHistory.social && (
-                                    <motion.div 
-                                      initial={{ height: 0, opacity: 0 }}
-                                      animate={{ height: 'auto', opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
-                                      className="overflow-hidden space-y-2"
-                                    >
-                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
-                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
-                                        <table className="w-full text-left border-collapse">
-                                          <thead>
-                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
-                                              <th className="px-4 py-3">Tipo</th>
-                                              <th className="px-4 py-3">Link</th>
-                                              <th className="px-4 py-3">Criado por</th>
-                                              <th className="px-4 py-3">Desativado por</th>
-                                              <th className="px-4 py-3">Criado em</th>
-                                              <th className="px-4 py-3">Desativado em</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {selectedFicha.socialNetworks?.filter((s: any) => s.validTo !== null).map((social: any) => (
-                                              <tr key={social.id} className="border-b border-slate-100 opacity-60">
-                                                <td className="px-4 py-3 text-xs">{social.type}</td>
-                                                <td className="px-4 py-3 text-xs">{social.link}</td>
-                                                <td className="px-4 py-3 text-xs font-medium">{social.user}</td>
-                                                <td className="px-4 py-3 text-xs font-medium text-red-600">{social.deactivatedBy || '---'}</td>
-                                                <td className="px-4 py-3 text-xs">{social.validFrom}</td>
-                                                <td className="px-4 py-3 text-xs text-red-600 font-medium">{social.validTo}</td>
                                               </tr>
                                             ))}
                                           </tbody>
@@ -9424,6 +9091,12 @@ export default function App() {
                                             <option value="Telemóvel">Telemóvel</option>
                                             <option value="Telefone">Telefone</option>
                                             <option value="Email">Email</option>
+                                            <option value="Facebook">Facebook</option>
+                                            <option value="Instagram">Instagram</option>
+                                            <option value="Twitter / X">Twitter / X</option>
+                                            <option value="LinkedIn">LinkedIn</option>
+                                            <option value="TikTok">TikTok</option>
+                                            <option value="WhatsApp">WhatsApp</option>
                                           </select>
                                         </div>
                                         <div className="space-y-1">
@@ -9580,99 +9253,6 @@ export default function App() {
                                 </div>
                               </div>
 
-                              {isNewRegistration && (
-                              <div className="grid grid-cols-1">
-                                {/* Redes Sociais */}
-                                <div className="space-y-4">
-                                  <AnimatePresence>
-                                    {showAddSocial && (
-                                      <motion.div 
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
-                                      >
-                                        <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                                          <h5 className="text-xs font-bold text-slate-700 uppercase">Nova Rede Social</h5>
-                                          <button onClick={() => setShowAddSocial(false)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                          <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Tipo</label>
-                                            <select 
-                                              value={newSocial.type}
-                                              onChange={(e) => setNewSocial({...newSocial, type: e.target.value})}
-                                              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                            >
-                                              <option value="Facebook">Facebook</option>
-                                              <option value="Instagram">Instagram</option>
-                                              <option value="Twitter">Twitter</option>
-                                              <option value="LinkedIn">LinkedIn</option>
-                                            </select>
-                                          </div>
-                                          <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Link / Username</label>
-                                            <input 
-                                              type="text" 
-                                              value={newSocial.link}
-                                              onChange={(e) => setNewSocial({...newSocial, link: e.target.value})}
-                                              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                            />
-                                          </div>
-                                        </div>
-                                        <div className="flex justify-end">
-                                          <button 
-                                            onClick={() => handleAddOtherInfo('social')}
-                                            className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors"
-                                          >
-                                            Confirmar Adição
-                                          </button>
-                                        </div>
-                                      </motion.div>
-                                    )}
-                                  </AnimatePresence>
-
-                                  <div className="flex justify-between items-center">
-                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Redes Sociais</h4>
-                                    <Button 
-                                      variant="outline" 
-                                      icon={showAddSocial ? X : Plus} 
-                                      onClick={() => setShowAddSocial(!showAddSocial)}
-                                    >
-                                      {showAddSocial ? 'Cancelar' : 'Adicionar Rede Social'}
-                                    </Button>
-                                  </div>
-
-                                  <div className="border-2 border-slate-50 rounded-2xl overflow-hidden">
-                                    <table className="w-full text-left border-collapse">
-                                      <thead>
-                                        <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                          <th className="px-6 py-3">Rede Social</th>
-                                          <th className="px-6 py-3">Link</th>
-                                          <th className="px-6 py-3 text-right">Ação</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-slate-50">
-                                        {(selectedFicha?.socialNetworks || savedSocialNetworks)?.filter((s: any) => s.validTo === null).map((social: any) => (
-                                          <tr key={social.id}>
-                                            <td className="px-6 py-3 text-xs font-bold text-slate-700">{social.type}</td>
-                                            <td className="px-6 py-3 text-xs text-slate-600 truncate max-w-[150px]">{social.link}</td>
-                                            <td className="px-6 py-3 text-right">
-                                              <button 
-                                                onClick={() => handleDeactivateOtherInfo('social', social.id)}
-                                                className="text-red-500 hover:text-red-700"
-                                              >
-                                                <Trash2 size={16} />
-                                              </button>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </div>
-                              </div>
-                              )}
                             </div>
                           </motion.div>
                         )}
@@ -9979,6 +9559,7 @@ export default function App() {
                             const newFicha = {
                               id: Date.now(),
                               number: `FICAD-${fichas.length + 1}/N-${councilCode}/${new Date().getFullYear()}`,
+                              estado: 'Por Completar',
                               name: updatedPerson.full_name,
                               birthDate: updatedPerson.birth_date,
                               island: updatedPerson.island
@@ -11449,7 +11030,7 @@ export default function App() {
                   {[
                     { key: 'photo', label: 'Fotografia de Perfil', desc: 'Foto frontal do cadastrado' },
                     { key: 'sinalComplementar', label: 'Sinais Complementares', desc: 'Características físicas, tatuagens, cicatrizes' },
-                    { key: 'outrasInfo', label: 'Outras Informações', desc: 'Moradas, contactos, alcunhas, redes sociais' },
+                    { key: 'outrasInfo', label: 'Outras Informações', desc: 'Moradas, contactos, alcunhas' },
                   ].map(({ key, label, desc }) => (
                     <label key={key} className="flex items-center gap-4 p-4 border-2 border-slate-100 rounded-xl hover:border-slate-300 cursor-pointer transition-all group">
                       <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${exportOptions[key as keyof typeof exportOptions] ? 'bg-slate-900 border-slate-900' : 'border-slate-300'}`}>
@@ -11682,16 +11263,6 @@ export default function App() {
                         </div>
                       )}
 
-                      {(selectedFicha.socialNetworks || []).length > 0 && (
-                        <div className="border-t border-slate-200 pt-4 space-y-2">
-                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Redes Sociais</p>
-                          {(selectedFicha.socialNetworks || []).map((s: any, i: number) => (
-                            <div key={i} className="text-xs text-slate-800">
-                              <span className="font-bold">{s.type}:</span> {s.link}
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   )}
 
