@@ -639,7 +639,7 @@ export default function App() {
   const [newFichaNicknames, setNewFichaNicknames] = useState<string[]>([]);
   const [newFichaNewNickname, setNewFichaNewNickname] = useState('');
   const [newFichaReasons, setNewFichaReasons] = useState<any[]>([]);
-  const [newFichaNewReason, setNewFichaNewReason] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+  const [newFichaNewReason, setNewFichaNewReason] = useState({ type: 'Criminal', date: '', refNo: '', unit: '', sijNo: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
   const [newFichaObservations, setNewFichaObservations] = useState<{content:string;author:string;date:string}[]>([]);
   const [newFichaNewObs, setNewFichaNewObs] = useState('');
   const [newFichaAttachments, setNewFichaAttachments] = useState<{name:string;type:string}[]>([]);
@@ -5828,7 +5828,7 @@ export default function App() {
                     setNewFichaAddresses([]); setNewFichaNewAddress({ type: 'Residência', island: '', county: '', parish: '', locality: '', zone: '', reference: '' });
                     setNewFichaContacts([]); setNewFichaNewContact({ type: 'Telemovel', info: '' });
                     setNewFichaNicknames([]); setNewFichaNewNickname('');
-                    setNewFichaReasons([]); setNewFichaNewReason({ reason: '', type: 'Criminal', date: '', refNo: '', destination: '', measures: '' });
+                    setNewFichaReasons([]); setNewFichaNewReason({ type: 'Criminal', date: '', refNo: '', unit: '', sijNo: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
                     setNewFichaObservations([]); setNewFichaNewObs('');
                     setNewFichaAttachments([]); setNewFichaNewAttach({ name: '', type: 'Documento' });
                     setNewFichaExpanded({ biographic: true, complementary: false, outras: false, motivo: false, biometric: false, observations: false, attachments: false });
@@ -6486,38 +6486,23 @@ export default function App() {
                                     </select>
                                   </div>
                                 </div>
-                                {/* Linha 3 — Motivo (dropdown), Destino */}
+                                {/* Linha 3 — Unidade, Nº SIJ */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo *</label>
-                                    <select value={newFichaNewReason.reason} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, reason: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                      <option value="">Selecione o motivo...</option>
-                                      <option>Detenção em flagrante delito</option>
-                                      <option>Suspeito de furto qualificado</option>
-                                      <option>Suspeito de roubo</option>
-                                      <option>Suspeito de homicídio</option>
-                                      <option>Desordem pública</option>
-                                      <option>Resistência à autoridade</option>
-                                      <option>Tráfico de estupefacientes</option>
-                                      <option>Violência doméstica</option>
-                                      <option>Ofensa à integridade física</option>
-                                      <option>Outro</option>
-                                    </select>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Destino</label>
-                                    <select value={newFichaNewReason.destination} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, destination: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
+                                    <select value={newFichaNewReason.unit} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, unit: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
                                       <option value="">Selecione...</option>
-                                      <option>Ministério Público</option>
-                                      <option>Tribunal de Comarca da Praia</option>
-                                      <option>Tribunal de Comarca de São Vicente</option>
-                                      <option>Estabelecimento Prisional</option>
-                                      <option>Delegacia de Saúde</option>
-                                      <option>Serviços Sociais</option>
-                                      <option>Libertado</option>
-                                      <option>Outro</option>
+                                      <option>ESF Praia</option>
+                                      <option>ESF Mindelo</option>
+                                      <option>ESF Santa Catarina</option>
+                                      <option>ESF São Vicente</option>
+                                      <option>DP Praia</option>
+                                      <option>DP Mindelo</option>
+                                      <option>DP Santa Cruz</option>
+                                      <option>DP Tarrafal</option>
                                     </select>
                                   </div>
+                                  <DetailField label="Nº SIJ" value={newFichaNewReason.sijNo} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, sijNo: v})} />
                                 </div>
                                 {/* Linha 4 — Nº Ocorrência, Medidas */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -6540,65 +6525,63 @@ export default function App() {
                                 </div>
                                 <div className="flex justify-end">
                                   <Button variant="primary" icon={Plus} onClick={() => {
-                                    if (!newFichaNewReason.reason) return;
+                                    if (!newFichaNewReason.natureza) return;
                                     setNewFichaReasons([...newFichaReasons, { ...newFichaNewReason, id: Date.now(), status: 'Ativo' }]);
-                                    setNewFichaNewReason({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+                                    setNewFichaNewReason({ type: 'Criminal', date: '', refNo: '', unit: '', sijNo: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
                                   }}>Adicionar Motivo</Button>
                                 </div>
                               </div>
                               {newFichaReasons.length > 0 ? (
                                 <div className="space-y-3">
                                   {newFichaReasons.map((r, i) => (
-                                    <div key={i} className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                                      {/* Info fora da tabela */}
-                                      <div className="px-5 py-4 grid grid-cols-2 md:grid-cols-4 gap-4 border-b border-slate-100">
+                                    <div key={i} className="relative bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                                      <button onClick={() => setNewFichaReasons(newFichaReasons.filter((_,j)=>j!==i))} className="absolute top-3 right-3 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all z-10" title="Remover"><Trash2 size={14} /></button>
+                                      <div className="px-5 py-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <div className="space-y-0.5">
-                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo</p>
-                                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${r.type === 'Criminal' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>{r.type}</span>
-                                        </div>
-                                        <div className="space-y-0.5">
-                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</p>
-                                          <p className="text-xs font-bold text-slate-800">{r.auto_type || '---'}</p>
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.refNo || '---'}</p>
                                         </div>
                                         <div className="space-y-0.5">
                                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data</p>
                                           <p className="text-xs font-bold text-slate-800">{r.date || '---'}</p>
                                         </div>
                                         <div className="space-y-0.5">
-                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Destino</p>
-                                          <p className="text-xs font-bold text-slate-800">{r.destination || '---'}</p>
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.auto_type || '---'}</p>
                                         </div>
                                         <div className="space-y-0.5">
-                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</p>
-                                          <p className="text-xs font-bold text-slate-800">{r.refNo || '---'}</p>
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo</p>
+                                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${r.type === 'Criminal' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>{r.type}</span>
                                         </div>
-                                        <div className="md:col-span-2 space-y-0.5">
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Natureza de Ocorrência</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.natureza || '---'}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Enquadramento</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.enquadramento || '---'}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipologia</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.tipologia || '---'}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unidade</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.unit || '---'}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nº SIJ</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.sijNo || '---'}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
                                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Medidas</p>
                                           <p className="text-xs font-bold text-slate-800">{r.measures || '---'}</p>
                                         </div>
-                                        <div className="flex items-end justify-end">
-                                          <button onClick={() => setNewFichaReasons(newFichaReasons.filter((_,j)=>j!==i))} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Estado</p>
+                                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">Ativo</span>
                                         </div>
                                       </div>
-                                      {/* Tabela — Natureza, Enquadramento, Tipologia, Motivo */}
-                                      <table className="w-full text-left border-collapse">
-                                        <thead>
-                                          <tr className="bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                            <th className="px-5 py-2">Natureza de Ocorrência</th>
-                                            <th className="px-5 py-2">Enquadramento de Crime</th>
-                                            <th className="px-5 py-2">Tipologia</th>
-                                            <th className="px-5 py-2">Motivo</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          <tr>
-                                            <td className="px-5 py-3 text-xs font-bold text-slate-800">{r.natureza || '---'}</td>
-                                            <td className="px-5 py-3 text-xs font-bold text-slate-800">{r.enquadramento || '---'}</td>
-                                            <td className="px-5 py-3 text-xs font-bold text-slate-800">{r.tipologia || '---'}</td>
-                                            <td className="px-5 py-3 text-xs font-bold text-slate-800">{r.reason || '---'}</td>
-                                          </tr>
-                                        </tbody>
-                                      </table>
                                     </div>
                                   ))}
                                 </div>
