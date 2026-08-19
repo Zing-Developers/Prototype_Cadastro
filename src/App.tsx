@@ -51,7 +51,8 @@ import {
   Database,
   UserPlus,
   Lock,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -193,7 +194,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [currentView, setCurrentView] = useState<'dashboard' | 'person_list' | 'person_detail' | 'ficha_list' | 'ficha_new' | 'ficha_detail' | 'recognition' | 'rehabilitation_list' | 'document_registration' | 'document_detail' | 'document_search' | 'certificate_list' | 'certificate_registration' | 'parametrizacoes'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'person_list' | 'person_detail' | 'ficha_list' | 'ficha_new' | 'ficha_detail' | 'recognition' | 'rehabilitation_list' | 'document_registration' | 'document_detail' | 'document_search' | 'certificate_list' | 'certificate_registration' | 'certificate_list_extravio' | 'certificate_registration_extravio' | 'certificate_analysis_extravio' | 'certificate_analysis_extravio_detail' | 'certificate_decision_extravio' | 'certificate_decision_extravio_detail' | 'certificate_history_extravio' | 'certificate_history_extravio_detail' | 'parametrizacoes'>('dashboard');
   const [selectedPerson, setSelectedPerson] = useState<any>(null);
   const [selectedFicha, setSelectedFicha] = useState<any>(null);
   const [persons, setPersons] = useState<any[]>([
@@ -427,7 +428,7 @@ export default function App() {
   const [showAddParam, setShowAddParam] = useState(false);
   const [newParamData, setNewParamData] = useState({ valor: '', descricao: '' });
   const [editingParamId, setEditingParamId] = useState<number | null>(null);
-  const [editingParamData, setEditingParamData] = useState({ valor: '', descricao: '' });
+  const [editingParamData, setEditingParamData] = useState({ valor: '', descricao: '', padrao: false });
   const [paramGroups, setParamGroups] = useState<any[]>([
     { id: 1, sigla: 'SG', nome: 'Sem Grupo',      areaAtuacao: '---',                          ilha: '',          cidade: '',        freguesia: '',                  localidade: '',                 referencia: '',               estado: 'Ativo' },
     { id: 2, sigla: 'TL', nome: 'Thug Life',       areaAtuacao: 'Tráfico de estupefacientes',   ilha: 'Santiago',  cidade: 'Praia',   freguesia: 'Achada Sto António', localidade: 'Achada Sto António',referencia: 'Zona do Mercado',  estado: 'Ativo' },
@@ -448,7 +449,7 @@ export default function App() {
       { id: 5, valor: 'PC',  descricao: 'Proibição de Contacto',                estado: 'Ativo' },
       { id: 6, valor: 'SP',  descricao: 'Suspensão de Pena',                    estado: 'Ativo' },
       { id: 7, valor: 'ML',  descricao: 'Multa',                                estado: 'Ativo' },
-      { id: 8, valor: 'SMA', descricao: 'Sem Medidas Aplicadas',                estado: 'Ativo' },
+      { id: 8, valor: 'SMA', descricao: 'Sem Medidas Aplicadas',                estado: 'Ativo', padrao: true },
     ],
     'Tipo de Endereço': [
       { id: 1, valor: 'RES', descricao: 'Residência',  estado: 'Ativo' },
@@ -487,14 +488,6 @@ export default function App() {
       { id: 3, valor: 'OPE', descricao: 'Recolhido em Operação Policial',       estado: 'Ativo' },
       { id: 4, valor: 'INP', descricao: 'Extraviado em Instituição Pública',    estado: 'Ativo' },
       { id: 5, valor: 'OUT', descricao: 'Outro',                                estado: 'Ativo' },
-    ],
-    'Motivo Solicitação Certificado Cadastro': [
-      { id: 1, valor: 'CP', descricao: 'Concurso Público',    estado: 'Ativo' },
-      { id: 2, valor: 'EP', descricao: 'Emprego Privado',     estado: 'Ativo' },
-      { id: 3, valor: 'VE', descricao: 'Visto / Emigração',   estado: 'Ativo' },
-      { id: 4, valor: 'PJ', descricao: 'Processo Judicial',   estado: 'Ativo' },
-      { id: 5, valor: 'UP', descricao: 'Uso Pessoal',         estado: 'Ativo' },
-      { id: 6, valor: 'LA', descricao: 'Licença / Alvará',    estado: 'Ativo' },
     ],
   });
 
@@ -611,13 +604,62 @@ export default function App() {
     }
   ]);
 
+  const [certificateExtravioStep, setCertificateExtravioStep] = useState(1);
+  const [certificateExtravioSearchFilters, setCertificateExtravioSearchFilters] = useState({
+    orderNumber: '',
+    name: '',
+    birthDate: '',
+    requestDate: ''
+  });
+  const [certificateExtravioData, setCertificateExtravioData] = useState({
+    fullName: '',
+    birthDate: '',
+    gender: '',
+    civilStatus: '',
+    birthPlace: '',
+    nationality: '',
+    fatherName: '',
+    motherName: '',
+    docType: '',
+    docNumber: '',
+    island: '',
+    county: '',
+    parish: '',
+    locality: '',
+    reference: '',
+    phone: '',
+    email: '',
+    photo: null as string | null,
+    lostDocType: '',
+    lostDocNumber: '',
+    lostDocIssueDate: '',
+    lostDocExpiryDate: ''
+  });
+  const [ducExtravioGenerated, setDucExtravioGenerated] = useState(false);
+  const [mockCertificatesExtravio, setMockCertificatesExtravio] = useState<any[]>([
+    {
+      id: '000004',
+      name: 'Manuel Sousa',
+      birthDate: '29/04/1998',
+      requestDate: '19/02/2023',
+      status: 'Concluído'
+    }
+  ]);
+
   // Biographical Search States
   const [bioSearchDocType, setBioSearchDocType] = useState('CNI');
   const [bioSearchName, setBioSearchName] = useState('');
   const [bioSearchDocNumber, setBioSearchDocNumber] = useState('');
   const [bioSearchResults, setBioSearchResults] = useState<any[]>([]);
   const [showBioSearchModal, setShowBioSearchModal] = useState(false);
-  const [bioSearchTarget, setBioSearchTarget] = useState<'certificate' | 'document' | 'ficha' | null>(null);
+  const [bioSearchTarget, setBioSearchTarget] = useState<'certificate' | 'certificate_extravio' | 'document' | 'ficha' | null>(null);
+
+  // Lost Document Search States (Certificado de Extravio)
+  const [lostDocSearchType, setLostDocSearchType] = useState('CNI');
+  const [lostDocSearchNumber, setLostDocSearchNumber] = useState('');
+  const [lostDocSearchName, setLostDocSearchName] = useState('');
+  const [lostDocSearchResults, setLostDocSearchResults] = useState<any[]>([]);
+  const [showLostDocSearchModal, setShowLostDocSearchModal] = useState(false);
 
   const emptyNewFicha = () => ({
     name: '', birthDate: '', gender: '', civilStatus: '', birthPlace: '',
@@ -659,6 +701,30 @@ export default function App() {
     setShowBioSearchModal(true);
   };
 
+  const handleLostDocSearch = () => {
+    const results = fichas.filter(f => {
+      const matchName = lostDocSearchName ? f.name?.toLowerCase().includes(lostDocSearchName.toLowerCase()) : true;
+      const matchDoc = lostDocSearchNumber ? (f.docNumber?.toLowerCase().includes(lostDocSearchNumber.toLowerCase()) || f.number?.toLowerCase().includes(lostDocSearchNumber.toLowerCase())) : true;
+
+      if (!lostDocSearchName && !lostDocSearchNumber) return false;
+
+      return matchName && matchDoc;
+    });
+    setLostDocSearchResults(results);
+    setShowLostDocSearchModal(true);
+  };
+
+  const selectLostDocFromSearch = (ficha: any) => {
+    setCertificateExtravioData({
+      ...certificateExtravioData,
+      lostDocType: ficha.docType || lostDocSearchType,
+      lostDocNumber: ficha.docNumber || ficha.number || '',
+      lostDocIssueDate: ficha.docIssueDate || '',
+      lostDocExpiryDate: ficha.docExpiryDate || ''
+    });
+    setShowLostDocSearchModal(false);
+  };
+
   const selectPersonFromSearch = (person: any) => {
     if (bioSearchTarget === 'certificate') {
       setCertificateData({
@@ -674,6 +740,30 @@ export default function App() {
         fatherName: person.fatherName || '',
         motherName: person.motherName || '',
         nif: person.nif || '',
+        // Endereço (if available)
+        island: person.addresses?.[0]?.island || '',
+        county: person.addresses?.[0]?.council || '',
+        parish: person.addresses?.[0]?.parish || '',
+        locality: person.addresses?.[0]?.locality || '',
+        reference: person.addresses?.[0]?.reference || '',
+        // Contacto
+        phone: person.contacts?.find((c: any) => c.type === 'Telemovel')?.info || '',
+        email: person.contacts?.find((c: any) => c.type === 'Email')?.info || '',
+        photo: person.photo || null,
+      });
+    } else if (bioSearchTarget === 'certificate_extravio') {
+      setCertificateExtravioData({
+        ...certificateExtravioData,
+        fullName: person.name || '',
+        birthDate: person.birthDate || '',
+        docType: bioSearchDocType,
+        docNumber: person.docNumber || person.number || '',
+        gender: person.gender || 'Masculino',
+        civilStatus: person.civilStatus || 'Solteiro(a)',
+        birthPlace: person.birthPlace || '',
+        nationality: person.nationality || 'Cabo-verdiana',
+        fatherName: person.fatherName || '',
+        motherName: person.motherName || '',
         // Endereço (if available)
         island: person.addresses?.[0]?.island || '',
         county: person.addresses?.[0]?.council || '',
@@ -825,6 +915,58 @@ export default function App() {
   const [selectedAnalysisCertificate, setSelectedAnalysisCertificate] = useState<any>(null);
   const [selectedDecisionCertificate, setSelectedDecisionCertificate] = useState<any>(null);
   const [selectedHistoryCertificate, setSelectedHistoryCertificate] = useState<any>(null);
+  const [mockAnalysisCertificatesExtravio, setMockAnalysisCertificatesExtravio] = useState<any[]>([
+    {
+      id: '000004',
+      name: 'Manuel Sousa',
+      birthDate: '29/04/1998',
+      requestDate: '19/02/2025',
+      status: 'Por analisar',
+      biographic: {
+        fullName: 'Manuel Sousa',
+        birthDate: '1997-06-27',
+        gender: 'Masculino',
+        civilStatus: 'Solteiro',
+        birthPlace: 'Cabo Verde',
+        nationality: 'Cabo-verdiana',
+        fatherName: 'Pedro Sousa',
+        motherName: 'Maria Sousa',
+        docType: 'CNI',
+        docNumber: '11485999M0'
+      },
+      address: {
+        island: 'Santiago',
+        council: 'Santiago',
+        parish: 'N.S Da Graça',
+        locality: 'Palmarejo',
+        reference: 'Perto Paulino'
+      },
+      contact: {
+        mobile: '9876545',
+        email: 'manuel@gmail.com'
+      },
+      documentosExtraviados: {
+        docType: 'CNI',
+        docNumber: '19980712M0018',
+        docIssueDate: '2018-07-12',
+        docExpiryDate: '2028-07-12'
+      },
+      attachments: [
+        { name: 'Declaração de Extravio.pdf', type: 'pdf' }
+      ],
+      observations: [
+        { user: 'Mascarenhas', date: '20/03/2025', text: 'Pedido de certificado de extravio de CNI.' }
+      ],
+      history: [
+        { date: '19/02/2025', phase: 'Analise', status: 'Por analisar', user: 'Maria' }
+      ]
+    }
+  ]);
+  const [mockDecisionCertificatesExtravio, setMockDecisionCertificatesExtravio] = useState<any[]>([]);
+  const [mockConcludedCertificatesExtravio, setMockConcludedCertificatesExtravio] = useState<any[]>([]);
+  const [selectedAnalysisCertificateExtravio, setSelectedAnalysisCertificateExtravio] = useState<any>(null);
+  const [selectedDecisionCertificateExtravio, setSelectedDecisionCertificateExtravio] = useState<any>(null);
+  const [selectedHistoryCertificateExtravio, setSelectedHistoryCertificateExtravio] = useState<any>(null);
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [returnReason, setReturnReason] = useState('');
   const [registeredDoc, setRegisteredDoc] = useState<any>(null);
@@ -842,7 +984,6 @@ export default function App() {
     number: '',
     name: '',
     birthDate: '',
-    estado: '',
     comando: '',
     unit: '',
     auto_type: '',
@@ -1155,8 +1296,16 @@ export default function App() {
     analysisAnexos: true,
     analysisObservations: true,
     analysisHistory: true,
+    extravioBiographic: true,
+    extravioDocuments: true,
+    extravioCertificateModel: true,
+    extravioAnexos: true,
+    extravioObservations: true,
+    extravioHistory: true,
   });
   const [certAnalysisHasSearched, setCertAnalysisHasSearched] = useState(false);
+  const [returnReasonExtravio, setReturnReasonExtravio] = useState('');
+  const [showReturnModalExtravio, setShowReturnModalExtravio] = useState(false);
 
   const legacyCharacteristicTypes: Record<string, string[]> = {
     'Barba': ['Cavanhaque', 'Barba Comprida', 'Barba Curta', 'Sem Barba'],
@@ -1693,25 +1842,29 @@ export default function App() {
                       description="Histórico completo de certificados emitidos."
                       onClick={() => setCurrentView('certificate_history')}
                     />
-                    <MenuCard 
-                      title="Certificado de Extravio" 
-                      icon={FileWarning} 
+                    <MenuCard
+                      title="Certificado de Extravio"
+                      icon={FileWarning}
                       description="Emissão de certificados para documentos extraviados."
+                      onClick={() => setCurrentView('certificate_list_extravio')}
                     />
-                    <MenuCard 
-                      title="Analise" 
-                      icon={Search} 
+                    <MenuCard
+                      title="Analise"
+                      icon={Search}
                       description="Análise de comunicações de extravio."
+                      onClick={() => setCurrentView('certificate_analysis_extravio')}
                     />
-                    <MenuCard 
-                      title="Decisão" 
-                      icon={Shield} 
+                    <MenuCard
+                      title="Decisão"
+                      icon={Shield}
                       description="Decisão sobre comunicações de extravio."
+                      onClick={() => setCurrentView('certificate_decision_extravio')}
                     />
                     <MenuCard
                       title="Historico Comunicações de Extravio"
                       icon={History}
                       description="Histórico de comunicações de itens extraviados."
+                      onClick={() => setCurrentView('certificate_history_extravio')}
                     />
                   </div>
                 </div>
@@ -3690,6 +3843,420 @@ export default function App() {
                   </div>
                 </div>
               </motion.div>
+            ) : currentView === 'certificate_list_extravio' ? (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Declaração para Emissão de Documentos — Certificado de Extravio</h2>
+                  <Button icon={Plus} onClick={() => {
+                    setCertificateExtravioStep(1);
+                    setDucExtravioGenerated(false);
+                    setCurrentView('certificate_registration_extravio');
+                  }}>Nova Solicitação</Button>
+                </div>
+
+                <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">N.º Pedido</label>
+                      <input
+                        type="text"
+                        value={certificateExtravioSearchFilters.orderNumber}
+                        onChange={(e) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, orderNumber: e.target.value})}
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
+                        placeholder="Ex: 000004"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</label>
+                      <input
+                        type="text"
+                        value={certificateExtravioSearchFilters.name}
+                        onChange={(e) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, name: e.target.value})}
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
+                        placeholder="Nome completo"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Nascimento</label>
+                      <div className="relative">
+                        <input
+                          type="date"
+                          value={certificateExtravioSearchFilters.birthDate}
+                          onChange={(e) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, birthDate: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
+                        />
+                        <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Pedido</label>
+                      <div className="relative">
+                        <input
+                          type="date"
+                          value={certificateExtravioSearchFilters.requestDate}
+                          onChange={(e) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, requestDate: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
+                        />
+                        <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-4 flex justify-end gap-3">
+                      <Button variant="outline" onClick={() => setCertificateExtravioSearchFilters({
+                        orderNumber: '',
+                        name: '',
+                        birthDate: '',
+                        requestDate: ''
+                      })}>Limpar</Button>
+                      <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                  <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Listagem de Pedidos</h3>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {mockCertificatesExtravio.length.toString().padStart(2, '0')}</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                          <th className="px-6 py-4">Número Pedido</th>
+                          <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Data Nascimento</th>
+                          <th className="px-6 py-4">Data Pedido</th>
+                          <th className="px-6 py-4">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {mockCertificatesExtravio.map((cert) => (
+                          <tr
+                            key={cert.id}
+                            className="hover:bg-blue-50 cursor-pointer transition-colors group"
+                          >
+                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.id}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                cert.status === 'Por Pagar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                              }`}>
+                                {cert.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                    <div className="flex gap-2">
+                      <button className="p-2 bg-white border-2 border-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-colors disabled:opacity-50" disabled><ChevronLeft size={16} /></button>
+                      <button className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-black">1</button>
+                      <button className="p-2 bg-white border-2 border-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-colors disabled:opacity-50" disabled><ChevronRight size={16} /></button>
+                    </div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Página 1 de 1</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-start">
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar</Button>
+                </div>
+              </motion.div>
+            ) : currentView === 'certificate_registration_extravio' ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-8 pb-12"
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Solicitação de Pedido</h2>
+                </div>
+
+                {/* Steps — igual ao certificado de cadastro */}
+                <div className="flex items-center justify-between max-w-2xl mx-auto relative px-4">
+                  <div className="absolute top-6 left-12 right-12 h-1 bg-slate-100 rounded-full"></div>
+                  <div
+                    className="absolute top-6 left-12 h-1 bg-blue-600 rounded-full transition-all duration-500"
+                    style={{ width: certificateExtravioStep === 1 ? '0%' : '100%' }}
+                  ></div>
+                  {[
+                    { id: 1, label: 'Identificação', icon: User },
+                    { id: 2, label: 'DUC', icon: FileText }
+                  ].map((step) => (
+                    <div key={step.id} className="relative z-10 flex flex-col items-center gap-3">
+                      <div className={`w-12 h-12 rounded-2xl border-2 flex items-center justify-center transition-all duration-300 ${
+                        certificateExtravioStep > step.id
+                          ? 'bg-green-500 border-green-200 text-white shadow-lg shadow-green-100'
+                          : certificateExtravioStep === step.id
+                            ? 'bg-blue-600 border-blue-200 text-white shadow-lg shadow-blue-200 scale-110'
+                            : 'bg-white border-slate-100 text-slate-300'
+                      }`}>
+                        {certificateExtravioStep > step.id ? <Check size={20} /> : <step.icon size={20} />}
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${certificateExtravioStep === step.id ? 'text-blue-600' : 'text-slate-400'}`}>Passo {step.id}</span>
+                        <span className={`text-[10px] font-bold whitespace-nowrap ${certificateExtravioStep === step.id ? 'text-slate-900' : 'text-slate-400'}`}>{step.label}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Card principal */}
+                <div className="bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+                  {/* Card header */}
+                  <div className="p-6 bg-slate-50 border-b-2 border-slate-100 flex items-center gap-3">
+                    <div className="p-2 bg-slate-900 text-white rounded-lg">
+                      {certificateExtravioStep === 1 ? <User size={18} /> : <FileText size={18} />}
+                    </div>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
+                      {certificateExtravioStep === 1 ? 'Dados de Identificação' : 'Documento Único de Cobrança'}
+                    </h3>
+                  </div>
+
+                  <div className="p-8 space-y-8">
+                    {certificateExtravioStep === 1 ? (
+                      <div className="space-y-8">
+
+                        {/* Pesquisa biográfica */}
+                        <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-6 space-y-4">
+                          <div className="flex flex-col md:flex-row gap-4 items-end">
+                            <div className="w-full md:w-32 space-y-2">
+                              <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Tipo Doc</label>
+                              <select value={bioSearchDocType} onChange={(e) => setBioSearchDocType(e.target.value)}
+                                className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all">
+                                <option value="CNI">CNI</option>
+                                <option value="Passaporte">Passaporte</option>
+                                <option value="TRE">TRE</option>
+                                <option value="BI">BI</option>
+                              </select>
+                            </div>
+                            <div className="flex-1 space-y-2">
+                              <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">N.º Documento</label>
+                              <input type="text" value={bioSearchDocNumber} onChange={(e) => setBioSearchDocNumber(e.target.value)}
+                                placeholder="Digite o número do documento..."
+                                className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
+                            </div>
+                            <div className="flex-1 space-y-2">
+                              <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Nome da Pessoa</label>
+                              <input type="text" value={bioSearchName} onChange={(e) => setBioSearchName(e.target.value)}
+                                placeholder="Digite o nome..."
+                                className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
+                            </div>
+                            <Button variant="secondary" icon={Search} onClick={() => { setBioSearchTarget('certificate_extravio'); handleBioSearch(); }}>Pesquisar</Button>
+                          </div>
+                        </div>
+
+                        {/* Dados Biograficos */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Biograficos</p>
+                          <div className="flex flex-col md:flex-row gap-8 items-start">
+                            {certificateExtravioData.photo && (
+                              <div className="w-32 h-40 rounded-2xl border-4 border-white shadow-xl overflow-hidden shrink-0 bg-slate-100">
+                                <img src={certificateExtravioData.photo} alt="Pessoa" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              </div>
+                            )}
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-6">
+                              <DetailField label="Nome Completo" value={certificateExtravioData.fullName} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, fullName: v})} />
+                              <DetailField label="Data Nascimento" value={certificateExtravioData.birthDate} type="date" readOnly={false} icon={Calendar} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, birthDate: v})} />
+                              <DetailField label="Sexo" value={certificateExtravioData.gender} type="select" options={['Masculino', 'Feminino']} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, gender: v})} />
+                              <DetailField label="Estado Civil" value={certificateExtravioData.civilStatus} type="select" options={['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)']} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, civilStatus: v})} />
+                              <DetailField label="Naturalidade" value={certificateExtravioData.birthPlace} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, birthPlace: v})} />
+                              <DetailField label="Nacionalidade" value={certificateExtravioData.nationality} type="select" options={['Cabo-verdiana', 'Portuguesa', 'Angolana', 'Outra']} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, nationality: v})} />
+                              <DetailField label="Nome Pai" value={certificateExtravioData.fatherName} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, fatherName: v})} />
+                              <DetailField label="Nome Mãe" value={certificateExtravioData.motherName} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, motherName: v})} />
+                              <DetailField label="Tipo Documento" value={certificateExtravioData.docType} type="select" options={['BI', 'CNI', 'Passaporte', 'TRE']} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, docType: v})} />
+                              <DetailField label="Número Documento" value={certificateExtravioData.docNumber} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, docNumber: v})} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Endereço */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Endereço</p>
+                          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                            <DetailField label="Ilha" value={certificateExtravioData.island} type="select" options={['Santiago', 'São Vicente', 'Sal', 'Boa Vista', 'Fogo', 'Santo Antão', 'Maio', 'Brava', 'São Nicolau']} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, island: v})} />
+                            <DetailField label="Conselho" value={certificateExtravioData.county} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, county: v})} />
+                            <DetailField label="Freguesia" value={certificateExtravioData.parish} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, parish: v})} />
+                            <DetailField label="Localidade" value={certificateExtravioData.locality} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, locality: v})} />
+                            <DetailField label="Ponto de Referencia" value={certificateExtravioData.reference} readOnly={false} icon={MapPin} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, reference: v})} />
+                          </div>
+                        </div>
+
+                        {/* Contacto */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contacto</p>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <DetailField label="Telemovel" value={certificateExtravioData.phone} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, phone: v})} />
+                            <DetailField label="Email" value={certificateExtravioData.email} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, email: v})} />
+                          </div>
+                        </div>
+
+                        {/* Documento Extraviado */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Extraviado</p>
+
+                          {/* Pesquisa de documento extraviado */}
+                          <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-6 space-y-4">
+                            <div className="flex flex-col md:flex-row gap-4 items-end">
+                              <div className="w-full md:w-32 space-y-2">
+                                <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Tipo Doc</label>
+                                <select value={lostDocSearchType} onChange={(e) => setLostDocSearchType(e.target.value)}
+                                  className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all">
+                                  <option value="CNI">CNI</option>
+                                  <option value="Passaporte">Passaporte</option>
+                                  <option value="TRE">TRE</option>
+                                  <option value="BI">BI</option>
+                                </select>
+                              </div>
+                              <div className="flex-1 space-y-2">
+                                <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">N.º Documento</label>
+                                <input type="text" value={lostDocSearchNumber} onChange={(e) => setLostDocSearchNumber(e.target.value)}
+                                  placeholder="Digite o número do documento..."
+                                  className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
+                              </div>
+                              <div className="flex-1 space-y-2">
+                                <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Nome da Pessoa</label>
+                                <input type="text" value={lostDocSearchName} onChange={(e) => setLostDocSearchName(e.target.value)}
+                                  placeholder="Digite o nome..."
+                                  className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
+                              </div>
+                              <Button variant="secondary" icon={Search} onClick={handleLostDocSearch}>Pesquisar</Button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <DetailField label="Tipo Documento" value={certificateExtravioData.lostDocType} type="select" options={['BI', 'CNI', 'Passaporte', 'TRE']} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, lostDocType: v})} />
+                            <DetailField label="Número Documento" value={certificateExtravioData.lostDocNumber} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, lostDocNumber: v})} />
+                            <DetailField label="Data Emissão" value={certificateExtravioData.lostDocIssueDate} type="date" readOnly={false} icon={Calendar} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, lostDocIssueDate: v})} />
+                            <DetailField label="Data Validade" value={certificateExtravioData.lostDocExpiryDate} type="date" readOnly={false} icon={Calendar} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, lostDocExpiryDate: v})} />
+                          </div>
+                        </div>
+
+                        {/* Anexos — igual ao cadastro de documentos */}
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">
+                              Anexos {savedAttachments.length > 0 && <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{savedAttachments.length}</span>}
+                            </p>
+                            <button onClick={() => setShowAttachmentModal(true)}
+                              className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2">
+                              <Plus size={14} /> Adicionar Anexo
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {savedAttachments.length > 0 ? (
+                              savedAttachments.map((att, idx) => (
+                                <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-lg group relative">
+                                  <div className="w-12 h-12 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-400">
+                                    {att.type === 'Imagem' ? <ImageIcon size={24} /> : <FileText size={24} />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-slate-800 truncate">{att.title}</p>
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold">{att.type} • {att.date}</p>
+                                  </div>
+                                  <button onClick={() => setSavedAttachments(savedAttachments.filter((_, i) => i !== idx))}
+                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="col-span-full py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                                <Paperclip size={28} className="mx-auto text-slate-200 mb-2" />
+                                <p className="text-slate-400 text-sm italic">Nenhum anexo associado</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                      </div>
+                    ) : (
+                      <div className="space-y-8">
+                        {!ducExtravioGenerated ? (
+                          <div className="flex flex-col items-center justify-center py-16 space-y-6">
+                            <div className="p-6 bg-blue-50 text-blue-600 rounded-2xl">
+                              <FileText size={48} />
+                            </div>
+                            <div className="text-center space-y-2">
+                              <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Gerar Documento de Cobrança</h3>
+                              <p className="text-sm text-slate-400 font-medium">Clique no botão abaixo para gerar o DUC para este pedido.</p>
+                            </div>
+                            <Button variant="secondary" onClick={() => setDucExtravioGenerated(true)}>Gerar DUC</Button>
+                          </div>
+                        ) : (
+                          <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                                    <th className="px-6 py-4">Número DUC</th>
+                                    <th className="px-6 py-4">Total a Pagar</th>
+                                    <th className="px-6 py-4">Estado</th>
+                                    <th className="px-6 py-4 text-right">Ações</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr className="border-b border-slate-50">
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">9865457</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">500$</td>
+                                    <td className="px-6 py-4">
+                                      <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black uppercase tracking-tighter">Por Pagar</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                      <div className="flex justify-end gap-2">
+                                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"><Eye size={16} /></button>
+                                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"><Printer size={16} /></button>
+                                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"><History size={16} /></button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer navegação */}
+                  <div className="p-6 bg-slate-50 border-t-2 border-slate-100 flex justify-between items-center">
+                    <Button variant="outline" icon={ArrowLeft} onClick={() => {
+                      if (certificateExtravioStep === 1) setCurrentView('certificate_list_extravio');
+                      else setCertificateExtravioStep(1);
+                    }}>Voltar</Button>
+                    <div className="flex gap-3">
+                      <Button variant="outline" onClick={() => setCurrentView('certificate_list_extravio')}>Cancelar</Button>
+                      {certificateExtravioStep === 1 ? (
+                        <Button variant="primary" icon={ArrowRight} onClick={() => setCertificateExtravioStep(2)}>Próximo</Button>
+                      ) : (
+                        ducExtravioGenerated && (
+                          <Button variant="primary" icon={Check} onClick={() => {
+                            setMockCertificatesExtravio([...mockCertificatesExtravio, {
+                              id: String(mockCertificatesExtravio.length + 4).padStart(6, '0'),
+                              name: certificateExtravioData.fullName || 'Novo Pedido',
+                              birthDate: certificateExtravioData.birthDate || '---',
+                              requestDate: new Date().toLocaleDateString('pt-BR'),
+                              status: 'Por Pagar'
+                            }]);
+                            setSuccessMessage('Solicitação de Certificado de Extravio Registada com Sucesso.');
+                            setShowSuccessModal(true);
+                            setCurrentView('certificate_list_extravio');
+                          }}>Concluir</Button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             ) : currentView === 'certificate_analysis' ? (
               <motion.div 
                 initial={{ opacity: 0, x: 20 }}
@@ -5364,6 +5931,1094 @@ export default function App() {
                 </div>
               </motion.div>
 
+            ) : currentView === 'certificate_analysis_extravio' ? (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Análise de Certificado de Extravio</h2>
+                </div>
+
+                <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                    <DetailField label="N.º Pedido" value={certificateExtravioSearchFilters.orderNumber} readOnly={false} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, orderNumber: val})} />
+                    <DetailField label="Nome" value={certificateExtravioSearchFilters.name} readOnly={false} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, name: val})} />
+                    <DetailField label="Data de Nascimento" value={certificateExtravioSearchFilters.birthDate} type="date" readOnly={false} icon={Calendar} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, birthDate: val})} />
+                    <DetailField label="Data Pedido" value={certificateExtravioSearchFilters.requestDate} type="date" readOnly={false} icon={Calendar} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, requestDate: val})} />
+                  </div>
+                  <div className="flex justify-end mt-6">
+                    <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                  <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Listagem de Pedidos</h3>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {mockAnalysisCertificatesExtravio.length.toString().padStart(2, '0')}</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                          <th className="px-6 py-4">Número Pedido</th>
+                          <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Data Nascimento</th>
+                          <th className="px-6 py-4">Data Pedido</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {mockAnalysisCertificatesExtravio.length > 0 ? (
+                          mockAnalysisCertificatesExtravio.map((cert) => (
+                            <tr
+                              key={cert.id}
+                              onClick={() => {
+                                setSelectedAnalysisCertificateExtravio(cert);
+                                setCurrentView('certificate_analysis_extravio_detail');
+                              }}
+                              className="hover:bg-blue-50 cursor-pointer transition-colors group"
+                            >
+                              <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{cert.id}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhum pedido aguardando análise.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex justify-start">
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar ao Início</Button>
+                </div>
+              </motion.div>
+            ) : currentView === 'certificate_analysis_extravio_detail' && selectedAnalysisCertificateExtravio ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6 pb-12"
+              >
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Análise de Certificado de Extravio</h2>
+                </div>
+
+                {/* Dados Biográficos */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioBiographic')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><User size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Dados Biográficos</span>
+                    </div>
+                    {expandedSections.extravioBiographic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioBiographic && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8 mt-1">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <DetailField label="Nome Completo" value={selectedAnalysisCertificateExtravio.biographic.fullName} />
+                            <DetailField label="Data Nascimento" value={selectedAnalysisCertificateExtravio.biographic.birthDate} icon={Calendar} />
+                            <DetailField label="Sexo" value={selectedAnalysisCertificateExtravio.biographic.gender} />
+                            <DetailField label="Estado Civil" value={selectedAnalysisCertificateExtravio.biographic.civilStatus} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <DetailField label="Naturalidade" value={selectedAnalysisCertificateExtravio.biographic.birthPlace} />
+                            <DetailField label="Nacionalidade" value={selectedAnalysisCertificateExtravio.biographic.nationality} />
+                            <DetailField label="Nome Pai" value={selectedAnalysisCertificateExtravio.biographic.fatherName} />
+                            <DetailField label="Nome Mãe" value={selectedAnalysisCertificateExtravio.biographic.motherName} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <DetailField label="Tipo Documento" value={selectedAnalysisCertificateExtravio.biographic.docType} />
+                            <DetailField label="Número Documento" value={selectedAnalysisCertificateExtravio.biographic.docNumber} />
+                          </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                              <DetailField label="Ilha" value={selectedAnalysisCertificateExtravio.address.island} />
+                              <DetailField label="Conselho" value={selectedAnalysisCertificateExtravio.address.council} />
+                              <DetailField label="Freguesia" value={selectedAnalysisCertificateExtravio.address.parish} />
+                              <DetailField label="Localidade" value={selectedAnalysisCertificateExtravio.address.locality} />
+                              <DetailField label="Ponto de Referencia" value={selectedAnalysisCertificateExtravio.address.reference} icon={MapPin} />
+                            </div>
+                          </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <DetailField label="Telemovel" value={selectedAnalysisCertificateExtravio.contact.mobile} />
+                              <DetailField label="Email" value={selectedAnalysisCertificateExtravio.contact.email} />
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Documento Extraviado */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioDocuments')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><FileWarning size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Documento Extraviado</span>
+                    </div>
+                    {expandedSections.extravioDocuments ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioDocuments && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6 mt-1">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <DetailField label="Tipo Documento" value={selectedAnalysisCertificateExtravio.documentosExtraviados.docType} />
+                            <DetailField label="Número Documento" value={selectedAnalysisCertificateExtravio.documentosExtraviados.docNumber} />
+                            <DetailField label="Data Emissão" value={selectedAnalysisCertificateExtravio.documentosExtraviados.docIssueDate} icon={Calendar} />
+                            <DetailField label="Data Validade" value={selectedAnalysisCertificateExtravio.documentosExtraviados.docExpiryDate} icon={Calendar} />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Modelo de Certificado de Extravio */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioCertificateModel')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><FileText size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Modelo de Certificado de Extravio</span>
+                    </div>
+                    {expandedSections.extravioCertificateModel ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioCertificateModel && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-slate-200 p-8 rounded-2xl flex justify-center mt-1">
+                          {(() => { const cert = selectedAnalysisCertificateExtravio; const doc = cert.documentosExtraviados; return (
+                          <div className="bg-white w-full max-w-3xl shadow-2xl p-12 space-y-8 font-serif text-slate-800 border border-slate-300">
+                            <div className="flex flex-col items-center text-center space-y-2 border-b-2 border-slate-900 pb-6">
+                              <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200">
+                                  <Shield size={32} className="text-slate-400" />
+                                </div>
+                                <div className="text-left">
+                                  <p className="text-xs font-bold uppercase tracking-tighter">Ministério da Administração Interna</p>
+                                  <p className="text-[10px] font-bold uppercase tracking-tighter">Direção Nacional da Polícia Nacional</p>
+                                  <p className="text-[10px] font-bold uppercase tracking-tighter">Direção Central de Investigação Criminal</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-center space-y-2">
+                              <div className="inline-block border-2 border-slate-900 px-8 py-2">
+                                <p className="text-sm font-black uppercase tracking-widest">Certificado de Extravio de Documento</p>
+                                <p className="text-xs font-bold">N.º {cert.id}/2026</p>
+                              </div>
+                            </div>
+                            <div className="space-y-6 text-justify leading-relaxed text-sm">
+                              <p className="font-bold">ROBERTO CARLOS CENTEIO LIMA, Subintendente da Polícia Nacional e Diretor da Direção Central de Investigação Criminal da Polícia Nacional---------------------------------------</p>
+                              <p>
+                                <span className="font-bold">CERTIFICA</span>, a pedido do (a) interessado (a), que compareceu perante esta Direção o (a) cidadão (ã) Cabo-verdiano (a) senhor (a) <span className="font-bold uppercase underline">{cert.biographic.fullName}</span>, {cert.biographic.civilStatus}, nascido (a) em <span className="font-bold">{cert.biographic.birthDate}</span>, filho (a) de <span className="font-bold">{cert.biographic.fatherName}</span> e de <span className="font-bold">{cert.biographic.motherName}</span>, portador (a) de {cert.biographic.docType} Nº <span className="font-bold">{cert.biographic.docNumber}</span>, declarando o extravio do seu documento de identificação.
+                              </p>
+                              <div className="border-y-2 border-slate-900 py-3 text-center">
+                                <p className="font-black uppercase tracking-widest">Documento Extraviado: {doc.docType} Nº {doc.docNumber}</p>
+                                {(doc.docIssueDate || doc.docExpiryDate) && (
+                                  <p className="text-xs font-bold normal-case tracking-normal mt-1">
+                                    {doc.docIssueDate && <>Emitido em {doc.docIssueDate}</>}{doc.docIssueDate && doc.docExpiryDate ? ' · ' : ''}{doc.docExpiryDate && <>Válido até {doc.docExpiryDate}</>}
+                                  </p>
+                                )}
+                              </div>
+                              <p>Por ser verdade e haver sido solicitado pelo (a) interessado (a), manda passar o presente certificado, que vai devidamente assinado e autenticado com o carimbo a óleo em uso nesta Direção.</p>
+                            </div>
+                            <div className="pt-12 flex flex-col items-center text-center space-y-8">
+                              <p className="text-xs font-bold">Direção Central de Investigação Criminal, {new Date().toLocaleDateString('pt-BR')}</p>
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold">O Diretor,</p>
+                                <div className="pt-8">
+                                  <p className="text-xs font-bold">/Roberto Carlos Centeio Lima/</p>
+                                  <p className="text-[10px] font-bold">Subintendente da PN</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          ); })()}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Anexos */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioAnexos')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><Paperclip size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Anexos</span>
+                      <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{selectedAnalysisCertificateExtravio.attachments.length}</span>
+                    </div>
+                    {expandedSections.extravioAnexos ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioAnexos && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-3 mt-1">
+                          <Button variant="outline" icon={Plus} className="text-xs py-2">Adicionar Anexo</Button>
+                          <div className="space-y-2">
+                            {selectedAnalysisCertificateExtravio.attachments.map((file: any, idx: number) => (
+                              <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border-2 border-slate-100 rounded-xl">
+                                <div className="flex items-center gap-3">
+                                  <FileText size={18} className="text-slate-400" />
+                                  <span className="text-xs font-bold text-slate-900">{file.name}</span>
+                                </div>
+                                <button className="text-slate-400 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Observações */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioObservations')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><MessageSquare size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Observações</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button onClick={(e) => { e.stopPropagation(); }} className="text-blue-600 text-[10px] font-black uppercase tracking-widest hover:underline">Novo +</button>
+                      {expandedSections.extravioObservations ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </div>
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioObservations && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-4 mt-1">
+                          {selectedAnalysisCertificateExtravio.observations.map((obs: any, idx: number) => (
+                            <div key={idx} className="p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl space-y-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center"><ImageIcon size={20} className="text-slate-400" /></div>
+                                <div>
+                                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{obs.user}</p>
+                                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{obs.date}</p>
+                                </div>
+                              </div>
+                              <p className="text-xs text-slate-600 leading-relaxed font-medium">{obs.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Histórico do Pedido */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioHistory')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Histórico do Pedido</span>
+                    </div>
+                    {expandedSections.extravioHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioHistory && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mt-1">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                                  <th className="px-6 py-4">Data</th>
+                                  <th className="px-6 py-4">Fase</th>
+                                  <th className="px-6 py-4">Estado</th>
+                                  <th className="px-6 py-4">Utente</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {selectedAnalysisCertificateExtravio.history.map((h: any, idx: number) => (
+                                  <tr key={idx} className="bg-white">
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="flex justify-between pt-8 border-t border-slate-100">
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_analysis_extravio')}>Voltar</Button>
+                  <Button
+                    variant="primary"
+                    icon={Check}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => {
+                      setPendingConcluirAction(() => () => {
+                        const newDecisionCert = {
+                          ...selectedAnalysisCertificateExtravio,
+                          status: 'Para Decisão',
+                          history: [
+                            ...selectedAnalysisCertificateExtravio.history,
+                            { date: new Date().toLocaleDateString('pt-BR'), phase: 'Decisão', status: 'Para Decisão', user: user?.name || 'Sistema' }
+                          ]
+                        };
+                        setMockDecisionCertificatesExtravio([...mockDecisionCertificatesExtravio, newDecisionCert]);
+                        setMockAnalysisCertificatesExtravio(mockAnalysisCertificatesExtravio.filter(c => c.id !== selectedAnalysisCertificateExtravio.id));
+                        setSuccessMessage('Pedido enviado para Decisão com sucesso.');
+                        setShowSuccessModal(true);
+                        setCurrentView('certificate_analysis_extravio');
+                      });
+                      setShowConfirmConcluir(true);
+                    }}
+                  >
+                    Concluir
+                  </Button>
+                </div>
+              </motion.div>
+            ) : currentView === 'certificate_decision_extravio' ? (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Decisão de Certificado de Extravio</h2>
+                </div>
+
+                <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                    <DetailField label="N.º Pedido" value={certificateExtravioSearchFilters.orderNumber} readOnly={false} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, orderNumber: val})} />
+                    <DetailField label="Nome" value={certificateExtravioSearchFilters.name} readOnly={false} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, name: val})} />
+                    <DetailField label="Data de Nascimento" value={certificateExtravioSearchFilters.birthDate} type="date" readOnly={false} icon={Calendar} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, birthDate: val})} />
+                    <DetailField label="Data Pedido" value={certificateExtravioSearchFilters.requestDate} type="date" readOnly={false} icon={Calendar} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, requestDate: val})} />
+                  </div>
+                  <div className="flex justify-end mt-6">
+                    <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                  <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Listagem de Pedidos para Decisão</h3>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {mockDecisionCertificatesExtravio.length.toString().padStart(2, '0')}</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                          <th className="px-6 py-4">Número Pedido</th>
+                          <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Data Nascimento</th>
+                          <th className="px-6 py-4">Data Pedido</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {mockDecisionCertificatesExtravio.length > 0 ? (
+                          mockDecisionCertificatesExtravio.map((cert) => (
+                            <tr
+                              key={cert.id}
+                              onClick={() => {
+                                setSelectedDecisionCertificateExtravio(cert);
+                                setCurrentView('certificate_decision_extravio_detail');
+                              }}
+                              className="hover:bg-blue-50 cursor-pointer transition-colors group"
+                            >
+                              <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{cert.id}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhum pedido aguardando decisão.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex justify-start">
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar ao Início</Button>
+                </div>
+              </motion.div>
+            ) : currentView === 'certificate_decision_extravio_detail' && selectedDecisionCertificateExtravio ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6 pb-12"
+              >
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Decisão de Certificado de Extravio</h2>
+                </div>
+
+                {/* Devolução Warning */}
+                {selectedDecisionCertificateExtravio.returnReason && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-4 bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 shadow-sm"
+                  >
+                    <div className="p-2 bg-amber-100 rounded-xl flex-shrink-0">
+                      <AlertTriangle size={20} className="text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-amber-900 leading-relaxed">
+                        <span className="font-black">Motivo Devolução:</span> {selectedDecisionCertificateExtravio.returnReason}
+                      </p>
+                      <p className="text-[10px] text-amber-500 font-black uppercase tracking-wider mt-2">
+                        {selectedDecisionCertificateExtravio.returnedAt} · {selectedDecisionCertificateExtravio.returnedBy}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Dados Biográficos */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioBiographic')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><User size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Dados Biográficos</span>
+                    </div>
+                    {expandedSections.extravioBiographic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioBiographic && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8 mt-1">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <DetailField label="Nome Completo" value={selectedDecisionCertificateExtravio.biographic.fullName} />
+                            <DetailField label="Data Nascimento" value={selectedDecisionCertificateExtravio.biographic.birthDate} icon={Calendar} />
+                            <DetailField label="Sexo" value={selectedDecisionCertificateExtravio.biographic.gender} />
+                            <DetailField label="Estado Civil" value={selectedDecisionCertificateExtravio.biographic.civilStatus} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <DetailField label="Naturalidade" value={selectedDecisionCertificateExtravio.biographic.birthPlace} />
+                            <DetailField label="Nacionalidade" value={selectedDecisionCertificateExtravio.biographic.nationality} />
+                            <DetailField label="Nome Pai" value={selectedDecisionCertificateExtravio.biographic.fatherName} />
+                            <DetailField label="Nome Mãe" value={selectedDecisionCertificateExtravio.biographic.motherName} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <DetailField label="Tipo Documento" value={selectedDecisionCertificateExtravio.biographic.docType} />
+                            <DetailField label="Número Documento" value={selectedDecisionCertificateExtravio.biographic.docNumber} />
+                          </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                              <DetailField label="Ilha" value={selectedDecisionCertificateExtravio.address.island} />
+                              <DetailField label="Conselho" value={selectedDecisionCertificateExtravio.address.council} />
+                              <DetailField label="Freguesia" value={selectedDecisionCertificateExtravio.address.parish} />
+                              <DetailField label="Localidade" value={selectedDecisionCertificateExtravio.address.locality} />
+                              <DetailField label="Ponto de Referencia" value={selectedDecisionCertificateExtravio.address.reference} icon={MapPin} />
+                            </div>
+                          </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <DetailField label="Telemovel" value={selectedDecisionCertificateExtravio.contact.mobile} />
+                              <DetailField label="Email" value={selectedDecisionCertificateExtravio.contact.email} />
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Documento Extraviado */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioDocuments')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><FileWarning size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Documento Extraviado</span>
+                    </div>
+                    {expandedSections.extravioDocuments ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioDocuments && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6 mt-1">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <DetailField label="Tipo Documento" value={selectedDecisionCertificateExtravio.documentosExtraviados.docType} />
+                            <DetailField label="Número Documento" value={selectedDecisionCertificateExtravio.documentosExtraviados.docNumber} />
+                            <DetailField label="Data Emissão" value={selectedDecisionCertificateExtravio.documentosExtraviados.docIssueDate} icon={Calendar} />
+                            <DetailField label="Data Validade" value={selectedDecisionCertificateExtravio.documentosExtraviados.docExpiryDate} icon={Calendar} />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Modelo de Certificado de Extravio */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioCertificateModel')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><FileText size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Modelo de Certificado de Extravio</span>
+                    </div>
+                    {expandedSections.extravioCertificateModel ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioCertificateModel && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-slate-200 p-8 rounded-2xl flex justify-center mt-1">
+                          {(() => { const cert = selectedDecisionCertificateExtravio; const doc = cert.documentosExtraviados; return (
+                          <div className="bg-white w-full max-w-3xl shadow-2xl p-12 space-y-8 font-serif text-slate-800 border border-slate-300">
+                            <div className="flex flex-col items-center text-center space-y-2 border-b-2 border-slate-900 pb-6">
+                              <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200">
+                                  <Shield size={32} className="text-slate-400" />
+                                </div>
+                                <div className="text-left">
+                                  <p className="text-xs font-bold uppercase tracking-tighter">Ministério da Administração Interna</p>
+                                  <p className="text-[10px] font-bold uppercase tracking-tighter">Direção Nacional da Polícia Nacional</p>
+                                  <p className="text-[10px] font-bold uppercase tracking-tighter">Direção Central de Investigação Criminal</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-center space-y-2">
+                              <div className="inline-block border-2 border-slate-900 px-8 py-2">
+                                <p className="text-sm font-black uppercase tracking-widest">Certificado de Extravio de Documento</p>
+                                <p className="text-xs font-bold">N.º {cert.id}/2026</p>
+                              </div>
+                            </div>
+                            <div className="space-y-6 text-justify leading-relaxed text-sm">
+                              <p className="font-bold">ROBERTO CARLOS CENTEIO LIMA, Subintendente da Polícia Nacional e Diretor da Direção Central de Investigação Criminal da Polícia Nacional---------------------------------------</p>
+                              <p>
+                                <span className="font-bold">CERTIFICA</span>, a pedido do (a) interessado (a), que compareceu perante esta Direção o (a) cidadão (ã) Cabo-verdiano (a) senhor (a) <span className="font-bold uppercase underline">{cert.biographic.fullName}</span>, {cert.biographic.civilStatus}, nascido (a) em <span className="font-bold">{cert.biographic.birthDate}</span>, filho (a) de <span className="font-bold">{cert.biographic.fatherName}</span> e de <span className="font-bold">{cert.biographic.motherName}</span>, portador (a) de {cert.biographic.docType} Nº <span className="font-bold">{cert.biographic.docNumber}</span>, declarando o extravio do seu documento de identificação.
+                              </p>
+                              <div className="border-y-2 border-slate-900 py-3 text-center">
+                                <p className="font-black uppercase tracking-widest">Documento Extraviado: {doc.docType} Nº {doc.docNumber}</p>
+                                {(doc.docIssueDate || doc.docExpiryDate) && (
+                                  <p className="text-xs font-bold normal-case tracking-normal mt-1">
+                                    {doc.docIssueDate && <>Emitido em {doc.docIssueDate}</>}{doc.docIssueDate && doc.docExpiryDate ? ' · ' : ''}{doc.docExpiryDate && <>Válido até {doc.docExpiryDate}</>}
+                                  </p>
+                                )}
+                              </div>
+                              <p>Por ser verdade e haver sido solicitado pelo (a) interessado (a), manda passar o presente certificado, que vai devidamente assinado e autenticado com o carimbo a óleo em uso nesta Direção.</p>
+                            </div>
+                            <div className="pt-12 flex flex-col items-center text-center space-y-8">
+                              <p className="text-xs font-bold">Direção Central de Investigação Criminal, {new Date().toLocaleDateString('pt-BR')}</p>
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold">O Diretor,</p>
+                                <div className="pt-8">
+                                  <p className="text-xs font-bold">/Roberto Carlos Centeio Lima/</p>
+                                  <p className="text-[10px] font-bold">Subintendente da PN</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          ); })()}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Anexos */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioAnexos')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><Paperclip size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Anexos</span>
+                      <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{selectedDecisionCertificateExtravio.attachments.length}</span>
+                    </div>
+                    {expandedSections.extravioAnexos ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioAnexos && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-2 mt-1">
+                          {selectedDecisionCertificateExtravio.attachments.map((file: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 border-2 border-slate-100 rounded-xl">
+                              <FileText size={18} className="text-slate-400" />
+                              <span className="text-xs font-bold text-slate-900">{file.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Observações */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioObservations')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><MessageSquare size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Observações</span>
+                    </div>
+                    {expandedSections.extravioObservations ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioObservations && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-4 mt-1">
+                          {selectedDecisionCertificateExtravio.observations.map((obs: any, idx: number) => (
+                            <div key={idx} className="p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl space-y-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center"><ImageIcon size={20} className="text-slate-400" /></div>
+                                <div>
+                                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{obs.user}</p>
+                                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{obs.date}</p>
+                                </div>
+                              </div>
+                              <p className="text-xs text-slate-600 leading-relaxed font-medium">{obs.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Histórico */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioHistory')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Histórico do Pedido</span>
+                    </div>
+                    {expandedSections.extravioHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioHistory && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mt-1">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                                  <th className="px-6 py-4">Data</th>
+                                  <th className="px-6 py-4">Fase</th>
+                                  <th className="px-6 py-4">Estado</th>
+                                  <th className="px-6 py-4">Utente</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {selectedDecisionCertificateExtravio.history.map((h: any, idx: number) => (
+                                  <tr key={idx} className="bg-white">
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="flex justify-between pt-8 border-t border-slate-100">
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_decision_extravio')}>Voltar</Button>
+                  <div className="flex gap-4">
+                    <Button
+                      variant="outline"
+                      icon={RotateCcw}
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={() => setShowReturnModalExtravio(true)}
+                    >
+                      Devolver
+                    </Button>
+                    <Button
+                      variant="primary"
+                      icon={CheckCircle}
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                      onClick={() => {
+                        setPendingConcluirAction(() => () => {
+                          const concludedCert = {
+                            ...selectedDecisionCertificateExtravio,
+                            status: 'Concluído',
+                            concludedAt: new Date().toLocaleDateString('pt-BR'),
+                            history: [
+                              ...selectedDecisionCertificateExtravio.history,
+                              { date: new Date().toLocaleDateString('pt-BR'), phase: 'Decisão', status: 'Concluído', user: user?.name || 'Sistema' }
+                            ]
+                          };
+                          setMockConcludedCertificatesExtravio(prev => [...prev, concludedCert]);
+                          setSuccessMessage('Despacho concluído e certificado de extravio emitido com sucesso!');
+                          setShowSuccessModal(true);
+                          setMockDecisionCertificatesExtravio(mockDecisionCertificatesExtravio.filter(c => c.id !== selectedDecisionCertificateExtravio.id));
+                          setCurrentView('certificate_decision_extravio');
+                        });
+                        setShowConfirmConcluir(true);
+                      }}
+                    >
+                      Concluir e Emitir Certificado
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            ) : currentView === 'certificate_history_extravio' ? (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Histórico Comunicações de Extravio</h2>
+                </div>
+
+                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                  <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Todos os Pedidos</h3>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">
+                      Total : {(mockAnalysisCertificatesExtravio.length + mockDecisionCertificatesExtravio.length + mockConcludedCertificatesExtravio.length).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                          <th className="px-6 py-4">Número Pedido</th>
+                          <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Data Nascimento</th>
+                          <th className="px-6 py-4">Data Pedido</th>
+                          <th className="px-6 py-4">Fase</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {[
+                          ...mockAnalysisCertificatesExtravio.map(c => ({ ...c, _fase: 'Análise', _faseColor: 'bg-blue-50 text-blue-600' })),
+                          ...mockDecisionCertificatesExtravio.map(c => ({ ...c, _fase: 'Decisão', _faseColor: 'bg-amber-50 text-amber-600' })),
+                          ...mockConcludedCertificatesExtravio.map(c => ({ ...c, _fase: 'Concluído', _faseColor: 'bg-emerald-50 text-emerald-600' })),
+                        ].length > 0 ? [
+                          ...mockAnalysisCertificatesExtravio.map(c => ({ ...c, _fase: 'Análise', _faseColor: 'bg-blue-50 text-blue-600' })),
+                          ...mockDecisionCertificatesExtravio.map(c => ({ ...c, _fase: 'Decisão', _faseColor: 'bg-amber-50 text-amber-600' })),
+                          ...mockConcludedCertificatesExtravio.map(c => ({ ...c, _fase: 'Concluído', _faseColor: 'bg-emerald-50 text-emerald-600' })),
+                        ].map((cert) => (
+                          <tr
+                            key={cert.id + cert._fase}
+                            onClick={() => {
+                              setSelectedHistoryCertificateExtravio(cert);
+                              setCurrentView('certificate_history_extravio_detail');
+                            }}
+                            className="hover:bg-blue-50 cursor-pointer transition-colors group"
+                          >
+                            <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{cert.id}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${cert._faseColor}`}>{cert._fase}</span>
+                            </td>
+                          </tr>
+                        )) : (
+                          <tr>
+                            <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhum pedido encontrado.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex justify-start">
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar ao Início</Button>
+                </div>
+              </motion.div>
+
+            ) : currentView === 'certificate_history_extravio_detail' && selectedHistoryCertificateExtravio ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6 pb-12"
+              >
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Detalhe do Pedido</h2>
+                  <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                    selectedHistoryCertificateExtravio._fase === 'Concluído' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                    selectedHistoryCertificateExtravio._fase === 'Decisão' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
+                    'bg-blue-50 text-blue-600 border border-blue-200'
+                  }`}>{selectedHistoryCertificateExtravio._fase}</span>
+                </div>
+
+                {/* Devolução Warning */}
+                {selectedHistoryCertificateExtravio.returnReason && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-4 bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 shadow-sm"
+                  >
+                    <div className="p-2 bg-amber-100 rounded-xl flex-shrink-0">
+                      <AlertTriangle size={20} className="text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-amber-900 leading-relaxed">
+                        <span className="font-black">Motivo Devolução:</span> {selectedHistoryCertificateExtravio.returnReason}
+                      </p>
+                      <p className="text-[10px] text-amber-500 font-black uppercase tracking-wider mt-2">
+                        {selectedHistoryCertificateExtravio.returnedAt} · {selectedHistoryCertificateExtravio.returnedBy}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Dados Biográficos */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioBiographic')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><User size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Dados Biográficos</span>
+                    </div>
+                    {expandedSections.extravioBiographic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioBiographic && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8 mt-1">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <DetailField label="Nome Completo" value={selectedHistoryCertificateExtravio.biographic.fullName} />
+                            <DetailField label="Data Nascimento" value={selectedHistoryCertificateExtravio.biographic.birthDate} icon={Calendar} />
+                            <DetailField label="Sexo" value={selectedHistoryCertificateExtravio.biographic.gender} />
+                            <DetailField label="Estado Civil" value={selectedHistoryCertificateExtravio.biographic.civilStatus} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                            <DetailField label="Naturalidade" value={selectedHistoryCertificateExtravio.biographic.birthPlace} />
+                            <DetailField label="Nacionalidade" value={selectedHistoryCertificateExtravio.biographic.nationality} />
+                            <DetailField label="Nome Pai" value={selectedHistoryCertificateExtravio.biographic.fatherName} />
+                            <DetailField label="Nome Mãe" value={selectedHistoryCertificateExtravio.biographic.motherName} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <DetailField label="Tipo Documento" value={selectedHistoryCertificateExtravio.biographic.docType} />
+                            <DetailField label="Número Documento" value={selectedHistoryCertificateExtravio.biographic.docNumber} />
+                          </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                              <DetailField label="Ilha" value={selectedHistoryCertificateExtravio.address.island} />
+                              <DetailField label="Conselho" value={selectedHistoryCertificateExtravio.address.council} />
+                              <DetailField label="Freguesia" value={selectedHistoryCertificateExtravio.address.parish} />
+                              <DetailField label="Localidade" value={selectedHistoryCertificateExtravio.address.locality} />
+                              <DetailField label="Ponto de Referencia" value={selectedHistoryCertificateExtravio.address.reference} icon={MapPin} />
+                            </div>
+                          </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <DetailField label="Telemovel" value={selectedHistoryCertificateExtravio.contact.mobile} />
+                              <DetailField label="Email" value={selectedHistoryCertificateExtravio.contact.email} />
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Documento Extraviado */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioDocuments')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><FileWarning size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Documento Extraviado</span>
+                    </div>
+                    {expandedSections.extravioDocuments ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioDocuments && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6 mt-1">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <DetailField label="Tipo Documento" value={selectedHistoryCertificateExtravio.documentosExtraviados.docType} />
+                            <DetailField label="Número Documento" value={selectedHistoryCertificateExtravio.documentosExtraviados.docNumber} />
+                            <DetailField label="Data Emissão" value={selectedHistoryCertificateExtravio.documentosExtraviados.docIssueDate} icon={Calendar} />
+                            <DetailField label="Data Validade" value={selectedHistoryCertificateExtravio.documentosExtraviados.docExpiryDate} icon={Calendar} />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Modelo de Certificado de Extravio */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioCertificateModel')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><FileText size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Modelo de Certificado de Extravio</span>
+                    </div>
+                    {expandedSections.extravioCertificateModel ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioCertificateModel && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-slate-200 p-8 rounded-2xl flex justify-center mt-1">
+                          {(() => { const cert = selectedHistoryCertificateExtravio; const doc = cert.documentosExtraviados; return (
+                          <div className="bg-white w-full max-w-3xl shadow-2xl p-12 space-y-8 font-serif text-slate-800 border border-slate-300">
+                            <div className="flex flex-col items-center text-center space-y-2 border-b-2 border-slate-900 pb-6">
+                              <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200">
+                                  <Shield size={32} className="text-slate-400" />
+                                </div>
+                                <div className="text-left">
+                                  <p className="text-xs font-bold uppercase tracking-tighter">Ministério da Administração Interna</p>
+                                  <p className="text-[10px] font-bold uppercase tracking-tighter">Direção Nacional da Polícia Nacional</p>
+                                  <p className="text-[10px] font-bold uppercase tracking-tighter">Direção Central de Investigação Criminal</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-center space-y-2">
+                              <div className="inline-block border-2 border-slate-900 px-8 py-2">
+                                <p className="text-sm font-black uppercase tracking-widest">Certificado de Extravio de Documento</p>
+                                <p className="text-xs font-bold">N.º {cert.id}/2026</p>
+                              </div>
+                            </div>
+                            <div className="space-y-6 text-justify leading-relaxed text-sm">
+                              <p className="font-bold">ROBERTO CARLOS CENTEIO LIMA, Subintendente da Polícia Nacional e Diretor da Direção Central de Investigação Criminal da Polícia Nacional---------------------------------------</p>
+                              <p>
+                                <span className="font-bold">CERTIFICA</span>, a pedido do (a) interessado (a), que compareceu perante esta Direção o (a) cidadão (ã) Cabo-verdiano (a) senhor (a) <span className="font-bold uppercase underline">{cert.biographic.fullName}</span>, {cert.biographic.civilStatus}, nascido (a) em <span className="font-bold">{cert.biographic.birthDate}</span>, filho (a) de <span className="font-bold">{cert.biographic.fatherName}</span> e de <span className="font-bold">{cert.biographic.motherName}</span>, portador (a) de {cert.biographic.docType} Nº <span className="font-bold">{cert.biographic.docNumber}</span>, declarando o extravio do seu documento de identificação.
+                              </p>
+                              <div className="border-y-2 border-slate-900 py-3 text-center">
+                                <p className="font-black uppercase tracking-widest">Documento Extraviado: {doc.docType} Nº {doc.docNumber}</p>
+                                {(doc.docIssueDate || doc.docExpiryDate) && (
+                                  <p className="text-xs font-bold normal-case tracking-normal mt-1">
+                                    {doc.docIssueDate && <>Emitido em {doc.docIssueDate}</>}{doc.docIssueDate && doc.docExpiryDate ? ' · ' : ''}{doc.docExpiryDate && <>Válido até {doc.docExpiryDate}</>}
+                                  </p>
+                                )}
+                              </div>
+                              <p>Por ser verdade e haver sido solicitado pelo (a) interessado (a), manda passar o presente certificado, que vai devidamente assinado e autenticado com o carimbo a óleo em uso nesta Direção.</p>
+                            </div>
+                            <div className="pt-12 flex flex-col items-center text-center space-y-8">
+                              <p className="text-xs font-bold">Direção Central de Investigação Criminal, {new Date().toLocaleDateString('pt-BR')}</p>
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold">O Diretor,</p>
+                                <div className="pt-8">
+                                  <p className="text-xs font-bold">/Roberto Carlos Centeio Lima/</p>
+                                  <p className="text-[10px] font-bold">Subintendente da PN</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          ); })()}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Anexos */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioAnexos')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><Paperclip size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Anexos</span>
+                      <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{selectedHistoryCertificateExtravio.attachments.length}</span>
+                    </div>
+                    {expandedSections.extravioAnexos ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioAnexos && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-2 mt-1">
+                          {selectedHistoryCertificateExtravio.attachments.map((file: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 border-2 border-slate-100 rounded-xl">
+                              <FileText size={18} className="text-slate-400" />
+                              <span className="text-xs font-bold text-slate-900">{file.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Observações */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioObservations')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><MessageSquare size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Observações</span>
+                    </div>
+                    {expandedSections.extravioObservations ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioObservations && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-4 mt-1">
+                          {selectedHistoryCertificateExtravio.observations.map((obs: any, idx: number) => (
+                            <div key={idx} className="p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl space-y-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center"><ImageIcon size={20} className="text-slate-400" /></div>
+                                <div>
+                                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{obs.user}</p>
+                                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{obs.date}</p>
+                                </div>
+                              </div>
+                              <p className="text-xs text-slate-600 leading-relaxed font-medium">{obs.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Histórico */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioHistory')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Histórico do Pedido</span>
+                    </div>
+                    {expandedSections.extravioHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioHistory && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mt-1">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                                  <th className="px-6 py-4">Data</th>
+                                  <th className="px-6 py-4">Fase</th>
+                                  <th className="px-6 py-4">Estado</th>
+                                  <th className="px-6 py-4">Utente</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {selectedHistoryCertificateExtravio.history.map((h: any, idx: number) => (
+                                  <tr key={idx} className="bg-white">
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="flex justify-start pt-8 border-t border-slate-100">
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_history_extravio')}>Voltar</Button>
+                </div>
+              </motion.div>
+
             ) : currentView === 'parametrizacoes' ? (
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
@@ -5475,7 +7130,7 @@ export default function App() {
                                 if (!newParamData.valor.trim()) return;
                                 setParamDomains(prev => ({
                                   ...prev,
-                                  [selectedDomain]: [...(prev[selectedDomain] || []), { id: Date.now(), valor: newParamData.valor, descricao: newParamData.descricao, estado: 'Ativo' }]
+                                  [selectedDomain]: [...(prev[selectedDomain] || []), { id: Date.now(), valor: newParamData.valor, descricao: newParamData.descricao, estado: 'Ativo', padrao: false }]
                                 }));
                                 setNewParamData({ valor: '', descricao: '' });
                                 setShowAddParam(false);
@@ -5519,27 +7174,18 @@ export default function App() {
                           <th className="px-6 py-4">Valor</th>
                           <th className="px-6 py-4">Descrição</th>
                           <th className="px-6 py-4">Estado</th>
+                          <th className="px-6 py-4 text-center">Padrão</th>
                           <th className="px-6 py-4 text-right">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {(paramDomains[selectedDomain] || []).map((item: any, idx: number) => (
+                        {(paramDomains[selectedDomain] || []).slice().sort((a: any, b: any) => (a.valor || '').localeCompare(b.valor || '')).map((item: any, idx: number) => (
                           <tr key={item.id} className={`transition-colors ${item.estado === 'Inativo' ? 'opacity-50 bg-slate-50/50' : 'hover:bg-slate-50'}`}>
                             <td className="px-6 py-4 text-xs font-black text-slate-400">{(idx + 1).toString().padStart(2, '0')}</td>
 
-                            {/* Valor — inline edit */}
+                            {/* Valor — não editável */}
                             <td className="px-6 py-4">
-                              {editingParamId === item.id ? (
-                                <input
-                                  type="text"
-                                  value={editingParamData.valor}
-                                  onChange={(e) => setEditingParamData({ ...editingParamData, valor: e.target.value })}
-                                  className="w-full px-3 py-1.5 bg-white border-2 border-slate-900 rounded-lg text-sm font-bold text-slate-900 outline-none"
-                                  autoFocus
-                                />
-                              ) : (
-                                <span className="text-sm font-bold text-slate-900">{item.valor}</span>
-                              )}
+                              <span className="text-sm font-bold text-slate-900">{item.valor}</span>
                             </td>
 
                             {/* Descrição — inline edit */}
@@ -5550,6 +7196,7 @@ export default function App() {
                                   value={editingParamData.descricao}
                                   onChange={(e) => setEditingParamData({ ...editingParamData, descricao: e.target.value })}
                                   className="w-full px-3 py-1.5 bg-white border-2 border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:border-slate-900"
+                                  autoFocus
                                 />
                               ) : (
                                 <span className="text-sm font-medium text-slate-500">{item.descricao || '---'}</span>
@@ -5563,6 +7210,34 @@ export default function App() {
                               </span>
                             </td>
 
+                            {/* Padrão — só um por domínio, ajustável ao editar */}
+                            <td className="px-6 py-4">
+                              <div className="flex justify-center">
+                                {editingParamId === item.id ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingParamData({ ...editingParamData, padrao: !editingParamData.padrao })}
+                                    title={editingParamData.padrao ? 'Será o valor padrão' : 'Definir como padrão'}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border-2 ${
+                                      editingParamData.padrao
+                                        ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                        : 'text-slate-400 border-slate-200 hover:text-amber-500 hover:border-amber-200 hover:bg-amber-50'
+                                    }`}
+                                  >
+                                    <Star size={13} className={editingParamData.padrao ? 'fill-amber-500 text-amber-500' : ''} />
+                                    {editingParamData.padrao ? 'Padrão' : 'Definir'}
+                                  </button>
+                                ) : item.padrao ? (
+                                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-600" title="Valor padrão">
+                                    <Star size={13} className="fill-amber-500 text-amber-500" />
+                                    Padrão
+                                  </span>
+                                ) : (
+                                  <Star size={13} className="text-slate-200" />
+                                )}
+                              </div>
+                            </td>
+
                             {/* Ações */}
                             <td className="px-6 py-4">
                               <div className="flex items-center justify-end gap-2">
@@ -5573,7 +7248,9 @@ export default function App() {
                                         setParamDomains(prev => ({
                                           ...prev,
                                           [selectedDomain]: prev[selectedDomain].map((p: any) =>
-                                            p.id === item.id ? { ...p, valor: editingParamData.valor, descricao: editingParamData.descricao } : p
+                                            p.id === item.id
+                                              ? { ...p, descricao: editingParamData.descricao, padrao: editingParamData.padrao }
+                                              : { ...p, padrao: editingParamData.padrao ? false : p.padrao }
                                           )
                                         }));
                                         setEditingParamId(null);
@@ -5594,7 +7271,7 @@ export default function App() {
                                   <>
                                     {item.estado === 'Ativo' && (
                                       <button
-                                        onClick={() => { setEditingParamId(item.id); setEditingParamData({ valor: item.valor, descricao: item.descricao || '' }); }}
+                                        onClick={() => { setEditingParamId(item.id); setEditingParamData({ valor: item.valor, descricao: item.descricao || '', padrao: !!item.padrao }); }}
                                         className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
                                         title="Editar"
                                       >
@@ -5610,7 +7287,9 @@ export default function App() {
                                           )
                                         }));
                                       }}
-                                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-colors ${
+                                      disabled={item.estado === 'Ativo' && item.padrao}
+                                      title={item.estado === 'Ativo' && item.padrao ? 'Não é possível desativar o valor padrão' : undefined}
+                                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-50 ${
                                         item.estado === 'Ativo'
                                           ? 'bg-red-50 text-red-600 hover:bg-red-100'
                                           : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
@@ -5868,14 +7547,6 @@ export default function App() {
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Nascimento</label>
                         <input type="date" value={fichaSearchFilters.birthDate} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, birthDate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</label>
-                        <select value={fichaSearchFilters.estado} onChange={(e) => setFichaSearchFilters({...fichaSearchFilters, estado: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
-                          <option value="">Todos</option>
-                          <option value="Completo">Completo</option>
-                          <option value="Por Completar">Por Completar</option>
-                        </select>
-                      </div>
                     </div>
 
                     <AnimatePresence>
@@ -6014,7 +7685,7 @@ export default function App() {
                     <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
                       <Button variant="outline" onClick={() => {
                         setFichaSearchFilters({
-                          number: '', name: '', birthDate: '', estado: '',
+                          number: '', name: '', birthDate: '',
                           comando: '', unit: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '', tipo: '', doc_number: '',
                           island: '', municipality: '', parish: '', locality: '', zone: ''
                         });
@@ -6026,7 +7697,6 @@ export default function App() {
                           if (f.number && !ficha.number.toLowerCase().includes(f.number.toLowerCase())) return false;
                           if (f.name && !ficha.name.toLowerCase().includes(f.name.toLowerCase())) return false;
                           if (f.birthDate && ficha.birthDate !== f.birthDate) return false;
-                          if (f.estado && (ficha.estado || 'Por Completar') !== f.estado) return false;
                           if (f.doc_number && !(ficha.docNumber || '').toLowerCase().includes(f.doc_number.toLowerCase())) return false;
 
                           const reasons = ficha.registrationReasons || [];
@@ -6067,7 +7737,6 @@ export default function App() {
                           <th className="px-6 py-4">Nome Completo</th>
                           <th className="px-6 py-4">Data Nascimento</th>
                           <th className="px-6 py-4">Ilha</th>
-                          <th className="px-6 py-4">Estado</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
@@ -6084,11 +7753,6 @@ export default function App() {
                             <td className="px-6 py-4 text-sm font-bold text-slate-900">{f.name}</td>
                             <td className="px-6 py-4 text-sm font-medium text-slate-600">{f.birthDate ? new Date(f.birthDate).toLocaleDateString('pt-BR') : '---'}</td>
                             <td className="px-6 py-4 text-sm font-medium text-slate-600">{f.island}</td>
-                            <td className="px-6 py-4">
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${(f.estado || 'Por Completar') === 'Completo' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                                {f.estado || 'Por Completar'}
-                              </span>
-                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -8118,21 +9782,6 @@ export default function App() {
                           </div>
 
                           <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fingerprints Associadas</h4>
-                            <div className="flex gap-6 items-center">
-                              <div className="w-20 h-28 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center bg-slate-50 group hover:border-slate-900 transition-colors cursor-pointer">
-                                <Fingerprint size={40} className="text-slate-200 group-hover:text-slate-900 transition-colors" />
-                              </div>
-                              <div className="w-20 h-28 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center bg-slate-50 group hover:border-slate-900 transition-colors cursor-pointer">
-                                <Fingerprint size={40} className="text-slate-200 group-hover:text-slate-900 transition-colors" />
-                              </div>
-                              <button className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors">
-                                <Trash2 size={20} />
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="space-y-4">
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fotografias Atuais</h4>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                               {[
@@ -9649,6 +11298,77 @@ export default function App() {
           )}
         </AnimatePresence>
 
+        {/* Devolver Pedido Modal (Certificado de Extravio) */}
+        <AnimatePresence>
+          {showReturnModalExtravio && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200"
+              >
+                <div className="p-6 border-b border-slate-100 bg-slate-50">
+                  <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Devolver Pedido</h3>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo da Devolução</label>
+                    <textarea
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all min-h-[120px]"
+                      placeholder="Descreva o motivo pelo qual o pedido está sendo devolvido para análise..."
+                      value={returnReasonExtravio}
+                      onChange={(e) => setReturnReasonExtravio(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                  <button
+                    onClick={() => setShowReturnModalExtravio(false)}
+                    className="flex-1 px-4 py-2 bg-white text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition-colors text-sm border-2 border-slate-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!returnReasonExtravio.trim()) {
+                        setErrorMessage('Por favor, informe o motivo da devolução.');
+                        setShowErrorModal(true);
+                        return;
+                      }
+                      const returnedCert = {
+                        ...selectedDecisionCertificateExtravio,
+                        status: 'Devolvido',
+                        returnReason: returnReasonExtravio.trim(),
+                        returnedBy: user?.name || 'Sistema',
+                        returnedAt: new Date().toLocaleDateString('pt-BR'),
+                        history: [
+                          ...selectedDecisionCertificateExtravio.history,
+                          { date: new Date().toLocaleDateString('pt-BR'), phase: 'Analise', status: 'Devolvido', user: user?.name || 'Sistema' }
+                        ],
+                        observations: [
+                          ...selectedDecisionCertificateExtravio.observations,
+                          { user: user?.name || 'Sistema', date: new Date().toLocaleDateString('pt-BR'), text: `DEVOLUÇÃO: ${returnReasonExtravio}` }
+                        ]
+                      };
+                      setMockAnalysisCertificatesExtravio([...mockAnalysisCertificatesExtravio, returnedCert]);
+                      setMockDecisionCertificatesExtravio(mockDecisionCertificatesExtravio.filter(c => c.id !== selectedDecisionCertificateExtravio.id));
+                      setShowReturnModalExtravio(false);
+                      setReturnReasonExtravio('');
+                      setSuccessMessage('Pedido devolvido para análise com sucesso.');
+                      setShowSuccessModal(true);
+                      setCurrentView('certificate_decision_extravio');
+                    }}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors text-sm shadow-md"
+                  >
+                    Devolver
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         {/* Associar Cadastro Modal */}
         <AnimatePresence>
           {showAssociateModal && (
@@ -9940,9 +11660,11 @@ export default function App() {
                 </div>
                 <div className="px-6 py-6 text-center space-y-6">
                   <p className="text-sm font-bold text-slate-600">
-                    {associatedPerson
-                      ? <>Tem a certeza que deseja enviar este pedido para <span className="text-slate-900">Decisão</span>? O cadastro <span className="text-slate-900 font-black">{associatedPerson.number}</span> ficará associado.</>
-                      : <>Tem a certeza que deseja enviar este pedido para <span className="text-slate-900">Decisão</span> sem cadastro associado?</>
+                    {currentView === 'certificate_analysis_extravio_detail'
+                      ? <>Tem a certeza que deseja enviar este pedido para <span className="text-slate-900">Decisão</span>?</>
+                      : associatedPerson
+                        ? <>Tem a certeza que deseja enviar este pedido para <span className="text-slate-900">Decisão</span>? O cadastro <span className="text-slate-900 font-black">{associatedPerson.number}</span> ficará associado.</>
+                        : <>Tem a certeza que deseja enviar este pedido para <span className="text-slate-900">Decisão</span> sem cadastro associado?</>
                     }
                   </p>
                   <div className="flex gap-3">
@@ -11749,6 +13471,85 @@ export default function App() {
                 
                 <div className="flex justify-end pt-4">
                   <Button variant="outline" onClick={() => setShowBioSearchModal(false)}>Fechar</Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Lost Document Search Modal (Certificado de Extravio) */}
+      <AnimatePresence>
+        {showLostDocSearchModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowLostDocSearchModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-600 rounded-lg">
+                    <Search size={20} />
+                  </div>
+                  <h3 className="text-lg font-bold uppercase tracking-tight">Resultados da Pesquisa</h3>
+                </div>
+                <button
+                  onClick={() => setShowLostDocSearchModal(false)}
+                  className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-6">
+                {lostDocSearchResults.length === 0 ? (
+                  <div className="text-center py-12 space-y-4">
+                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                      <Search size={32} />
+                    </div>
+                    <p className="font-bold text-slate-900">Nenhum resultado encontrado para {lostDocSearchName ? `"${lostDocSearchName}"` : ''} {lostDocSearchName && lostDocSearchNumber ? 'e' : ''} {lostDocSearchNumber ? `"${lostDocSearchNumber}"` : ''}</p>
+                    <p className="text-sm text-slate-400">Tente buscar por um nome ou número de documento diferente.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Selecione o documento correspondente:</p>
+                    <div className="grid grid-cols-1 gap-4 max-h-[400px] overflow-y-auto pr-2">
+                      {lostDocSearchResults.map((ficha) => (
+                        <button
+                          key={ficha.id}
+                          onClick={() => selectLostDocFromSearch(ficha)}
+                          className="w-full text-left p-4 bg-slate-50 border-2 border-slate-100 rounded-xl hover:border-blue-600 hover:bg-blue-50 transition-all group"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                              <h4 className="font-black text-slate-900 uppercase text-xs tracking-tight group-hover:text-blue-600">{ficha.name}</h4>
+                              <div className="flex gap-4 text-[10px] text-slate-400 font-bold">
+                                <span>Doc: {ficha.docType || lostDocSearchType} {ficha.docNumber || ficha.number || '---'}</span>
+                                <span>Emissão: {ficha.docIssueDate || '---'}</span>
+                                <span>Validade: {ficha.docExpiryDate || '---'}</span>
+                              </div>
+                            </div>
+                            <div className="p-2 bg-white rounded-lg border border-slate-200 group-hover:bg-blue-600 group-hover:border-blue-600 group-hover:text-white transition-colors">
+                              <CheckCircle size={16} />
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-4">
+                  <Button variant="outline" onClick={() => setShowLostDocSearchModal(false)}>Fechar</Button>
                 </div>
               </div>
             </motion.div>
