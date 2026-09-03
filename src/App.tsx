@@ -2756,17 +2756,6 @@ export default function App() {
                                   onChange={(val: string) => setDocData({...docData, document: {...docData.document, issueDate: val}})} />
                                 <DetailField label="Data Validade" value={docData.document.expiryDate} type="date" readOnly={false} icon={Calendar}
                                   onChange={(val: string) => setDocData({...docData, document: {...docData.document, expiryDate: val}})} />
-                                <DetailField label="NIF" value={docData.document.nif} readOnly={false}
-                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, nif: val}})} />
-                              </div>
-                            </div>
-
-                            {/* Contactos */}
-                            <div className="space-y-4">
-                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</p>
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                <DetailField label="Telemóvel" value={docData.document.phone} readOnly={false}
-                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, phone: val}})} />
                               </div>
                             </div>
 
@@ -3124,14 +3113,6 @@ export default function App() {
                               <DetailField label="Número Documento" value={registeredDoc.document.number} />
                               <DetailField label="Data Emissão" value={registeredDoc.document.issueDate} icon={Calendar} />
                               <DetailField label="Data Validade" value={registeredDoc.document.expiryDate} icon={Calendar} />
-                              <DetailField label="NIF" value={registeredDoc.document.nif || '---'} />
-                            </div>
-                          </div>
-                          {/* Contactos */}
-                          <div className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</p>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                              <DetailField label="Telemóvel" value={registeredDoc.document.phone || '---'} />
                             </div>
                           </div>
                           {/* Motivo */}
