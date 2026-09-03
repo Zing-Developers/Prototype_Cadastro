@@ -82,15 +82,15 @@ function getPortraitUrl(seed: string, gender: 'men' | 'women' = 'men'): string {
 
 // --- Components ---
 
-const Button = ({ 
-  children, 
-  icon: Icon, 
-  onClick, 
+const Button = ({
+  children,
+  icon: Icon,
+  onClick,
   variant = 'primary',
   className = ""
-}: { 
-  children: React.ReactNode; 
-  icon?: any; 
+}: {
+  children: React.ReactNode;
+  icon?: any;
   onClick?: () => void;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
   className?: string;
@@ -105,7 +105,7 @@ const Button = ({
   };
 
   return (
-    <button 
+    <button
       onClick={onClick}
       className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl transition-all duration-200 font-bold text-sm ${variants[variant]} ${className}`}
     >
@@ -563,6 +563,19 @@ export default function App() {
       observations: ''
     }
   });
+  const [editingDocId, setEditingDocId] = useState<string | null>(null);
+  const emptyDocData = () => ({
+    document: {
+      reason: '', type: '', number: '', issueDate: '', expiryDate: '', fullName: '',
+      birthDate: '', nationality: '', birthPlace: '', fatherName: '', motherName: '',
+      nif: '', phone: '', photo: null as string | null, attachments: [] as File[]
+    },
+    finder: {
+      type: 'Civil', name: '', idType: '', idNumber: '', contact: '', foundDate: '',
+      location: { island: '', county: '', parish: '', locality: '', zone: '', reference: '' }
+    },
+    storage: { island: '', county: '', organicUnit: '', observations: '' }
+  });
   const [certificateStep, setCertificateStep] = useState(1);
   const [certificateSearchFilters, setCertificateSearchFilters] = useState({
     orderNumber: '',
@@ -688,13 +701,11 @@ export default function App() {
   const [newFichaNewAttach, setNewFichaNewAttach] = useState({ name: '', type: 'Documento' });
 
   const handleBioSearch = () => {
+    // Exige pelo menos um campo de pesquisa preenchido (N.º Documento ou Nome)
+    if (!bioSearchName.trim() && !bioSearchDocNumber.trim()) return;
     const results = fichas.filter(f => {
       const matchName = bioSearchName ? f.name?.toLowerCase().includes(bioSearchName.toLowerCase()) : true;
       const matchDoc = bioSearchDocNumber ? (f.docNumber?.toLowerCase().includes(bioSearchDocNumber.toLowerCase()) || f.number?.toLowerCase().includes(bioSearchDocNumber.toLowerCase())) : true;
-      
-      // If both are empty, don't return everything unless specified (usually it's better to require at least one)
-      if (!bioSearchName && !bioSearchDocNumber) return false;
-      
       return matchName && matchDoc;
     });
     setBioSearchResults(results);
@@ -702,12 +713,10 @@ export default function App() {
   };
 
   const handleLostDocSearch = () => {
+    if (!lostDocSearchName.trim() && !lostDocSearchNumber.trim()) return;
     const results = fichas.filter(f => {
       const matchName = lostDocSearchName ? f.name?.toLowerCase().includes(lostDocSearchName.toLowerCase()) : true;
       const matchDoc = lostDocSearchNumber ? (f.docNumber?.toLowerCase().includes(lostDocSearchNumber.toLowerCase()) || f.number?.toLowerCase().includes(lostDocSearchNumber.toLowerCase())) : true;
-
-      if (!lostDocSearchName && !lostDocSearchNumber) return false;
-
       return matchName && matchDoc;
     });
     setLostDocSearchResults(results);
@@ -1045,6 +1054,7 @@ export default function App() {
         { name: 'foto_frente_bi.jpg', type: 'Imagem' },
         { name: 'auto_ocorrencia.pdf', type: 'PDF' }
       ],
+      estado: 'Por Levantar',
       registeredBy: 'Carlos Mendes',
       registeredAt: '2024-03-01'
     },
@@ -1081,6 +1091,7 @@ export default function App() {
         observations: 'Passaporte com sinais de uso intenso.'
       },
       attachments: [],
+      estado: 'Levantado',
       registeredBy: 'Paulo Lopes',
       registeredAt: '2024-07-10'
     },
@@ -1119,6 +1130,7 @@ export default function App() {
       attachments: [
         { name: 'cni_frente.jpg', type: 'Imagem' }
       ],
+      estado: 'Por Levantar',
       registeredBy: 'Maria Santos',
       registeredAt: '2025-01-22'
     }
@@ -2593,7 +2605,7 @@ export default function App() {
                 className="space-y-8"
               >
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Cadastro Documentos</h2>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{editingDocId ? 'Editar Documento' : 'Cadastro Documentos'}</h2>
                 </div>
 
                 {/* Steps Indicator */}
@@ -2688,9 +2700,9 @@ export default function App() {
                                 className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all"
                               />
                             </div>
-                            <Button 
-                              variant="secondary" 
-                              icon={Search} 
+                            <Button
+                              variant="secondary"
+                              icon={Search}
                               onClick={() => {
                                 setBioSearchTarget('document');
                                 handleBioSearch();
@@ -2744,17 +2756,6 @@ export default function App() {
                                   onChange={(val: string) => setDocData({...docData, document: {...docData.document, issueDate: val}})} />
                                 <DetailField label="Data Validade" value={docData.document.expiryDate} type="date" readOnly={false} icon={Calendar}
                                   onChange={(val: string) => setDocData({...docData, document: {...docData.document, expiryDate: val}})} />
-                                <DetailField label="NIF" value={docData.document.nif} readOnly={false}
-                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, nif: val}})} />
-                              </div>
-                            </div>
-
-                            {/* Contactos */}
-                            <div className="space-y-4">
-                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</p>
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                <DetailField label="Telemóvel" value={docData.document.phone} readOnly={false}
-                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, phone: val}})} />
                               </div>
                             </div>
 
@@ -2973,10 +2974,10 @@ export default function App() {
                   </div>
 
                   <div className="p-6 bg-slate-50 border-t-2 border-slate-100 flex justify-between items-center">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       icon={ArrowLeft}
-                      onClick={() => docStep > 1 ? setDocStep(docStep - 1) : setCurrentView('document_search')}
+                      onClick={() => docStep > 1 ? setDocStep(docStep - 1) : (setEditingDocId(null), setCurrentView('document_search'))}
                     >
                       Voltar
                     </Button>
@@ -2984,20 +2985,38 @@ export default function App() {
                       <Button
                         variant="outline"
                         className="text-purple-600 border-purple-200 hover:bg-purple-50"
-                        onClick={() => setCurrentView('document_search')}
+                        onClick={() => { setEditingDocId(null); setCurrentView('document_search'); }}
                       >
                         Cancelar
                       </Button>
-                      <Button 
-                        variant="primary" 
+                      <Button
+                        variant="primary"
                         icon={docStep === 3 ? Check : ArrowRight}
                         onClick={() => {
                           if (docStep < 3) {
                             setDocStep(docStep + 1);
+                          } else if (editingDocId) {
+                            const updatedDoc = {
+                              ...registeredDoc,
+                              ...docData,
+                              id: editingDocId,
+                              attachments: registeredDoc?.attachments || [],
+                              registeredBy: registeredDoc?.registeredBy || user?.name || 'Carlos Mendes',
+                              registeredAt: registeredDoc?.registeredAt || new Date().toLocaleDateString('pt-BR')
+                            };
+                            setMockDocuments(prev => prev.map(d => d.id === editingDocId ? updatedDoc : d));
+                            setRegisteredDoc(updatedDoc);
+                            setDocSearchResults(prev => prev ? prev.map(d => d.id === editingDocId ? updatedDoc : d) : prev);
+                            setEditingDocId(null);
+                            setIsReadOnlyView(true);
+                            setSuccessMessage('Dados do documento atualizados com sucesso');
+                            setShowSuccessModal(true);
+                            setCurrentView('document_detail');
                           } else {
                             setRegisteredDoc({
-                              ...docData, 
+                              ...docData,
                               id: '002',
+                              estado: 'Por Levantar',
                               registeredBy: user?.name || 'Carlos Mendes',
                               registeredAt: new Date().toLocaleDateString('pt-BR')
                             });
@@ -3021,7 +3040,19 @@ export default function App() {
               >
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
                   <div className="space-y-1">
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Detalhes do Registo</h2>
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Detalhes do Registo</h2>
+                      {(() => {
+                        const estado = registeredDoc.estado || (registeredDoc.levantamento ? 'Levantado' : 'Por Levantar');
+                        return (
+                          <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
+                            estado === 'Levantado' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                          }`}>
+                            {estado}
+                          </span>
+                        );
+                      })()}
+                    </div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registo Individual N.º {registeredDoc.id}</p>
                   </div>
                   <div className="flex items-center gap-2 bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-2">
@@ -3082,14 +3113,6 @@ export default function App() {
                               <DetailField label="Número Documento" value={registeredDoc.document.number} />
                               <DetailField label="Data Emissão" value={registeredDoc.document.issueDate} icon={Calendar} />
                               <DetailField label="Data Validade" value={registeredDoc.document.expiryDate} icon={Calendar} />
-                              <DetailField label="NIF" value={registeredDoc.document.nif || '---'} />
-                            </div>
-                          </div>
-                          {/* Contactos */}
-                          <div className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</p>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                              <DetailField label="Telemóvel" value={registeredDoc.document.phone || '---'} />
                             </div>
                           </div>
                           {/* Motivo */}
@@ -3285,6 +3308,8 @@ export default function App() {
                   <div className="flex gap-3">
                     <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar ao Início</Button>
                     <Button variant="primary" icon={Plus} onClick={() => {
+                      setEditingDocId(null);
+                      setDocData(emptyDocData());
                       setDocStep(1);
                       setIsReadOnlyView(false);
                       setCurrentView('document_registration');
@@ -3408,17 +3433,21 @@ export default function App() {
                           <th className="px-6 py-4">Data Nascimento</th>
                           <th className="px-6 py-4">Ilha</th>
                           <th className="px-6 py-4">Unidade Organica</th>
+                          <th className="px-6 py-4">Estado</th>
+                          <th className="px-6 py-4 text-right">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {(docSearchResults !== null ? docSearchResults : mockDocuments).length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="px-6 py-12 text-center text-sm font-bold text-slate-400">
+                            <td colSpan={8} className="px-6 py-12 text-center text-sm font-bold text-slate-400">
                               Nenhum documento encontrado para os filtros aplicados.
                             </td>
                           </tr>
                         ) : (
-                          (docSearchResults !== null ? docSearchResults : mockDocuments).map((doc) => (
+                          (docSearchResults !== null ? docSearchResults : mockDocuments).map((doc) => {
+                            const estado = doc.estado || (doc.levantamento ? 'Levantado' : 'Por Levantar');
+                            return (
                             <tr
                               key={doc.id}
                               onClick={() => {
@@ -3434,8 +3463,42 @@ export default function App() {
                               <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.document.birthDate}</td>
                               <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.island}</td>
                               <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.organicUnit}</td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
+                                  estado === 'Levantado'
+                                    ? 'bg-emerald-50 text-emerald-600'
+                                    : 'bg-amber-50 text-amber-600'
+                                }`}>
+                                  {estado}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <button
+                                  title="Editar dados do documento"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingDocId(doc.id);
+                                    setRegisteredDoc(doc);
+                                    setDocData({
+                                      document: { ...emptyDocData().document, ...doc.document, attachments: [] },
+                                      finder: {
+                                        ...emptyDocData().finder,
+                                        ...doc.finder,
+                                        location: { ...emptyDocData().finder.location, ...doc.finder.location }
+                                      },
+                                      storage: { ...emptyDocData().storage, ...doc.storage }
+                                    });
+                                    setDocStep(1);
+                                    setCurrentView('document_registration');
+                                  }}
+                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                              </td>
                             </tr>
-                          ))
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
