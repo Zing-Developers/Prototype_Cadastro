@@ -489,6 +489,24 @@ export default function App() {
       { id: 4, valor: 'INP', descricao: 'Extraviado em Instituição Pública',    estado: 'Ativo' },
       { id: 5, valor: 'OUT', descricao: 'Outro',                                estado: 'Ativo' },
     ],
+    'Documentos Extraviados': [
+      { id: 1,  valor: 'BI',   descricao: 'Bilhete de Identidade',              estado: 'Ativo' },
+      { id: 2,  valor: 'CNI',  descricao: 'Cartão Nacional de Identificação',   estado: 'Ativo' },
+      { id: 3,  valor: 'PASS', descricao: 'Passaporte',                        estado: 'Ativo' },
+      { id: 4,  valor: 'TRE',  descricao: 'Título de Residência',              estado: 'Ativo' },
+      { id: 5,  valor: 'CP',   descricao: 'Cédula Pessoal',                    estado: 'Ativo' },
+      { id: 6,  valor: 'CC',   descricao: 'Carta de Condução',                 estado: 'Ativo' },
+      { id: 7,  valor: 'LIV',  descricao: 'Livrete',                           estado: 'Ativo' },
+      { id: 8,  valor: 'DV',   descricao: 'Documento de Veículo',              estado: 'Ativo' },
+      { id: 9,  valor: 'CN',   descricao: 'Certidão de Nascimento',            estado: 'Ativo' },
+      { id: 10, valor: 'CCAS', descricao: 'Certidão de Casamento',             estado: 'Ativo' },
+      { id: 11, valor: 'COB',  descricao: 'Certidão de Óbito',                 estado: 'Ativo' },
+      { id: 12, valor: 'NIF',  descricao: 'NIF / Cartão de Contribuinte',      estado: 'Ativo' },
+      { id: 13, valor: 'CH',   descricao: 'Certificado de Habilitações',       estado: 'Ativo' },
+      { id: 14, valor: 'LIC',  descricao: 'Licença',                          estado: 'Ativo' },
+      { id: 15, valor: 'ALV',  descricao: 'Alvará',                           estado: 'Ativo' },
+      { id: 16, valor: 'OUT',  descricao: 'Outro',                            estado: 'Ativo' },
+    ],
   });
 
 
@@ -548,18 +566,18 @@ export default function App() {
       contact: '',
       foundDate: '',
       location: {
-        island: '',
-        county: '',
-        parish: '',
+        island: 'Santiago',
+        county: 'Praia',
+        parish: 'Nossa Senhora da Graça',
         locality: '',
         zone: '',
         reference: ''
       }
     },
     storage: {
-      island: '',
-      county: '',
-      organicUnit: '',
+      island: 'Santiago',
+      county: 'Praia',
+      organicUnit: 'PN - Praia',
       observations: ''
     }
   });
@@ -572,10 +590,21 @@ export default function App() {
     },
     finder: {
       type: 'Civil', name: '', idType: '', idNumber: '', contact: '', foundDate: '',
-      location: { island: '', county: '', parish: '', locality: '', zone: '', reference: '' }
+      location: { island: 'Santiago', county: 'Praia', parish: 'Nossa Senhora da Graça', locality: '', zone: '', reference: '' }
     },
-    storage: { island: '', county: '', organicUnit: '', observations: '' }
+    storage: { island: 'Santiago', county: 'Praia', organicUnit: 'PN - Praia', observations: '' }
   });
+  // Documentos adicionados à fila deste registo (permite cadastrar vários documentos encontrados juntos)
+  const [pendingDocs, setPendingDocs] = useState<{ document: any; attachments: any[] }[]>([]);
+  const handleAddDocToQueue = () => {
+    const d = docData.document;
+    if (!d.type && !d.number && !d.fullName) return;
+    setPendingDocs(prev => [...prev, { document: { ...d }, attachments: [...savedAttachments] }]);
+    setDocData(prev => ({ ...prev, document: emptyDocData().document }));
+    setSavedAttachments([]);
+    setBioSearchDocNumber('');
+    setBioSearchName('');
+  };
   const [certificateStep, setCertificateStep] = useState(1);
   const [certificateSearchFilters, setCertificateSearchFilters] = useState({
     orderNumber: '',
@@ -665,7 +694,7 @@ export default function App() {
   const [bioSearchDocNumber, setBioSearchDocNumber] = useState('');
   const [bioSearchResults, setBioSearchResults] = useState<any[]>([]);
   const [showBioSearchModal, setShowBioSearchModal] = useState(false);
-  const [bioSearchTarget, setBioSearchTarget] = useState<'certificate' | 'certificate_extravio' | 'document' | 'ficha' | null>(null);
+  const [bioSearchTarget, setBioSearchTarget] = useState<'certificate' | 'certificate_extravio' | 'document' | 'document_finder' | 'ficha' | null>(null);
 
   // Lost Document Search States (Certificado de Extravio)
   const [lostDocSearchType, setLostDocSearchType] = useState('CNI');
@@ -801,6 +830,17 @@ export default function App() {
           number: person.docNumber || '',
           issueDate: person.docIssueDate || docData.document.issueDate,
           expiryDate: person.docExpiryDate || docData.document.expiryDate,
+        }
+      });
+    } else if (bioSearchTarget === 'document_finder') {
+      setDocData({
+        ...docData,
+        finder: {
+          ...docData.finder,
+          name: person.name || '',
+          idType: bioSearchDocType || docData.finder.idType,
+          idNumber: person.docNumber || person.number || '',
+          contact: person.contacts?.find((c: any) => c.type === 'Telemovel')?.info || docData.finder.contact,
         }
       });
     } else if (bioSearchTarget === 'ficha') {
@@ -1062,7 +1102,7 @@ export default function App() {
       id: '002',
       document: {
         reason: 'Roubo',
-        type: 'Passaporte',
+        type: 'PASS',
         number: 'CV0098234',
         issueDate: '2019-06-15',
         expiryDate: '2029-06-15',
@@ -2743,14 +2783,14 @@ export default function App() {
                               </div>
                             </div>
 
-                            {/* Documentos de Identificação */}
+                            {/* Documento Encontrado */}
                             <div className="space-y-4">
-                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documentos de Identificação</p>
+                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Encontrado</p>
                               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                 <DetailField label="Tipo Documento" value={docData.document.type} type="select" readOnly={false}
-                                  options={['CNI', 'BI', 'Passaporte', 'TRE', 'Carta Condução']}
+                                  options={(paramDomains['Documentos Extraviados'] || []).filter(m => m.estado === 'Ativo').map(m => m.valor)}
                                   onChange={(val: string) => setDocData({...docData, document: {...docData.document, type: val}})} />
-                                <DetailField label="Numero Documento" value={docData.document.number} readOnly={false}
+                                <DetailField label="Identificação de Documento" value={docData.document.number} readOnly={false}
                                   onChange={(val: string) => setDocData({...docData, document: {...docData.document, number: val}})} />
                                 <DetailField label="Data Emissão" value={docData.document.issueDate} type="date" readOnly={false} icon={Calendar}
                                   onChange={(val: string) => setDocData({...docData, document: {...docData.document, issueDate: val}})} />
@@ -2765,7 +2805,7 @@ export default function App() {
                               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                 <div className="md:col-span-2">
                                   <DetailField label="Motivo" value={docData.document.reason} type="select" readOnly={false}
-                                    options={['Perda', 'Roubo', 'Encontrado']}
+                                    options={(paramDomains['Motivo Cadastro Documento'] || []).filter(m => m.estado === 'Ativo').map(m => m.descricao)}
                                     onChange={(val: string) => setDocData({...docData, document: {...docData.document, reason: val}})} />
                                 </div>
                               </div>
@@ -2815,6 +2855,48 @@ export default function App() {
 
                           </div>
                         </div>
+
+                        {/* Fila de Documentos deste Registo */}
+                        {!editingDocId && (
+                          <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 space-y-4">
+                            <div className="flex items-center justify-between">
+                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
+                                Documentos a Cadastrar {pendingDocs.length > 0 && <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{pendingDocs.length}</span>}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={handleAddDocToQueue}
+                                className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
+                              >
+                                <Plus size={14} /> Adicionar Outro Documento
+                              </button>
+                            </div>
+                            {pendingDocs.length > 0 ? (
+                              <div className="space-y-2">
+                                {pendingDocs.map((pd, idx) => (
+                                  <div key={idx} className="flex items-center gap-4 p-4 bg-white rounded-xl border border-slate-100">
+                                    <div className="p-3 rounded-xl bg-blue-100 text-blue-600 flex-shrink-0">
+                                      <FileText size={20} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-black text-slate-900 truncate">{pd.document.fullName || 'Sem nome'} <span className="text-slate-400 font-medium">·</span> {pd.document.type || '---'} {pd.document.number}</p>
+                                      <p className="text-[10px] text-slate-400 mt-1 font-bold">{pd.document.reason || 'Sem motivo indicado'}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => setPendingDocs(prev => prev.filter((_, i) => i !== idx))}
+                                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                      title="Remover"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-slate-400 text-xs italic">Nenhum documento adicionado ainda. Preencha os dados acima e clique em "Adicionar Outro Documento" para cadastrar vários documentos encontrados juntos (ex: numa bolsa/carteira).</p>
+                            )}
+                          </div>
+                        )}
                     </div>
                   )}
 
@@ -2832,9 +2914,59 @@ export default function App() {
                         </div>
 
                         {docData.finder.type === 'Civil' && (
+                          <div className="space-y-8">
+                            {/* Biographical Search bar */}
+                            <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-6 space-y-4">
+                              <div className="flex flex-col md:flex-row gap-4 items-end">
+                                <div className="w-full md:w-32 space-y-2">
+                                  <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Tipo Doc</label>
+                                  <select
+                                    value={bioSearchDocType}
+                                    onChange={(e) => setBioSearchDocType(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all"
+                                  >
+                                    <option value="CNI">CNI</option>
+                                    <option value="Passaporte">Passaporte</option>
+                                    <option value="TRE">TRE</option>
+                                    <option value="BI">BI</option>
+                                  </select>
+                                </div>
+                                <div className="flex-1 space-y-2">
+                                  <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">N.º Documento</label>
+                                  <input
+                                    type="text"
+                                    value={bioSearchDocNumber}
+                                    onChange={(e) => setBioSearchDocNumber(e.target.value)}
+                                    placeholder="Digite o número do documento..."
+                                    className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all"
+                                  />
+                                </div>
+                                <div className="flex-1 space-y-2">
+                                  <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Nome da Pessoa</label>
+                                  <input
+                                    type="text"
+                                    value={bioSearchName}
+                                    onChange={(e) => setBioSearchName(e.target.value)}
+                                    placeholder="Digite o nome..."
+                                    className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all"
+                                  />
+                                </div>
+                                <Button
+                                  variant="secondary"
+                                  icon={Search}
+                                  onClick={() => {
+                                    setBioSearchTarget('document_finder');
+                                    handleBioSearch();
+                                  }}
+                                >
+                                  Pesquisar
+                                </Button>
+                              </div>
+                            </div>
+
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <div className="md:col-span-2">
-                              <DetailField 
+                              <DetailField
                                 label="Nome" 
                                 value={docData.finder.name} 
                                 readOnly={false}
@@ -2924,6 +3056,7 @@ export default function App() {
                               </div>
                             </div>
                           </div>
+                          </div>
                         )}
                       </div>
                     )}
@@ -2977,7 +3110,7 @@ export default function App() {
                     <Button
                       variant="outline"
                       icon={ArrowLeft}
-                      onClick={() => docStep > 1 ? setDocStep(docStep - 1) : (setEditingDocId(null), setCurrentView('document_search'))}
+                      onClick={() => docStep > 1 ? setDocStep(docStep - 1) : (setEditingDocId(null), setPendingDocs([]), setCurrentView('document_search'))}
                     >
                       Voltar
                     </Button>
@@ -2985,7 +3118,7 @@ export default function App() {
                       <Button
                         variant="outline"
                         className="text-purple-600 border-purple-200 hover:bg-purple-50"
-                        onClick={() => { setEditingDocId(null); setCurrentView('document_search'); }}
+                        onClick={() => { setEditingDocId(null); setPendingDocs([]); setCurrentView('document_search'); }}
                       >
                         Cancelar
                       </Button>
@@ -2993,7 +3126,10 @@ export default function App() {
                         variant="primary"
                         icon={docStep === 3 ? Check : ArrowRight}
                         onClick={() => {
-                          if (docStep < 3) {
+                          if (docStep === 1 && !editingDocId) {
+                            handleAddDocToQueue();
+                            setDocStep(2);
+                          } else if (docStep < 3) {
                             setDocStep(docStep + 1);
                           } else if (editingDocId) {
                             const updatedDoc = {
@@ -3013,16 +3149,32 @@ export default function App() {
                             setShowSuccessModal(true);
                             setCurrentView('document_detail');
                           } else {
-                            setRegisteredDoc({
-                              ...docData,
-                              id: '002',
+                            const baseId = Math.max(0, ...mockDocuments.map(d => parseInt(d.id, 10) || 0));
+                            const queue = pendingDocs.length > 0
+                              ? pendingDocs
+                              : [{ document: { ...docData.document }, attachments: savedAttachments }];
+                            const newRecords = queue.map((pd, i) => ({
+                              id: String(baseId + 1 + i).padStart(3, '0'),
+                              document: pd.document,
+                              finder: docData.finder,
+                              storage: docData.storage,
+                              attachments: pd.attachments,
                               estado: 'Por Levantar',
                               registeredBy: user?.name || 'Carlos Mendes',
                               registeredAt: new Date().toLocaleDateString('pt-BR')
-                            });
-                            setSuccessMessage('Cadastro Documento Perdido com Sucesso');
-                            setShowSuccessModal(true);
-                            setCurrentView('document_detail');
+                            }));
+                            setMockDocuments(prev => [...prev, ...newRecords]);
+                            setPendingDocs([]);
+                            if (newRecords.length > 1) {
+                              setSuccessMessage(`${newRecords.length} documentos cadastrados com sucesso`);
+                              setShowSuccessModal(true);
+                              setCurrentView('document_search');
+                            } else {
+                              setRegisteredDoc(newRecords[0]);
+                              setSuccessMessage('Cadastro Documento Perdido com Sucesso');
+                              setShowSuccessModal(true);
+                              setCurrentView('document_detail');
+                            }
                           }
                         }}
                       >
@@ -3105,12 +3257,12 @@ export default function App() {
                               <DetailField label="Nome Mãe" value={registeredDoc.document.motherName || '---'} />
                             </div>
                           </div>
-                          {/* Documentos de Identificação */}
+                          {/* Documento Encontrado */}
                           <div className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documentos de Identificação</p>
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Encontrado</p>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                               <DetailField label="Tipo Documento" value={registeredDoc.document.type} />
-                              <DetailField label="Número Documento" value={registeredDoc.document.number} />
+                              <DetailField label="Identificação de Documento" value={registeredDoc.document.number} />
                               <DetailField label="Data Emissão" value={registeredDoc.document.issueDate} icon={Calendar} />
                               <DetailField label="Data Validade" value={registeredDoc.document.expiryDate} icon={Calendar} />
                             </div>
@@ -3310,6 +3462,8 @@ export default function App() {
                     <Button variant="primary" icon={Plus} onClick={() => {
                       setEditingDocId(null);
                       setDocData(emptyDocData());
+                      setPendingDocs([]);
+                      setSavedAttachments([]);
                       setDocStep(1);
                       setIsReadOnlyView(false);
                       setCurrentView('document_registration');
@@ -3327,10 +3481,9 @@ export default function App() {
                         className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
                       >
                         <option value="">Selecione...</option>
-                        <option value="BI">BI</option>
-                        <option value="Passaporte">Passaporte</option>
-                        <option value="CNI">CNI</option>
-                        <option value="TRE">TRE</option>
+                        {(paramDomains['Documentos Extraviados'] || []).filter(m => m.estado === 'Ativo').map(m => (
+                          <option key={m.id} value={m.valor}>{m.valor}</option>
+                        ))}
                       </select>
                     </div>
                     <div className="space-y-2">
@@ -3479,6 +3632,7 @@ export default function App() {
                                     e.stopPropagation();
                                     setEditingDocId(doc.id);
                                     setRegisteredDoc(doc);
+                                    setPendingDocs([]);
                                     setDocData({
                                       document: { ...emptyDocData().document, ...doc.document, attachments: [] },
                                       finder: {
