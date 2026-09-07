@@ -581,7 +581,8 @@ export default function App() {
       observations: ''
     }
   });
-  const [editingDocId, setEditingDocId] = useState<string | null>(null);
+  // Nº de Registo a ser editado (a edição é sempre do registo completo, não de um documento isolado)
+  const [editingRegistoId, setEditingRegistoId] = useState<string | null>(null);
   const emptyDocData = () => ({
     document: {
       reason: '', type: '', number: '', issueDate: '', expiryDate: '', fullName: '',
@@ -594,16 +595,70 @@ export default function App() {
     },
     storage: { island: 'Santiago', county: 'Praia', organicUnit: 'PN - Praia', observations: '' }
   });
-  // Documentos adicionados à fila deste registo (permite cadastrar vários documentos encontrados juntos)
-  const [pendingDocs, setPendingDocs] = useState<{ document: any; attachments: any[] }[]>([]);
-  const handleAddDocToQueue = () => {
-    const d = docData.document;
-    if (!d.type && !d.number && !d.fullName) return;
-    setPendingDocs(prev => [...prev, { document: { ...d }, attachments: [...savedAttachments] }]);
-    setDocData(prev => ({ ...prev, document: emptyDocData().document }));
-    setSavedAttachments([]);
-    setBioSearchDocNumber('');
-    setBioSearchName('');
+  // Documentos encontrados adicionados a este registo (Dados Pessoais / Motivo / Anexos são partilhados por todos).
+  // `id` só existe em documentos já gravados — os novos ficam sem id até serem criados.
+  const emptyDocItem = { type: '', number: '', issueDate: '', expiryDate: '' };
+  type DocItem = { id?: string; type: string; number: string; issueDate: string; expiryDate: string };
+  const [docItems, setDocItems] = useState<DocItem[]>([]);
+  const [showDocItemModal, setShowDocItemModal] = useState(false);
+  const [tempDocItems, setTempDocItems] = useState<DocItem[]>([]);
+  const [currentDocItem, setCurrentDocItem] = useState<DocItem>({ ...emptyDocItem });
+  // Índice da linha em edição dentro do modal (null = a adicionar um documento novo)
+  const [editingDocItemIdx, setEditingDocItemIdx] = useState<number | null>(null);
+  const openDocItemModal = () => {
+    setTempDocItems([...docItems]);
+    setCurrentDocItem({ ...emptyDocItem });
+    setEditingDocItemIdx(null);
+    setShowDocItemModal(true);
+  };
+  const fecharDocItemModal = () => {
+    setShowDocItemModal(false);
+    setTempDocItems([]);
+    setCurrentDocItem({ ...emptyDocItem });
+    setEditingDocItemIdx(null);
+  };
+  const docEstado = (d: any) => d.estado || (d.levantamento ? 'Levantado' : 'Por Levantar');
+  const estadoPillClass = (e: string) => e === 'Levantado'
+    ? 'bg-emerald-50 text-emerald-600'
+    : e === 'Parcial' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600';
+  // Abre o wizard para editar o REGISTO completo (dados partilhados + todos os seus documentos)
+  const startEditRegisto = (doc: any) => {
+    const rid = doc.registoId || doc.id;
+    const docsDoRegisto = mockDocuments.filter(d => (d.registoId || d.id) === rid);
+    const base = docsDoRegisto[0] || doc;
+    setEditingRegistoId(rid);
+    setRegisteredDoc(base);
+    setDocItems(docsDoRegisto.map(d => ({
+      id: d.id,
+      type: d.document.type || '',
+      number: d.document.number || '',
+      issueDate: d.document.issueDate || '',
+      expiryDate: d.document.expiryDate || '',
+    })));
+    setSavedAttachments(base.attachments || []);
+    setDocData({
+      document: { ...emptyDocData().document, ...base.document, attachments: [] },
+      finder: { ...emptyDocData().finder, ...base.finder, location: { ...emptyDocData().finder.location, ...base.finder.location } },
+      storage: { ...emptyDocData().storage, ...base.storage }
+    });
+    setDocStep(1);
+    setCurrentView('document_registration');
+  };
+  const openDocDetail = (doc: any) => {
+    setRegisteredDoc(doc);
+    setIsReadOnlyView(true);
+    setCurrentView('document_detail');
+  };
+  // Documentos do registo que ainda estão por levantar
+  const porLevantarDoRegisto = (doc: any) => {
+    const rid = doc?.registoId || doc?.id;
+    return mockDocuments.filter(d => (d.registoId || d.id) === rid && docEstado(d) !== 'Levantado');
+  };
+  const abrirLevantamento = (doc: any) => {
+    setLevantamentoSelecionados(porLevantarDoRegisto(doc).map(d => d.id));
+    setLevantamentoIsOwner(null);
+    setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' });
+    setShowLevantamentoModal(true);
   };
   const [certificateStep, setCertificateStep] = useState(1);
   const [certificateSearchFilters, setCertificateSearchFilters] = useState({
@@ -1052,6 +1107,7 @@ export default function App() {
   const [mockDocuments, setMockDocuments] = useState<any[]>([
     {
       id: '001',
+      registoId: 'REG-001',
       document: {
         reason: 'Extravio',
         type: 'BI',
@@ -1100,6 +1156,7 @@ export default function App() {
     },
     {
       id: '002',
+      registoId: 'REG-002',
       document: {
         reason: 'Roubo',
         type: 'PASS',
@@ -1137,6 +1194,7 @@ export default function App() {
     },
     {
       id: '003',
+      registoId: 'REG-003',
       document: {
         reason: 'Encontrado',
         type: 'CNI',
@@ -1178,6 +1236,11 @@ export default function App() {
   const [showLevantamentoModal, setShowLevantamentoModal] = useState(false);
   const [levantamentoIsOwner, setLevantamentoIsOwner] = useState<boolean | null>(null);
   const [levantamentoOtherPerson, setLevantamentoOtherPerson] = useState({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' });
+  // Ids dos documentos escolhidos para levantar (permite levantamento parcial do registo)
+  const [levantamentoSelecionados, setLevantamentoSelecionados] = useState<string[]>([]);
+  const toggleLevantamentoDoc = (id: string) => setLevantamentoSelecionados(prev =>
+    prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+  );
   
   const [showOtherInfoHistory, setShowOtherInfoHistory] = useState({
     address: false,
@@ -2262,9 +2325,18 @@ export default function App() {
                         />
                       </div>
                       <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alcunha</label>
+                        <input
+                          type="text"
+                          value={recognitionFilters.nickname}
+                          onChange={(e) => setRecognitionFilters({...recognitionFilters, nickname: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Nascimento</label>
-                        <input 
-                          type="date" 
+                        <input
+                          type="date"
                           value={recognitionFilters.birthDate}
                           onChange={(e) => setRecognitionFilters({...recognitionFilters, birthDate: e.target.value})}
                           className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
@@ -2645,7 +2717,7 @@ export default function App() {
                 className="space-y-8"
               >
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{editingDocId ? 'Editar Documento' : 'Cadastro Documentos'}</h2>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{editingRegistoId ? `Editar Registo ${editingRegistoId}` : 'Cadastro Documentos'}</h2>
                 </div>
 
                 {/* Steps Indicator */}
@@ -2761,6 +2833,57 @@ export default function App() {
                           )}
                           <div className="flex-1 space-y-8">
 
+                            {/* Documentos Cadastrados */}
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">
+                                  Documentos Cadastrados
+                                  {docItems.length > 0 && <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{docItems.length}</span>}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={openDocItemModal}
+                                  className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
+                                >
+                                  <Plus size={14} /> Adicionar Documento
+                                </button>
+                              </div>
+
+                              {docItems.length > 0 ? (
+                                <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm">
+                                  <div className="overflow-x-auto border border-slate-200 rounded">
+                                    <table className="w-full text-left border-collapse">
+                                      <thead className="bg-slate-50">
+                                        <tr className="text-[10px] font-black text-slate-500 uppercase border-b border-slate-200">
+                                          <th className="px-4 py-2">Nº</th>
+                                          <th className="px-4 py-2">Tipo</th>
+                                          <th className="px-4 py-2">Identificação</th>
+                                          <th className="px-4 py-2">Data Emissão</th>
+                                          <th className="px-4 py-2">Data Validade</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-slate-100">
+                                        {docItems.map((it, idx) => (
+                                          <tr key={idx}>
+                                            <td className="px-4 py-2 text-xs font-bold text-slate-400">{(idx + 1).toString().padStart(2, '0')}</td>
+                                            <td className="px-4 py-2 text-sm font-bold text-slate-900">{it.type || '---'}</td>
+                                            <td className="px-4 py-2 text-sm font-bold text-slate-900">{it.number || '---'}</td>
+                                            <td className="px-4 py-2 text-sm font-bold text-slate-600">{it.issueDate || '—'}</td>
+                                            <td className="px-4 py-2 text-sm font-bold text-slate-600">{it.expiryDate || '—'}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                                  <FileText size={28} className="mx-auto text-slate-200 mb-2" />
+                                  <p className="text-slate-400 text-sm italic">Nenhum documento adicionado ainda.</p>
+                                </div>
+                              )}
+                            </div>
+
                             {/* Dados Pessoais */}
                             <div className="space-y-4">
                               <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Pessoais</p>
@@ -2783,28 +2906,12 @@ export default function App() {
                               </div>
                             </div>
 
-                            {/* Documento Encontrado */}
+                            {/* Proveniência do Documento */}
                             <div className="space-y-4">
-                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Encontrado</p>
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                <DetailField label="Tipo Documento" value={docData.document.type} type="select" readOnly={false}
-                                  options={(paramDomains['Documentos Extraviados'] || []).filter(m => m.estado === 'Ativo').map(m => m.valor)}
-                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, type: val}})} />
-                                <DetailField label="Identificação de Documento" value={docData.document.number} readOnly={false}
-                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, number: val}})} />
-                                <DetailField label="Data Emissão" value={docData.document.issueDate} type="date" readOnly={false} icon={Calendar}
-                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, issueDate: val}})} />
-                                <DetailField label="Data Validade" value={docData.document.expiryDate} type="date" readOnly={false} icon={Calendar}
-                                  onChange={(val: string) => setDocData({...docData, document: {...docData.document, expiryDate: val}})} />
-                              </div>
-                            </div>
-
-                            {/* Motivo */}
-                            <div className="space-y-4">
-                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Motivo</p>
+                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Proveniência do Documento</p>
                               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                 <div className="md:col-span-2">
-                                  <DetailField label="Motivo" value={docData.document.reason} type="select" readOnly={false}
+                                  <DetailField label="Proveniência do Documento" value={docData.document.reason} type="select" readOnly={false}
                                     options={(paramDomains['Motivo Cadastro Documento'] || []).filter(m => m.estado === 'Ativo').map(m => m.descricao)}
                                     onChange={(val: string) => setDocData({...docData, document: {...docData.document, reason: val}})} />
                                 </div>
@@ -2855,48 +2962,6 @@ export default function App() {
 
                           </div>
                         </div>
-
-                        {/* Fila de Documentos deste Registo */}
-                        {!editingDocId && (
-                          <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 space-y-4">
-                            <div className="flex items-center justify-between">
-                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
-                                Documentos a Cadastrar {pendingDocs.length > 0 && <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{pendingDocs.length}</span>}
-                              </p>
-                              <button
-                                type="button"
-                                onClick={handleAddDocToQueue}
-                                className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
-                              >
-                                <Plus size={14} /> Adicionar Outro Documento
-                              </button>
-                            </div>
-                            {pendingDocs.length > 0 ? (
-                              <div className="space-y-2">
-                                {pendingDocs.map((pd, idx) => (
-                                  <div key={idx} className="flex items-center gap-4 p-4 bg-white rounded-xl border border-slate-100">
-                                    <div className="p-3 rounded-xl bg-blue-100 text-blue-600 flex-shrink-0">
-                                      <FileText size={20} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-black text-slate-900 truncate">{pd.document.fullName || 'Sem nome'} <span className="text-slate-400 font-medium">·</span> {pd.document.type || '---'} {pd.document.number}</p>
-                                      <p className="text-[10px] text-slate-400 mt-1 font-bold">{pd.document.reason || 'Sem motivo indicado'}</p>
-                                    </div>
-                                    <button
-                                      onClick={() => setPendingDocs(prev => prev.filter((_, i) => i !== idx))}
-                                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                      title="Remover"
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-slate-400 text-xs italic">Nenhum documento adicionado ainda. Preencha os dados acima e clique em "Adicionar Outro Documento" para cadastrar vários documentos encontrados juntos (ex: numa bolsa/carteira).</p>
-                            )}
-                          </div>
-                        )}
                     </div>
                   )}
 
@@ -3110,7 +3175,7 @@ export default function App() {
                     <Button
                       variant="outline"
                       icon={ArrowLeft}
-                      onClick={() => docStep > 1 ? setDocStep(docStep - 1) : (setEditingDocId(null), setPendingDocs([]), setCurrentView('document_search'))}
+                      onClick={() => docStep > 1 ? setDocStep(docStep - 1) : (setEditingRegistoId(null), setDocItems([]), setCurrentView('document_search'))}
                     >
                       Voltar
                     </Button>
@@ -3118,7 +3183,7 @@ export default function App() {
                       <Button
                         variant="outline"
                         className="text-purple-600 border-purple-200 hover:bg-purple-50"
-                        onClick={() => { setEditingDocId(null); setPendingDocs([]); setCurrentView('document_search'); }}
+                        onClick={() => { setEditingRegistoId(null); setDocItems([]); setCurrentView('document_search'); }}
                       >
                         Cancelar
                       </Button>
@@ -3126,45 +3191,94 @@ export default function App() {
                         variant="primary"
                         icon={docStep === 3 ? Check : ArrowRight}
                         onClick={() => {
-                          if (docStep === 1 && !editingDocId) {
-                            handleAddDocToQueue();
-                            setDocStep(2);
-                          } else if (docStep < 3) {
+                          if (docStep < 3) {
                             setDocStep(docStep + 1);
-                          } else if (editingDocId) {
-                            const updatedDoc = {
-                              ...registeredDoc,
-                              ...docData,
-                              id: editingDocId,
-                              attachments: registeredDoc?.attachments || [],
-                              registeredBy: registeredDoc?.registeredBy || user?.name || 'Carlos Mendes',
-                              registeredAt: registeredDoc?.registeredAt || new Date().toLocaleDateString('pt-BR')
+                          } else if (editingRegistoId) {
+                            // Edição do registo completo: dados partilhados + lista de documentos
+                            const shared = {
+                              reason: docData.document.reason,
+                              fullName: docData.document.fullName,
+                              birthDate: docData.document.birthDate,
+                              nationality: docData.document.nationality,
+                              birthPlace: docData.document.birthPlace,
+                              fatherName: docData.document.fatherName,
+                              motherName: docData.document.motherName,
+                              photo: docData.document.photo,
                             };
-                            setMockDocuments(prev => prev.map(d => d.id === editingDocId ? updatedDoc : d));
-                            setRegisteredDoc(updatedDoc);
-                            setDocSearchResults(prev => prev ? prev.map(d => d.id === editingDocId ? updatedDoc : d) : prev);
-                            setEditingDocId(null);
+                            const existentes = mockDocuments.filter(d => (d.registoId || d.id) === editingRegistoId);
+                            const maxId = Math.max(0, ...mockDocuments.map(d => parseInt(d.id, 10) || 0));
+                            let proximoId = maxId;
+                            const registoRecords = docItems.map((it) => {
+                              const anterior = it.id ? existentes.find(d => d.id === it.id) : undefined;
+                              if (!anterior) proximoId += 1;
+                              return {
+                                ...(anterior || {}),
+                                id: anterior ? anterior.id : String(proximoId).padStart(3, '0'),
+                                registoId: editingRegistoId,
+                                document: { ...shared, type: it.type, number: it.number, issueDate: it.issueDate, expiryDate: it.expiryDate },
+                                finder: docData.finder,
+                                storage: docData.storage,
+                                attachments: savedAttachments,
+                                estado: anterior?.estado || 'Por Levantar',
+                                registeredBy: anterior?.registeredBy || user?.name || 'Carlos Mendes',
+                                registeredAt: anterior?.registeredAt || new Date().toLocaleDateString('pt-BR'),
+                              };
+                            });
+                            // substitui os documentos do registo no lugar (mantém a ordem e a contiguidade)
+                            const substituir = (prev: any[]) => {
+                              const out: any[] = [];
+                              let inserido = false;
+                              prev.forEach(d => {
+                                if ((d.registoId || d.id) === editingRegistoId) {
+                                  if (!inserido) { out.push(...registoRecords); inserido = true; }
+                                } else {
+                                  out.push(d);
+                                }
+                              });
+                              if (!inserido) out.push(...registoRecords);
+                              return out;
+                            };
+                            setMockDocuments(substituir);
+                            setDocSearchResults(prev => prev ? substituir(prev) : prev);
+                            setRegisteredDoc(registoRecords[0] || null);
+                            setEditingRegistoId(null);
+                            setDocItems([]);
                             setIsReadOnlyView(true);
-                            setSuccessMessage('Dados do documento atualizados com sucesso');
+                            setSuccessMessage(`Registo ${editingRegistoId} atualizado — ${registoRecords.length} ${registoRecords.length === 1 ? 'documento' : 'documentos'}.`);
                             setShowSuccessModal(true);
-                            setCurrentView('document_detail');
+                            setCurrentView(registoRecords.length > 0 ? 'document_detail' : 'document_search');
                           } else {
                             const baseId = Math.max(0, ...mockDocuments.map(d => parseInt(d.id, 10) || 0));
-                            const queue = pendingDocs.length > 0
-                              ? pendingDocs
-                              : [{ document: { ...docData.document }, attachments: savedAttachments }];
-                            const newRecords = queue.map((pd, i) => ({
+                            const items = docItems.length > 0 ? docItems : [{
+                              type: docData.document.type,
+                              number: docData.document.number,
+                              issueDate: docData.document.issueDate,
+                              expiryDate: docData.document.expiryDate,
+                            }];
+                            const shared = {
+                              reason: docData.document.reason,
+                              fullName: docData.document.fullName,
+                              birthDate: docData.document.birthDate,
+                              nationality: docData.document.nationality,
+                              birthPlace: docData.document.birthPlace,
+                              fatherName: docData.document.fatherName,
+                              motherName: docData.document.motherName,
+                              photo: docData.document.photo,
+                            };
+                            const registoId = 'REG-' + String(baseId + 1).padStart(3, '0');
+                            const newRecords = items.map((it, i) => ({
                               id: String(baseId + 1 + i).padStart(3, '0'),
-                              document: pd.document,
+                              registoId,
+                              document: { ...shared, type: it.type, number: it.number, issueDate: it.issueDate, expiryDate: it.expiryDate },
                               finder: docData.finder,
                               storage: docData.storage,
-                              attachments: pd.attachments,
+                              attachments: savedAttachments,
                               estado: 'Por Levantar',
                               registeredBy: user?.name || 'Carlos Mendes',
                               registeredAt: new Date().toLocaleDateString('pt-BR')
                             }));
                             setMockDocuments(prev => [...prev, ...newRecords]);
-                            setPendingDocs([]);
+                            setDocItems([]);
                             if (newRecords.length > 1) {
                               setSuccessMessage(`${newRecords.length} documentos cadastrados com sucesso`);
                               setShowSuccessModal(true);
@@ -3197,7 +3311,7 @@ export default function App() {
                       {(() => {
                         const estado = registeredDoc.estado || (registeredDoc.levantamento ? 'Levantado' : 'Por Levantar');
                         return (
-                          <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
+                          <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
                             estado === 'Levantado' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
                           }`}>
                             {estado}
@@ -3225,10 +3339,10 @@ export default function App() {
                         <span className="uppercase tracking-widest text-xs">Dados do Documento</span>
                       </div>
                       {!isReadOnlyView && (
-                        <button 
+                        <button
                           onClick={() => {
+                            startEditRegisto(registeredDoc);
                             setDocStep(1);
-                            setCurrentView('document_registration');
                           }}
                           className="text-slate-400 hover:text-slate-900 transition-colors"
                         >
@@ -3245,18 +3359,6 @@ export default function App() {
                           </div>
                         )}
                         <div className="flex-1 space-y-8">
-                          {/* Dados Pessoais */}
-                          <div className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Pessoais</p>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                              <div className="md:col-span-2"><DetailField label="Nome Completo" value={registeredDoc.document.fullName} /></div>
-                              <DetailField label="Data Nascimento" value={registeredDoc.document.birthDate} icon={Calendar} />
-                              <DetailField label="Nacionalidade" value={registeredDoc.document.nationality} />
-                              <DetailField label="Naturalidade" value={registeredDoc.document.birthPlace || '---'} />
-                              <DetailField label="Nome Pai" value={registeredDoc.document.fatherName || '---'} />
-                              <DetailField label="Nome Mãe" value={registeredDoc.document.motherName || '---'} />
-                            </div>
-                          </div>
                           {/* Documento Encontrado */}
                           <div className="space-y-4">
                             <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Encontrado</p>
@@ -3267,11 +3369,23 @@ export default function App() {
                               <DetailField label="Data Validade" value={registeredDoc.document.expiryDate} icon={Calendar} />
                             </div>
                           </div>
-                          {/* Motivo */}
+                          {/* Dados Pessoais */}
                           <div className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Motivo</p>
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Pessoais</p>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                              <div className="md:col-span-2"><DetailField label="Motivo" value={registeredDoc.document.reason} /></div>
+                              <div className="md:col-span-2"><DetailField label="Nome Completo" value={registeredDoc.document.fullName || 'Não identificado'} /></div>
+                              <DetailField label="Data Nascimento" value={registeredDoc.document.birthDate || '---'} icon={Calendar} />
+                              <DetailField label="Nacionalidade" value={registeredDoc.document.nationality || '---'} />
+                              <DetailField label="Naturalidade" value={registeredDoc.document.birthPlace || '---'} />
+                              <DetailField label="Nome Pai" value={registeredDoc.document.fatherName || '---'} />
+                              <DetailField label="Nome Mãe" value={registeredDoc.document.motherName || '---'} />
+                            </div>
+                          </div>
+                          {/* Proveniência do Documento */}
+                          <div className="space-y-4">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Proveniência do Documento</p>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                              <div className="md:col-span-2"><DetailField label="Proveniência do Documento" value={registeredDoc.document.reason || '---'} /></div>
                             </div>
                           </div>
                           {/* Anexos */}
@@ -3320,10 +3434,10 @@ export default function App() {
                         <span className="uppercase tracking-widest text-xs">Informações de Quem Encontrou</span>
                       </div>
                       {!isReadOnlyView && (
-                        <button 
+                        <button
                           onClick={() => {
+                            startEditRegisto(registeredDoc);
                             setDocStep(2);
-                            setCurrentView('document_registration');
                           }}
                           className="text-slate-400 hover:text-slate-900 transition-colors"
                         >
@@ -3368,10 +3482,10 @@ export default function App() {
                       </div>
                       <div className="flex gap-2">
                         {!isReadOnlyView && (
-                          <button 
+                          <button
                             onClick={() => {
+                              startEditRegisto(registeredDoc);
                               setDocStep(3);
-                              setCurrentView('document_registration');
                             }}
                             className="text-slate-400 hover:text-slate-900 transition-colors"
                           >
@@ -3395,6 +3509,38 @@ export default function App() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Section: Outros documentos deste registo */}
+                  {(() => {
+                    const irmaos = mockDocuments.filter(d => (d.registoId || d.id) === (registeredDoc.registoId || registeredDoc.id) && d.id !== registeredDoc.id);
+                    if (irmaos.length === 0) return null;
+                    return (
+                      <div className="space-y-4">
+                        <div className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center gap-3 font-black text-slate-900 shadow-sm">
+                          <div className="p-2 bg-slate-900 text-white rounded-lg"><FileText size={18} /></div>
+                          <span className="uppercase tracking-widest text-xs">Outros documentos deste registo ({registeredDoc.registoId || registeredDoc.id})</span>
+                        </div>
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-4 shadow-sm space-y-2">
+                          {irmaos.map((d) => {
+                            const e = docEstado(d);
+                            return (
+                              <button
+                                key={d.id}
+                                onClick={() => openDocDetail(d)}
+                                className="w-full flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-slate-300 transition-all text-left"
+                              >
+                                <div className="p-3 rounded-xl bg-blue-100 text-blue-600 flex-shrink-0"><FileText size={18} /></div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-black text-slate-900 truncate">{d.document.type || '---'} {d.document.number}</p>
+                                </div>
+                                <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${estadoPillClass(e)}`}>{e}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Section: Levantamento */}
                   {registeredDoc.levantamento && (
@@ -3437,11 +3583,11 @@ export default function App() {
                     <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('document_search')}>
                       Voltar para Gestão de Documentos
                     </Button>
-                    {!registeredDoc.levantamento && (
+                    {porLevantarDoRegisto(registeredDoc).length > 0 && (
                       <Button
                         variant="success"
                         icon={Check}
-                        onClick={() => setShowLevantamentoModal(true)}
+                        onClick={() => abrirLevantamento(registeredDoc)}
                       >
                         Realizar Levantamento
                       </Button>
@@ -3460,9 +3606,11 @@ export default function App() {
                   <div className="flex gap-3">
                     <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar ao Início</Button>
                     <Button variant="primary" icon={Plus} onClick={() => {
-                      setEditingDocId(null);
+                      setEditingRegistoId(null);
                       setDocData(emptyDocData());
-                      setPendingDocs([]);
+                      setDocItems([]);
+                      setTempDocItems([]);
+                      setCurrentDocItem({ ...emptyDocItem });
                       setSavedAttachments([]);
                       setDocStep(1);
                       setIsReadOnlyView(false);
@@ -3554,8 +3702,8 @@ export default function App() {
                         const f = docSearchFilters;
                         const results = mockDocuments.filter(doc => {
                           if (f.type && doc.document.type !== f.type) return false;
-                          if (f.number && !doc.document.number.toLowerCase().includes(f.number.toLowerCase())) return false;
-                          if (f.fullName && !doc.document.fullName.toLowerCase().includes(f.fullName.toLowerCase())) return false;
+                          if (f.number && !(doc.document.number || '').toLowerCase().includes(f.number.toLowerCase())) return false;
+                          if (f.fullName && !(doc.document.fullName || '').toLowerCase().includes(f.fullName.toLowerCase())) return false;
                           if (f.birthDate && doc.document.birthDate !== f.birthDate) return false;
                           if (f.island && doc.storage.island !== f.island) return false;
                           if (f.organicUnit && doc.storage.organicUnit !== f.organicUnit) return false;
@@ -3580,6 +3728,7 @@ export default function App() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                          <th className="px-6 py-4">Nº Registo</th>
                           <th className="px-6 py-4">Tipo</th>
                           <th className="px-6 py-4">Numero</th>
                           <th className="px-6 py-4">Nome</th>
@@ -3593,64 +3742,43 @@ export default function App() {
                       <tbody className="divide-y divide-slate-50">
                         {(docSearchResults !== null ? docSearchResults : mockDocuments).length === 0 ? (
                           <tr>
-                            <td colSpan={8} className="px-6 py-12 text-center text-sm font-bold text-slate-400">
+                            <td colSpan={9} className="px-6 py-12 text-center text-sm font-bold text-slate-400">
                               Nenhum documento encontrado para os filtros aplicados.
                             </td>
                           </tr>
                         ) : (
                           (docSearchResults !== null ? docSearchResults : mockDocuments).map((doc) => {
-                            const estado = doc.estado || (doc.levantamento ? 'Levantado' : 'Por Levantar');
+                            const estado = docEstado(doc);
                             return (
-                            <tr
-                              key={doc.id}
-                              onClick={() => {
-                                setRegisteredDoc(doc);
-                                setIsReadOnlyView(true);
-                                setCurrentView('document_detail');
-                              }}
-                              className="hover:bg-blue-50 cursor-pointer transition-colors group"
-                            >
-                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.type}</td>
-                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.number}</td>
-                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.fullName}</td>
-                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.document.birthDate}</td>
-                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.island}</td>
-                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.organicUnit}</td>
-                              <td className="px-6 py-4">
-                                <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
-                                  estado === 'Levantado'
-                                    ? 'bg-emerald-50 text-emerald-600'
-                                    : 'bg-amber-50 text-amber-600'
-                                }`}>
-                                  {estado}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <button
-                                  title="Editar dados do documento"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingDocId(doc.id);
-                                    setRegisteredDoc(doc);
-                                    setPendingDocs([]);
-                                    setDocData({
-                                      document: { ...emptyDocData().document, ...doc.document, attachments: [] },
-                                      finder: {
-                                        ...emptyDocData().finder,
-                                        ...doc.finder,
-                                        location: { ...emptyDocData().finder.location, ...doc.finder.location }
-                                      },
-                                      storage: { ...emptyDocData().storage, ...doc.storage }
-                                    });
-                                    setDocStep(1);
-                                    setCurrentView('document_registration');
-                                  }}
-                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                >
-                                  <Edit size={16} />
-                                </button>
-                              </td>
-                            </tr>
+                              <tr
+                                key={doc.id}
+                                onClick={() => openDocDetail(doc)}
+                                className="hover:bg-blue-50 cursor-pointer transition-colors group"
+                              >
+                                <td className="px-6 py-4">
+                                  <span className="text-[10px] font-black bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg tracking-tight whitespace-nowrap">
+                                    {doc.registoId || doc.id}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.type}</td>
+                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.number}</td>
+                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.fullName || <span className="text-slate-300 italic font-medium">Não identificado</span>}</td>
+                                <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.document.birthDate || <span className="text-slate-300">—</span>}</td>
+                                <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.island}</td>
+                                <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.organicUnit}</td>
+                                <td className="px-6 py-4">
+                                  <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${estadoPillClass(estado)}`}>{estado}</span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <button
+                                    title={`Editar registo ${doc.registoId || doc.id}`}
+                                    onClick={(e) => { e.stopPropagation(); startEditRegisto(doc); }}
+                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                  >
+                                    <Edit size={16} />
+                                  </button>
+                                </td>
+                              </tr>
                             );
                           })
                         )}
@@ -12104,6 +12232,172 @@ export default function App() {
           )}
         </AnimatePresence>
 
+      {/* Documentos Cadastrados Modal */}
+      <AnimatePresence>
+        {showDocItemModal && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded shadow-2xl w-full max-w-4xl overflow-hidden border-2 border-slate-900"
+            >
+              <div className="p-6 border-b border-slate-200">
+                <h2 className="text-xl font-bold text-slate-800">Documentos Cadastrados</h2>
+              </div>
+
+              <div className="p-6 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Tipo Documento *</label>
+                    <select
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none"
+                      value={currentDocItem.type}
+                      onChange={(e) => setCurrentDocItem({ ...currentDocItem, type: e.target.value })}
+                    >
+                      <option value="">Escolher</option>
+                      {(paramDomains['Documentos Extraviados'] || []).filter(m => m.estado === 'Ativo').map(m => (
+                        <option key={m.id} value={m.valor}>{m.valor}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Identificação de Documento *</label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none"
+                      value={currentDocItem.number}
+                      onChange={(e) => setCurrentDocItem({ ...currentDocItem, number: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Data Emissão</label>
+                    <input
+                      type="date"
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none"
+                      value={currentDocItem.issueDate}
+                      onChange={(e) => setCurrentDocItem({ ...currentDocItem, issueDate: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Data Validade</label>
+                    <input
+                      type="date"
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none"
+                      value={currentDocItem.expiryDate}
+                      onChange={(e) => setCurrentDocItem({ ...currentDocItem, expiryDate: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (!currentDocItem.type && !currentDocItem.number) return;
+                        if (editingDocItemIdx !== null) {
+                          setTempDocItems(tempDocItems.map((it, i) => i === editingDocItemIdx ? { ...currentDocItem } : it));
+                          setEditingDocItemIdx(null);
+                        } else {
+                          setTempDocItems([...tempDocItems, { ...currentDocItem }]);
+                        }
+                        setCurrentDocItem({ ...emptyDocItem });
+                      }}
+                      className={`px-6 py-2 font-bold rounded transition-colors text-xs border-2 shadow-sm ${
+                        editingDocItemIdx !== null
+                          ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700'
+                          : 'bg-white text-slate-900 border-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      {editingDocItemIdx !== null ? 'Guardar' : 'Adicionar'}
+                    </button>
+                    {editingDocItemIdx !== null && (
+                      <button
+                        onClick={() => { setEditingDocItemIdx(null); setCurrentDocItem({ ...emptyDocItem }); }}
+                        className="px-3 py-2 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {tempDocItems.length > 0 && (
+                  <div className="border border-slate-200 rounded overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-slate-50">
+                        <tr className="text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
+                          <th className="px-4 py-2">Tipo</th>
+                          <th className="px-4 py-2">Identificação</th>
+                          <th className="px-4 py-2">Data Emissão</th>
+                          <th className="px-4 py-2">Data Validade</th>
+                          <th className="px-4 py-2 text-right">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tempDocItems.map((it, idx) => (
+                          <tr key={idx} className={`border-b border-slate-100 last:border-0 ${editingDocItemIdx === idx ? 'bg-blue-50' : ''}`}>
+                            <td className="px-4 py-2 text-sm">{it.type || '---'}</td>
+                            <td className="px-4 py-2 text-sm">{it.number || '---'}</td>
+                            <td className="px-4 py-2 text-sm">{it.issueDate || '—'}</td>
+                            <td className="px-4 py-2 text-sm">{it.expiryDate || '—'}</td>
+                            <td className="px-4 py-2 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  title="Editar documento"
+                                  onClick={() => { setCurrentDocItem({ ...it }); setEditingDocItemIdx(idx); }}
+                                  className="text-slate-400 hover:text-blue-600"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button
+                                  title="Remover documento"
+                                  onClick={() => {
+                                    setTempDocItems(tempDocItems.filter((_, i) => i !== idx));
+                                    if (editingDocItemIdx === idx) { setEditingDocItemIdx(null); setCurrentDocItem({ ...emptyDocItem }); }
+                                    else if (editingDocItemIdx !== null && editingDocItemIdx > idx) setEditingDocItemIdx(editingDocItemIdx - 1);
+                                  }}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-slate-200 flex justify-end gap-4">
+                <button
+                  onClick={fecharDocItemModal}
+                  className="px-8 py-2 bg-slate-600 text-white font-bold rounded hover:bg-slate-700 transition-colors text-sm shadow-md"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    const porConfirmar = currentDocItem.type || currentDocItem.number;
+                    let finais = tempDocItems;
+                    if (porConfirmar) {
+                      // o que está no formulário ainda não foi confirmado: aplica a alteração ou acrescenta
+                      finais = editingDocItemIdx !== null
+                        ? tempDocItems.map((it, i) => i === editingDocItemIdx ? { ...currentDocItem } : it)
+                        : [...tempDocItems, { ...currentDocItem }];
+                    }
+                    setDocItems(finais);
+                    fecharDocItemModal();
+                  }}
+                  className="px-8 py-2 bg-emerald-600 text-white font-bold rounded hover:bg-emerald-700 transition-colors text-sm shadow-md"
+                >
+                  Guardar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Address Details Modal */}
       <AnimatePresence>
         {showAddressDetailsModal && selectedAddressDetails && (
@@ -13959,7 +14253,7 @@ export default function App() {
                   <div className="p-2 bg-white/10 rounded-lg"><Check size={18} className="text-white" /></div>
                   <h3 className="text-sm font-black text-white uppercase tracking-widest">Realizar Levantamento</h3>
                 </div>
-                <button onClick={() => { setShowLevantamentoModal(false); setLevantamentoIsOwner(null); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); }}
+                <button onClick={() => { setShowLevantamentoModal(false); setLevantamentoIsOwner(null); setLevantamentoSelecionados([]); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); }}
                   className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
                   <X size={18} />
                 </button>
@@ -13967,27 +14261,61 @@ export default function App() {
 
               <div className="p-6 space-y-6">
                 {/* Dados do documento (sempre visível) */}
-                <div className="bg-slate-50 border-2 border-slate-100 rounded-xl p-4 space-y-3">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Documento a Levantar</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Titular</p>
-                      <p className="text-sm font-black text-slate-900">{registeredDoc?.document?.fullName || '---'}</p>
+                {(() => {
+                  const rid = registeredDoc?.registoId || registeredDoc?.id;
+                  const pendentes = porLevantarDoRegisto(registeredDoc);
+                  const jaLevantados = mockDocuments.filter(d => (d.registoId || d.id) === rid && docEstado(d) === 'Levantado');
+                  return (
+                    <div className="bg-slate-50 border-2 border-slate-100 rounded-xl p-4 space-y-3">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Documentos a Levantar — Registo {rid}
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Titular</p>
+                          <p className="text-sm font-black text-slate-900">{registeredDoc?.document?.fullName || 'Não identificado'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Data Nascimento</p>
+                          <p className="text-sm font-black text-slate-900">{registeredDoc?.document?.birthDate || '---'}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 pt-1">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                          Selecione o que vai ser entregue
+                        </p>
+                        {pendentes.map(d => {
+                          const escolhido = levantamentoSelecionados.includes(d.id);
+                          return (
+                            <button
+                              key={d.id}
+                              type="button"
+                              onClick={() => toggleLevantamentoDoc(d.id)}
+                              className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+                                escolhido ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                              }`}
+                            >
+                              <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${
+                                escolhido ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300'
+                              }`}>
+                                {escolhido && <Check size={13} />}
+                              </span>
+                              <span className="text-[10px] font-black bg-slate-200 text-slate-600 px-2 py-0.5 rounded uppercase">{d.document.type || '---'}</span>
+                              <span className="text-sm font-bold text-slate-900 flex-1 min-w-0 truncate">{d.document.number || '---'}</span>
+                            </button>
+                          );
+                        })}
+                        {jaLevantados.length > 0 && (
+                          <p className="text-[10px] font-bold text-slate-400 pt-1">
+                            {jaLevantados.length === 1 ? '1 documento deste registo já foi levantado' : `${jaLevantados.length} documentos deste registo já foram levantados`}
+                            {' '}({jaLevantados.map(d => `${d.document.type} ${d.document.number}`).join(' · ')}).
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Nº Documento</p>
-                      <p className="text-sm font-black text-slate-900">{registeredDoc?.document?.number || '---'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Tipo</p>
-                      <p className="text-sm font-black text-slate-900">{registeredDoc?.document?.type || '---'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Data Nascimento</p>
-                      <p className="text-sm font-black text-slate-900">{registeredDoc?.document?.birthDate || '---'}</p>
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* Pergunta: quem levanta? */}
                 <div className="space-y-3">
@@ -14073,32 +14401,42 @@ export default function App() {
 
               {/* Footer */}
               <div className="px-6 py-4 border-t-2 border-slate-100 flex gap-3 justify-between">
-                <Button variant="outline" onClick={() => { setShowLevantamentoModal(false); setLevantamentoIsOwner(null); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); }}>
+                <Button variant="outline" onClick={() => { setShowLevantamentoModal(false); setLevantamentoIsOwner(null); setLevantamentoSelecionados([]); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); }}>
                   Cancelar
                 </Button>
                 {(() => {
                   const otherPersonValid = levantamentoOtherPerson.fullName.trim() && levantamentoOtherPerson.birthDate && levantamentoOtherPerson.docNumber.trim();
-                  const canSubmit = levantamentoIsOwner === true || (levantamentoIsOwner === false && otherPersonValid);
+                  const quemValido = levantamentoIsOwner === true || (levantamentoIsOwner === false && otherPersonValid);
+                  const canSubmit = quemValido && levantamentoSelecionados.length > 0;
                   return (
                     <button
                       disabled={!canSubmit}
                       onClick={() => {
-                        setRegisteredDoc({
-                          ...registeredDoc,
-                          levantamento: {
-                            isOwner: levantamentoIsOwner,
-                            nome: levantamentoIsOwner ? registeredDoc?.document?.fullName : levantamentoOtherPerson.fullName,
-                            dataNascimento: levantamentoIsOwner ? registeredDoc?.document?.birthDate : levantamentoOtherPerson.birthDate,
-                            docType: levantamentoIsOwner ? registeredDoc?.document?.type : levantamentoOtherPerson.docType,
-                            docNumber: levantamentoIsOwner ? registeredDoc?.document?.number : levantamentoOtherPerson.docNumber,
-                            registadoPor: user?.name || 'Administrador do Sistema',
-                            dataLevantamento: new Date().toLocaleDateString('pt-BR')
-                          }
-                        });
+                        const levantamento = {
+                          isOwner: levantamentoIsOwner,
+                          nome: levantamentoIsOwner ? registeredDoc?.document?.fullName : levantamentoOtherPerson.fullName,
+                          dataNascimento: levantamentoIsOwner ? registeredDoc?.document?.birthDate : levantamentoOtherPerson.birthDate,
+                          docType: levantamentoIsOwner ? registeredDoc?.document?.type : levantamentoOtherPerson.docType,
+                          docNumber: levantamentoIsOwner ? registeredDoc?.document?.number : levantamentoOtherPerson.docNumber,
+                          registadoPor: user?.name || 'Administrador do Sistema',
+                          dataLevantamento: new Date().toLocaleDateString('pt-BR')
+                        };
+                        const escolhidos = [...levantamentoSelecionados];
+                        // só os documentos escolhidos são libertados; os restantes ficam "Por Levantar"
+                        const touch = (d: any) => escolhidos.includes(d.id) ? { ...d, levantamento, estado: 'Levantado' } : d;
+                        setMockDocuments(prev => prev.map(touch));
+                        setDocSearchResults(prev => prev ? prev.map(touch) : prev);
+                        setRegisteredDoc((prev: any) => escolhidos.includes(prev?.id) ? { ...prev, levantamento, estado: 'Levantado' } : prev);
                         setShowLevantamentoModal(false);
                         setLevantamentoIsOwner(null);
+                        setLevantamentoSelecionados([]);
                         setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' });
-                        setSuccessMessage('Levantamento realizado com sucesso.');
+                        const rid = registeredDoc.registoId || registeredDoc.id;
+                        const restantes = mockDocuments.filter(d => (d.registoId || d.id) === rid && docEstado(d) !== 'Levantado' && !escolhidos.includes(d.id)).length;
+                        setSuccessMessage(
+                          `Levantamento realizado — ${escolhidos.length} ${escolhidos.length === 1 ? 'documento entregue' : 'documentos entregues'}.` +
+                          (restantes > 0 ? ` ${restantes} ${restantes === 1 ? 'documento continua' : 'documentos continuam'} por levantar.` : '')
+                        );
                         setShowSuccessModal(true);
                       }}
                       className={`px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all ${
