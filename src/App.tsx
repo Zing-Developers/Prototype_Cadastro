@@ -80,6 +80,9 @@ function getPortraitUrl(seed: string, gender: 'men' | 'women' = 'men'): string {
   return `https://randomuser.me/api/portraits/${gender}/${seedToId(seed)}.jpg`;
 }
 
+// Tipos de fotografia da ficha (grupo de "Dados Biométricos")
+const FICHA_PHOTO_TITLES = ['Frontal', 'Perfil Esquerdo', 'Perfil Direito', 'Tatuagem', 'Piercings', 'Marcas de Nascença'];
+
 // --- Components ---
 
 const Button = ({
@@ -87,13 +90,15 @@ const Button = ({
   icon: Icon,
   onClick,
   variant = 'primary',
-  className = ""
+  className = "",
+  disabled = false
 }: {
   children: React.ReactNode;
   icon?: any;
   onClick?: () => void;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
   className?: string;
+  disabled?: boolean;
 }) => {
   const variants = {
     primary: 'bg-slate-900 text-white hover:bg-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]',
@@ -107,7 +112,8 @@ const Button = ({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl transition-all duration-200 font-bold text-sm ${variants[variant]} ${className}`}
+      disabled={disabled}
+      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl transition-all duration-200 font-bold text-sm ${variants[variant]} disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none ${className}`}
     >
       {Icon && <Icon size={18} />}
       <span>{children}</span>
@@ -322,6 +328,17 @@ export default function App() {
           }
         }
       ],
+      activePhotoGroup: {
+        id: 100,
+        createdAt: '2024-06-10',
+        createdBy: 'Sistema',
+        photos: [
+          { label: 'Frontal', seed: 'frontal' },
+          { label: 'Perfil Esquerdo', seed: 'left' },
+          { label: 'Perfil Direito', seed: 'right' },
+          { label: 'Tatuagem', seed: 'tattoo' }
+        ]
+      },
       photoHistory: [
         {
           id: 1,
@@ -351,6 +368,9 @@ export default function App() {
         { id: 2, name: 'termo_identificacao.pdf', type: 'PDF', size: 204800, uploadedBy: 'Paulo', uploadedAt: '10/10/2024', description: 'Termo de identificação e apresentação' },
         { id: 3, name: 'foto_tatuagem_braco.jpg', type: 'Imagem', size: 1048576, uploadedBy: 'Maria', uploadedAt: '15/01/2025', description: 'Fotografia de tatuagem tribal no braço direito' },
         { id: 4, name: 'relatorio_ocorrencia_006.docx', type: 'Documento', size: 327680, uploadedBy: 'Maria', uploadedAt: '14/03/2024', description: 'Relatório de ocorrência nº 006' }
+      ],
+      registosAssociados: [
+        { id: 1, date: '14/03/2024', processNumber: '006', unit: 'ESF', user: 'Maria', sigoNotifiedAt: null, sigoNotifiedBy: null }
       ]
     },
   ]);
@@ -372,11 +392,19 @@ export default function App() {
   const [showConfirmNew, setShowConfirmNew] = useState(false);
   const [showConfirmConcluir, setShowConfirmConcluir] = useState(false);
   const [pendingConcluirAction, setPendingConcluirAction] = useState<(() => void) | null>(null);
+  const [showConfirmSigo, setShowConfirmSigo] = useState(false);
+  const [sigoTargetRecordId, setSigoTargetRecordId] = useState<number | null>(null);
   const [showComplementaryModal, setShowComplementaryModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [tempPhotos, setTempPhotos] = useState<any[]>([]);
   const [savedPhotos, setSavedPhotos] = useState<any[]>([]);
   const [currentPhotoTitle, setCurrentPhotoTitle] = useState('Frontal');
+  // Anexar Fotografia na Ficha (Detalhe da Ficha) — versiona photo_group: o operador escolhe
+  // explicitamente se as fotos entram no grupo ativo ou se abrem um grupo novo (fecha o atual para o histórico).
+  const [showAddPhotoModal, setShowAddPhotoModal] = useState(false);
+  const [tempFichaPhotos, setTempFichaPhotos] = useState<any[]>([]);
+  const [fichaPhotoTitle, setFichaPhotoTitle] = useState('Frontal');
+  const [photoGroupMode, setPhotoGroupMode] = useState<'add' | 'new'>('add');
   const [showObsModal, setShowObsModal] = useState(false);
   const [editingObs, setEditingObs] = useState<any>(null);
   const [obsContent, setObsContent] = useState('');
@@ -411,6 +439,9 @@ export default function App() {
   const [newDocument, setNewDocument] = useState({ type: 'CNI', number: '', issueDate: '', expiryDate: '', issueLocation: '' });
   const [showAddGroup, setShowAddGroup] = useState(false);
   const [newGroup, setNewGroup] = useState({ sigla: '', nome: '', funcao: '' });
+  // Modal único "Adicionar Informação" (Outras Informações da ficha)
+  const [showAddInfoModal, setShowAddInfoModal] = useState(false);
+  const [addInfoType, setAddInfoType] = useState<'document' | 'group' | 'address' | 'contact' | 'nickname'>('document');
   const [showAddressDetailsModal, setShowAddressDetailsModal] = useState(false);
   const [selectedAddressDetails, setSelectedAddressDetails] = useState<any>(null);
   
@@ -777,8 +808,10 @@ export default function App() {
   const [newFichaNewContact, setNewFichaNewContact] = useState({ type: 'Telemovel', info: '' });
   const [newFichaNicknames, setNewFichaNicknames] = useState<string[]>([]);
   const [newFichaNewNickname, setNewFichaNewNickname] = useState('');
+  // Outras Informações (Nova Ficha) — modal único "Adicionar Informação", como em Detalhe da Ficha
+  const [showNfAddInfoModal, setShowNfAddInfoModal] = useState(false);
+  const [nfAddInfoType, setNfAddInfoType] = useState<'address' | 'contact' | 'nickname'>('address');
   const [newFichaReasons, setNewFichaReasons] = useState<any[]>([]);
-  const [newFichaNewReason, setNewFichaNewReason] = useState({ type: 'Criminal', date: '', refNo: '', unit: '', sijNo: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
   const [newFichaObservations, setNewFichaObservations] = useState<{content:string;author:string;date:string}[]>([]);
   const [newFichaNewObs, setNewFichaNewObs] = useState('');
   const [newFichaAttachments, setNewFichaAttachments] = useState<{name:string;type:string}[]>([]);
@@ -1511,6 +1544,43 @@ export default function App() {
     fetchPersons();
   };
 
+  const resetAddInfoForm = (t: 'document' | 'group' | 'address' | 'contact' | 'nickname') => {
+    if (t === 'document') setNewDocument({ type: 'CNI', number: '', issueDate: '', expiryDate: '', issueLocation: '' });
+    else if (t === 'group') setNewGroup({ sigla: '', nome: '', funcao: '' });
+    else if (t === 'address') setNewAddress({ type: 'Residência', island: 'Santiago', council: '', parish: '', locality: '', reference: '' });
+    else if (t === 'contact') setNewContact({ type: 'Telemóvel', info: '' });
+    else if (t === 'nickname') setNewNickname({ value: '' });
+  };
+
+  const openAddInfoModal = () => {
+    setAddInfoType('document');
+    resetAddInfoForm('document');
+    setShowAddInfoModal(true);
+  };
+
+  const handleAddInfoTypeChange = (t: 'document' | 'group' | 'address' | 'contact' | 'nickname') => {
+    setAddInfoType(t);
+    resetAddInfoForm(t);
+  };
+
+  const canSaveAddInfo = () => {
+    if (addInfoType === 'document') return newDocument.number.trim() !== '';
+    if (addInfoType === 'group') return newGroup.sigla.trim() !== '';
+    if (addInfoType === 'address') return newAddress.type.trim() !== '' && newAddress.island.trim() !== '';
+    if (addInfoType === 'contact') return newContact.info.trim() !== '';
+    if (addInfoType === 'nickname') return newNickname.value.trim() !== '';
+    return false;
+  };
+
+  const handleSaveAddInfo = () => {
+    if (!canSaveAddInfo()) return;
+    handleAddOtherInfo(addInfoType);
+    setShowAddInfoModal(false);
+  };
+
+  const addInfoInputCls = "w-full px-4 py-2.5 bg-white border-2 border-slate-900 rounded text-sm font-bold text-slate-900 outline-none";
+  const addInfoLabelCls = "text-[10px] font-black text-slate-500 uppercase tracking-widest";
+
   const handleAddOtherInfo = (type: 'address' | 'contact' | 'nickname' | 'document' | 'group') => {
     const today = new Date().toISOString().split('T')[0];
     let newItem: any = {
@@ -1577,6 +1647,25 @@ export default function App() {
         setNewDocument({ type: 'CNI', number: '', issueDate: '', expiryDate: '', issueLocation: '' });
       }
     }
+  };
+
+  const handleComunicarSigo = () => {
+    if (!selectedFicha || sigoTargetRecordId == null) return;
+    const today = new Date().toISOString().split('T')[0];
+    const updatedFicha = {
+      ...selectedFicha,
+      registosAssociados: (selectedFicha.registosAssociados || []).map((r: any) =>
+        r.id === sigoTargetRecordId
+          ? { ...r, sigoNotifiedAt: today, sigoNotifiedBy: user?.name || 'Admin' }
+          : r
+      ),
+    };
+    setSelectedFicha(updatedFicha);
+    setFichas(fichas.map(f => f.id === updatedFicha.id ? updatedFicha : f));
+    setShowConfirmSigo(false);
+    setSigoTargetRecordId(null);
+    setSuccessMessage('Registo enviado ao SIGO com sucesso!');
+    setShowSuccessModal(true);
   };
 
   const handleDeactivateOtherInfo = (type: 'address' | 'contact' | 'nickname' | 'document' | 'group', id: number) => {
@@ -3635,7 +3724,7 @@ export default function App() {
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Número Documento</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Identificação de Documento</label>
                       <input 
                         type="text" 
                         value={docSearchFilters.number}
@@ -4772,7 +4861,7 @@ export default function App() {
                         )}
                       </AnimatePresence>
 
-                      {/* Motivo do Cadastro Accordion */}
+                      {/* Motivo de Cadastro Accordion */}
                       {associatedPerson.registrationReasons && (
                         <div className="mt-4">
                           <button
@@ -7847,12 +7936,13 @@ export default function App() {
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Gestão de Fichas</h2>
                   <Button variant="secondary" icon={UserPlus} onClick={() => {
+                    setSelectedFicha(null);
                     setNewFichaData(emptyNewFicha());
                     setNewFichaChars([]); setNewFichaNewChar({ name: '', value: '', observation: '' });
                     setNewFichaAddresses([]); setNewFichaNewAddress({ type: 'Residência', island: '', county: '', parish: '', locality: '', zone: '', reference: '' });
                     setNewFichaContacts([]); setNewFichaNewContact({ type: 'Telemovel', info: '' });
                     setNewFichaNicknames([]); setNewFichaNewNickname('');
-                    setNewFichaReasons([]); setNewFichaNewReason({ type: 'Criminal', date: '', refNo: '', unit: '', sijNo: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+                    setNewFichaReasons([]);
                     setNewFichaObservations([]); setNewFichaNewObs('');
                     setNewFichaAttachments([]); setNewFichaNewAttach({ name: '', type: 'Documento' });
                     setNewFichaExpanded({ biographic: true, complementary: false, outras: false, motivo: false, biometric: false, observations: false, attachments: false });
@@ -8289,7 +8379,27 @@ export default function App() {
 
                     {/* ── Accordion: Outras Informações ── */}
                     <div className="space-y-3">
-                      {nfAccordion('outras', 'Outras Informações', Info, newFichaAddresses.length + newFichaContacts.length + newFichaNicknames.length)}
+                      <div
+                        onClick={() => toggleNewFicha('outras')}
+                        className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-slate-900 text-white rounded-lg"><Info size={18} /></div>
+                          <span className="uppercase tracking-widest text-xs">Outras Informações</span>
+                          {(newFichaAddresses.length + newFichaContacts.length + newFichaNicknames.length) > 0 && (
+                            <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">{newFichaAddresses.length + newFichaContacts.length + newFichaNicknames.length}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => { setNfAddInfoType('address'); setShowNfAddInfoModal(true); if (!newFichaExpanded.outras) toggleNewFicha('outras'); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
+                          >
+                            <Plus size={13} /> Adicionar
+                          </button>
+                          {newFichaExpanded.outras ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                        </div>
+                      </div>
                       <AnimatePresence>
                         {newFichaExpanded.outras && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -8298,51 +8408,9 @@ export default function App() {
                               {/* Moradas */}
                               <div className="space-y-4">
                                 <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Moradas</h4>
-                                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
-                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo</label>
-                                      <select value={newFichaNewAddress.type} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, type: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                        {['Residência','Trabalho','Outro'].map(o => <option key={o}>{o}</option>)}
-                                      </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ilha</label>
-                                      <select value={newFichaNewAddress.island} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, island: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                        <option value="">Selecione...</option>
-                                        {['Santiago','São Vicente','Sal','Boa Vista','Fogo','Santo Antão','Maio','Brava','São Nicolau'].map(o => <option key={o}>{o}</option>)}
-                                      </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Conselho</label>
-                                      <input type="text" value={newFichaNewAddress.county} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, county: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Freguesia</label>
-                                      <input type="text" value={newFichaNewAddress.parish} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, parish: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localidade</label>
-                                      <input type="text" value={newFichaNewAddress.locality} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, locality: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zona</label>
-                                      <input type="text" value={newFichaNewAddress.zone} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, zone: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                                    </div>
-                                    <div className="md:col-span-2 space-y-1">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ponto de Referência</label>
-                                      <input type="text" value={newFichaNewAddress.reference} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, reference: e.target.value})} className="w-full px-3 py-2 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                                    </div>
-                                  </div>
-                                  <div className="flex justify-end">
-                                    <Button variant="primary" icon={Plus} onClick={() => {
-                                      if (!newFichaNewAddress.island) return;
-                                      setNewFichaAddresses([...newFichaAddresses, { ...newFichaNewAddress, id: Date.now(), createdAt: today, validFrom: today, validTo: null, user: user?.name || 'Admin' }]);
-                                      setNewFichaNewAddress({ type: 'Residência', island: '', county: '', parish: '', locality: '', zone: '', reference: '' });
-                                    }}>Adicionar Morada</Button>
-                                  </div>
-                                </div>
-                                {newFichaAddresses.length > 0 && (
+                                {newFichaAddresses.length === 0 ? (
+                                  <p className="text-xs font-bold text-slate-400">Nenhuma morada adicionada.</p>
+                                ) : (
                                   <div className="space-y-2">
                                     {newFichaAddresses.map((a, i) => (
                                       <div key={i} className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
@@ -8362,24 +8430,9 @@ export default function App() {
                               {/* Contactos */}
                               <div className="space-y-4">
                                 <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</h4>
-                                <div className="flex gap-4 items-end">
-                                  <div className="w-40 space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo</label>
-                                    <select value={newFichaNewContact.type} onChange={(e) => setNewFichaNewContact({...newFichaNewContact, type: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                      {['Telemovel','Email','Telefone fixo','Facebook','Instagram','Twitter / X','LinkedIn','TikTok','WhatsApp','Outro'].map(o => <option key={o}>{o}</option>)}
-                                    </select>
-                                  </div>
-                                  <div className="flex-1 space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto</label>
-                                    <input type="text" value={newFichaNewContact.info} onChange={(e) => setNewFichaNewContact({...newFichaNewContact, info: e.target.value})} placeholder="Número ou email..." className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                                  </div>
-                                  <Button variant="primary" icon={Plus} onClick={() => {
-                                    if (!newFichaNewContact.info) return;
-                                    setNewFichaContacts([...newFichaContacts, { ...newFichaNewContact, id: Date.now(), validFrom: today, validTo: null, user: user?.name || 'Admin' }]);
-                                    setNewFichaNewContact({ type: newFichaNewContact.type, info: '' });
-                                  }}>Adicionar</Button>
-                                </div>
-                                {newFichaContacts.length > 0 && (
+                                {newFichaContacts.length === 0 ? (
+                                  <p className="text-xs font-bold text-slate-400">Nenhum contacto adicionado.</p>
+                                ) : (
                                   <div className="space-y-2">
                                     {newFichaContacts.map((c, i) => (
                                       <div key={i} className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
@@ -8395,14 +8448,9 @@ export default function App() {
                               {/* Alcunhas */}
                               <div className="space-y-4">
                                 <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Alcunhas</h4>
-                                <div className="flex gap-4 items-end">
-                                  <div className="flex-1 space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alcunha</label>
-                                    <input type="text" value={newFichaNewNickname} onChange={(e) => setNewFichaNewNickname(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && newFichaNewNickname) { setNewFichaNicknames([...newFichaNicknames, newFichaNewNickname]); setNewFichaNewNickname(''); } }} placeholder="Ex: Manxedo..." className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                                  </div>
-                                  <Button variant="primary" icon={Plus} onClick={() => { if (!newFichaNewNickname) return; setNewFichaNicknames([...newFichaNicknames, newFichaNewNickname]); setNewFichaNewNickname(''); }}>Adicionar</Button>
-                                </div>
-                                {newFichaNicknames.length > 0 && (
+                                {newFichaNicknames.length === 0 ? (
+                                  <p className="text-xs font-bold text-slate-400">Nenhuma alcunha adicionada.</p>
+                                ) : (
                                   <div className="flex flex-wrap gap-2">
                                     {newFichaNicknames.map((n, i) => (
                                       <span key={i} className="flex items-center gap-2 bg-slate-100 text-slate-800 text-xs font-black px-3 py-1.5 rounded-full">
@@ -8425,120 +8473,18 @@ export default function App() {
                         {newFichaExpanded.motivo && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                             <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
-                              <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 space-y-6">
-                                {/* Linha 1 — Tipo, Tipo de Auto, Data */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                  <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo *</label>
-                                    <select value={newFichaNewReason.type} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, type: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                      <option value="Criminal">Criminal</option>
-                                      <option value="Policial">Policial</option>
-                                    </select>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</label>
-                                    <select value={newFichaNewReason.auto_type} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, auto_type: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                      <option value="">Selecione...</option>
-                                      <option>Auto de Notícia</option>
-                                      <option>Auto de Detenção</option>
-                                      <option>Auto de Flagrante Delito</option>
-                                      <option>Auto de Ocorrência</option>
-                                      <option>Auto de Apreensão</option>
-                                      <option>Outro</option>
-                                    </select>
-                                  </div>
-                                  <DetailField label="Data" value={newFichaNewReason.date} type="date" readOnly={false} icon={Calendar} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, date: v})} />
-                                </div>
-                                {/* Linha 2 — Natureza, Enquadramento, Tipologia */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                  <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Natureza de Ocorrência</label>
-                                    <select value={newFichaNewReason.natureza} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, natureza: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                      <option value="">Selecione...</option>
-                                      <option>Crime contra o Património</option>
-                                      <option>Crime contra as Pessoas</option>
-                                      <option>Crime contra a Ordem Pública</option>
-                                      <option>Crime contra o Estado</option>
-                                      <option>Crime contra a Família</option>
-                                      <option>Crime de Droga / Tráfico</option>
-                                      <option>Crime de Natureza Sexual</option>
-                                      <option>Outro</option>
-                                    </select>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enquadramento de Crime</label>
-                                    <select value={newFichaNewReason.enquadramento} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, enquadramento: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                      <option value="">Selecione...</option>
-                                      <option>Furto Simples — Art. 193º CP</option>
-                                      <option>Furto Qualificado — Art. 197º CP</option>
-                                      <option>Roubo — Art. 200º CP</option>
-                                      <option>Homicídio — Art. 122º CP</option>
-                                      <option>Ofensa à Integridade Física — Art. 131º CP</option>
-                                      <option>Violência Doméstica — Art. 134º CP</option>
-                                      <option>Tráfico de Droga — Lei 78/III/90</option>
-                                      <option>Desordem Pública — Art. 279º CP</option>
-                                      <option>Resistência à Autoridade — Art. 283º CP</option>
-                                      <option>Outro</option>
-                                    </select>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipologia</label>
-                                    <select value={newFichaNewReason.tipologia} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, tipologia: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                      <option value="">Selecione...</option>
-                                      <option>Detenção em Flagrante Delito</option>
-                                      <option>Suspeito de Crime</option>
-                                      <option>Arguido</option>
-                                      <option>Investigado</option>
-                                      <option>Condenado</option>
-                                      <option>Reincidente</option>
-                                      <option>Outro</option>
-                                    </select>
-                                  </div>
-                                </div>
-                                {/* Linha 3 — Unidade, Nº SIJ */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
-                                    <select value={newFichaNewReason.unit} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, unit: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                      <option value="">Selecione...</option>
-                                      <option>ESF Praia</option>
-                                      <option>ESF Mindelo</option>
-                                      <option>ESF Santa Catarina</option>
-                                      <option>ESF São Vicente</option>
-                                      <option>DP Praia</option>
-                                      <option>DP Mindelo</option>
-                                      <option>DP Santa Cruz</option>
-                                      <option>DP Tarrafal</option>
-                                    </select>
-                                  </div>
-                                  <DetailField label="Nº SIJ" value={newFichaNewReason.sijNo} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, sijNo: v})} />
-                                </div>
-                                {/* Linha 4 — Nº Ocorrência, Medidas */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <DetailField label="Nº Ocorrência" value={newFichaNewReason.refNo} readOnly={false} onChange={(v) => setNewFichaNewReason({...newFichaNewReason, refNo: v})} />
-                                  <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medidas Aplicadas</label>
-                                    <select value={newFichaNewReason.measures} onChange={(e) => setNewFichaNewReason({...newFichaNewReason, measures: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                      <option value="">Selecione...</option>
-                                      <option>Prisão Preventiva</option>
-                                      <option>Termo de Identidade e Residência</option>
-                                      <option>Liberdade Provisória</option>
-                                      <option>Obrigação de Apresentação Periódica</option>
-                                      <option>Proibição de Contacto</option>
-                                      <option>Suspensão de Pena</option>
-                                      <option>Multa</option>
-                                      <option>Sem medidas aplicadas</option>
-                                      <option>Outro</option>
-                                    </select>
-                                  </div>
-                                </div>
-                                <div className="flex justify-end">
-                                  <Button variant="primary" icon={Plus} onClick={() => {
-                                    if (!newFichaNewReason.natureza) return;
-                                    setNewFichaReasons([...newFichaReasons, { ...newFichaNewReason, id: Date.now(), status: 'Ativo' }]);
-                                    setNewFichaNewReason({ type: 'Criminal', date: '', refNo: '', unit: '', sijNo: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
-                                  }}>Adicionar Motivo</Button>
-                                </div>
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivos Registados</h4>
+                                <button
+                                  onClick={() => {
+                                    setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+                                    setShowAddMotivoInFicha(true);
+                                  }}
+                                  className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
+                                >
+                                  <ClipboardList size={14} />
+                                  Adicionar Motivo +
+                                </button>
                               </div>
                               {newFichaReasons.length > 0 ? (
                                 <div className="space-y-3">
@@ -9009,16 +8955,24 @@ export default function App() {
 
                 {/* Accordion: Outras Informações */}
                 <div className="space-y-4">
-                  <button 
+                  <div
                     onClick={() => toggleSection('other_info')}
-                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-900 text-white rounded-lg"><Info size={18} /></div>
                       <span className="uppercase tracking-widest text-xs">Outras Informações</span>
                     </div>
-                    {expandedSections.other_info ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                  </button>
+                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => { openAddInfoModal(); if (!expandedSections.other_info) toggleSection('other_info'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
+                      >
+                        <Plus size={13} /> Adicionar
+                      </button>
+                      {expandedSections.other_info ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </div>
+                  </div>
                   
                   <AnimatePresence>
                     {expandedSections.other_info && (
@@ -9031,56 +8985,7 @@ export default function App() {
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-12">
                           {/* Documento de Identificação */}
                           <div className="space-y-4">
-                            <AnimatePresence>
-                              {showAddDocument && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
-                                >
-                                  <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                                    <h5 className="text-xs font-bold text-slate-700 uppercase">Novo Documento</h5>
-                                    <button onClick={() => setShowAddDocument(false)} className="text-slate-400 hover:text-slate-600"><Trash2 size={14} /></button>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Tipo</label>
-                                      <select value={newDocument.type} onChange={(e) => setNewDocument({...newDocument, type: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors">
-                                        <option value="CNI">CNI</option>
-                                        <option value="Passaporte">Passaporte</option>
-                                        <option value="Título de Residência">Título de Residência</option>
-                                      </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Número</label>
-                                      <input type="text" value={newDocument.number} onChange={(e) => setNewDocument({...newDocument, number: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Local de Emissão</label>
-                                      <input type="text" value={newDocument.issueLocation} onChange={(e) => setNewDocument({...newDocument, issueLocation: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Data de Emissão</label>
-                                      <input type="date" value={newDocument.issueDate} onChange={(e) => setNewDocument({...newDocument, issueDate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Data de Validade</label>
-                                      <input type="date" value={newDocument.expiryDate} onChange={(e) => setNewDocument({...newDocument, expiryDate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
-                                    </div>
-                                  </div>
-                                  <div className="flex justify-end">
-                                    <button onClick={() => handleAddOtherInfo('document')} className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors">Confirmar Adição</button>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                            <div className="flex justify-between items-center">
-                              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento de Identificação</h4>
-                              <Button variant="outline" icon={showAddDocument ? Trash2 : Plus} onClick={() => setShowAddDocument(!showAddDocument)}>
-                                {showAddDocument ? 'Cancelar' : 'Adicionar Documento'}
-                              </Button>
-                            </div>
+                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento de Identificação</h4>
                             <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
                               <table className="w-full text-left border-collapse">
                                 <thead>
@@ -9150,63 +9055,7 @@ export default function App() {
 
                           {/* Grupo */}
                           <div className="space-y-4">
-                            <AnimatePresence>
-                              {showAddGroup && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
-                                >
-                                  <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                                    <h5 className="text-xs font-bold text-slate-700 uppercase">Associar Grupo</h5>
-                                    <button onClick={() => setShowAddGroup(false)} className="text-slate-400 hover:text-slate-600"><Trash2 size={14} /></button>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Sigla</label>
-                                      <select
-                                        value={newGroup.sigla}
-                                        onChange={(e) => {
-                                          const selected = paramGroups.find((g: any) => g.sigla === e.target.value);
-                                          setNewGroup({ ...newGroup, sigla: e.target.value, nome: selected?.nome || '' });
-                                        }}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                      >
-                                        <option value="">-- Selecionar --</option>
-                                        {paramGroups.filter((g: any) => g.estado === 'Ativo').map((g: any) => (
-                                          <option key={g.id} value={g.sigla}>{g.sigla}</option>
-                                        ))}
-                                      </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Nome</label>
-                                      <input
-                                        type="text"
-                                        value={newGroup.nome}
-                                        readOnly
-                                        className="w-full px-4 py-2.5 bg-slate-100 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-500 outline-none cursor-not-allowed"
-                                        placeholder="Preenchido automaticamente"
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Função</label>
-                                      <input type="text" value={newGroup.funcao} onChange={(e) => setNewGroup({ ...newGroup, funcao: e.target.value })} placeholder="Ex: Membro, Líder, Associado" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors" />
-                                    </div>
-                                  </div>
-                                  <div className="flex justify-end">
-                                    <button onClick={() => handleAddOtherInfo('group')} className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors">Confirmar Adição</button>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-
-                            <div className="flex justify-between items-center">
-                              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Grupo</h4>
-                              <Button variant="outline" icon={showAddGroup ? Trash2 : Plus} onClick={() => setShowAddGroup(!showAddGroup)}>
-                                {showAddGroup ? 'Cancelar' : 'Associar Grupo'}
-                              </Button>
-                            </div>
+                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Grupo</h4>
 
                             <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
                               <table className="w-full text-left border-collapse">
@@ -9284,123 +9133,7 @@ export default function App() {
 
                           {/* Endereço */}
                           <div className="space-y-4">
-                            <AnimatePresence>
-                              {showAddAddress && (
-                                <motion.div 
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
-                                >
-                                  <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                                    <h5 className="text-xs font-bold text-slate-700 uppercase">Novo Endereço</h5>
-                                    <button onClick={() => setShowAddAddress(false)} className="text-slate-400 hover:text-slate-600"><Trash2 size={14} /></button>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Tipo</label>
-                                      <select 
-                                        value={newAddress.type}
-                                        onChange={(e) => setNewAddress({...newAddress, type: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                      >
-                                        <option value="Residência">Residência</option>
-                                        <option value="Trabalho">Trabalho</option>
-                                        <option value="Outro">Outro</option>
-                                      </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Ilha</label>
-                                      <select 
-                                        value={newAddress.island}
-                                        onChange={(e) => setNewAddress({...newAddress, island: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                      >
-                                        <option value="">Selecione...</option>
-                                        <option value="Santiago">Santiago</option>
-                                        <option value="São Vicente">São Vicente</option>
-                                        <option value="Sal">Sal</option>
-                                        <option value="Fogo">Fogo</option>
-                                        <option value="Santo Antão">Santo Antão</option>
-                                        <option value="Boa Vista">Boa Vista</option>
-                                        <option value="Maio">Maio</option>
-                                        <option value="São Nicolau">São Nicolau</option>
-                                        <option value="Brava">Brava</option>
-                                      </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Conselho</label>
-                                      <select 
-                                        value={newAddress.council}
-                                        onChange={(e) => setNewAddress({...newAddress, council: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                      >
-                                        <option value="">Selecione...</option>
-                                        <option value="Praia">Praia</option>
-                                        <option value="Mindelo">Mindelo</option>
-                                        <option value="Espargos">Espargos</option>
-                                        <option value="Assomada">Assomada</option>
-                                      </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Freguesia</label>
-                                      <select 
-                                        value={newAddress.parish}
-                                        onChange={(e) => setNewAddress({...newAddress, parish: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                      >
-                                        <option value="">Selecione...</option>
-                                        <option value="Nossa Senhora da Graça">Nossa Senhora da Graça</option>
-                                        <option value="São Nicolau Tolentino">São Nicolau Tolentino</option>
-                                        <option value="Santíssimo Nome de Jesus">Santíssimo Nome de Jesus</option>
-                                      </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Localidade</label>
-                                      <select 
-                                        value={newAddress.locality}
-                                        onChange={(e) => setNewAddress({...newAddress, locality: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                      >
-                                        <option value="">Selecione...</option>
-                                        <option value="Achada Santo António">Achada Santo António</option>
-                                        <option value="Palmarejo">Palmarejo</option>
-                                        <option value="Plateau">Plateau</option>
-                                        <option value="Fazenda">Fazenda</option>
-                                      </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Referência</label>
-                                      <input 
-                                        type="text" 
-                                        value={newAddress.reference}
-                                        onChange={(e) => setNewAddress({...newAddress, reference: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                      />
-                                    </div>
-                                  </div>
-                                  <div className="flex justify-end">
-                                    <button 
-                                      onClick={() => handleAddOtherInfo('address')}
-                                      className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors"
-                                    >
-                                      Confirmar Adição
-                                    </button>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-
-                            <div className="flex justify-between items-center">
-                              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Endereço</h4>
-                              <Button 
-                                variant="outline" 
-                                icon={showAddAddress ? Trash2 : Plus} 
-                                onClick={() => setShowAddAddress(!showAddAddress)}
-                              >
-                                {showAddAddress ? 'Cancelar' : 'Adicionar Endereço'}
-                              </Button>
-                            </div>
+                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Endereço</h4>
 
                             <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
                               <table className="w-full text-left border-collapse">
@@ -9516,69 +9249,7 @@ export default function App() {
 
                           {/* Contactos */}
                           <div className="space-y-4">
-                            <AnimatePresence>
-                              {showAddContact && (
-                                <motion.div 
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
-                                >
-                                  <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                                    <h5 className="text-xs font-bold text-slate-700 uppercase">Novo Contacto</h5>
-                                    <button onClick={() => setShowAddContact(false)} className="text-slate-400 hover:text-slate-600"><Trash2 size={14} /></button>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Tipo</label>
-                                      <select 
-                                        value={newContact.type}
-                                        onChange={(e) => setNewContact({...newContact, type: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                      >
-                                        <option value="Telemóvel">Telemóvel</option>
-                                        <option value="Telefone">Telefone</option>
-                                        <option value="Email">Email</option>
-                                        <option value="Facebook">Facebook</option>
-                                        <option value="Instagram">Instagram</option>
-                                        <option value="Twitter / X">Twitter / X</option>
-                                        <option value="LinkedIn">LinkedIn</option>
-                                        <option value="TikTok">TikTok</option>
-                                        <option value="WhatsApp">WhatsApp</option>
-                                      </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Informação</label>
-                                      <input 
-                                        type="text" 
-                                        value={newContact.info}
-                                        onChange={(e) => setNewContact({...newContact, info: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                      />
-                                    </div>
-                                  </div>
-                                  <div className="flex justify-end">
-                                    <button 
-                                      onClick={() => handleAddOtherInfo('contact')}
-                                      className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors"
-                                    >
-                                      Confirmar Adição
-                                    </button>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-
-                            <div className="flex justify-between items-center">
-                              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</h4>
-                              <Button 
-                                variant="outline" 
-                                icon={showAddContact ? Trash2 : Plus} 
-                                onClick={() => setShowAddContact(!showAddContact)}
-                              >
-                                {showAddContact ? 'Cancelar' : 'Adicionar Contacto'}
-                              </Button>
-                            </div>
+                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</h4>
 
                             <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
                               <table className="w-full text-left border-collapse">
@@ -9671,51 +9342,7 @@ export default function App() {
 
                           {/* Alcunhas */}
                           <div className="space-y-4">
-                            <AnimatePresence>
-                              {showAddNickname && (
-                                <motion.div 
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 mb-4"
-                                >
-                                  <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                                    <h5 className="text-xs font-bold text-slate-700 uppercase">Nova Alcunha</h5>
-                                    <button onClick={() => setShowAddNickname(false)} className="text-slate-400 hover:text-slate-600"><Trash2 size={14} /></button>
-                                  </div>
-                                  <div className="grid grid-cols-1 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-slate-500 uppercase">Alcunha</label>
-                                      <input 
-                                        type="text" 
-                                        value={newNickname.value}
-                                        onChange={(e) => setNewNickname({...newNickname, value: e.target.value})}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
-                                      />
-                                    </div>
-                                  </div>
-                                  <div className="flex justify-end">
-                                    <button 
-                                      onClick={() => handleAddOtherInfo('nickname')}
-                                      className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded text-xs hover:bg-blue-700 transition-colors"
-                                    >
-                                      Confirmar Adição
-                                    </button>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-
-                            <div className="flex justify-between items-center">
-                              <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Alcunhas</h4>
-                              <Button 
-                                variant="outline" 
-                                icon={showAddNickname ? Trash2 : Plus} 
-                                onClick={() => setShowAddNickname(!showAddNickname)}
-                              >
-                                {showAddNickname ? 'Cancelar' : 'Adicionar Alcunha'}
-                              </Button>
-                            </div>
+                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Alcunhas</h4>
 
                             <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
                               <table className="w-full text-left border-collapse">
@@ -9807,7 +9434,7 @@ export default function App() {
                   </AnimatePresence>
                 </div>
 
-                {/* Accordion: Motivo do Cadastro */}
+                {/* Accordion: Motivo de Cadastro */}
                 <div className="space-y-4">
                   <div
                     onClick={() => toggleSection('motivo')}
@@ -9815,7 +9442,7 @@ export default function App() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-900 text-white rounded-lg"><HelpCircle size={18} /></div>
-                      <span className="uppercase tracking-widest text-xs">Motivo do Cadastro</span>
+                      <span className="uppercase tracking-widest text-xs">Motivo de Cadastro</span>
                     </div>
                     <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                       <button
@@ -9837,145 +9464,13 @@ export default function App() {
                         className="overflow-hidden"
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
-                          <AnimatePresence>
-                            {showAddMotivoInFicha && (
-                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 space-y-5">
-                                  {/* Linha 1 — Tipo, Tipo de Auto, Data */}
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo *</label>
-                                      <select value={newMotivoInFicha.type} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, type: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                        <option value="Criminal">Criminal</option>
-                                        <option value="Policial">Policial</option>
-                                      </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</label>
-                                      <select value={newMotivoInFicha.auto_type} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, auto_type: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                        <option value="">Selecione...</option>
-                                        <option>Auto de Notícia</option>
-                                        <option>Auto de Detenção</option>
-                                        <option>Auto de Flagrante Delito</option>
-                                        <option>Auto de Ocorrência</option>
-                                        <option>Auto de Apreensão</option>
-                                        <option>Outro</option>
-                                      </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</label>
-                                      <input type="date" value={newMotivoInFicha.date} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, date: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                                    </div>
-                                  </div>
-                                  {/* Linha 2 — Natureza, Enquadramento, Tipologia */}
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Natureza de Ocorrência</label>
-                                      <select value={newMotivoInFicha.natureza} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, natureza: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                        <option value="">Selecione...</option>
-                                        <option>Crime contra o Património</option>
-                                        <option>Crime contra as Pessoas</option>
-                                        <option>Crime contra a Ordem Pública</option>
-                                        <option>Crime contra o Estado</option>
-                                        <option>Crime contra a Família</option>
-                                        <option>Crime de Droga / Tráfico</option>
-                                        <option>Crime de Natureza Sexual</option>
-                                        <option>Outro</option>
-                                      </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enquadramento de Crime</label>
-                                      <select value={newMotivoInFicha.enquadramento} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, enquadramento: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                        <option value="">Selecione...</option>
-                                        <option>Furto Simples — Art. 193º CP</option>
-                                        <option>Furto Qualificado — Art. 197º CP</option>
-                                        <option>Roubo — Art. 200º CP</option>
-                                        <option>Homicídio — Art. 122º CP</option>
-                                        <option>Ofensa à Integridade Física — Art. 131º CP</option>
-                                        <option>Violência Doméstica — Art. 134º CP</option>
-                                        <option>Tráfico de Droga — Lei 78/III/90</option>
-                                        <option>Desordem Pública — Art. 279º CP</option>
-                                        <option>Resistência à Autoridade — Art. 283º CP</option>
-                                        <option>Outro</option>
-                                      </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipologia</label>
-                                      <select value={newMotivoInFicha.tipologia} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, tipologia: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                        <option value="">Selecione...</option>
-                                        <option>Detenção em Flagrante Delito</option>
-                                        <option>Suspeito de Crime</option>
-                                        <option>Arguido</option>
-                                        <option>Investigado</option>
-                                        <option>Condenado</option>
-                                        <option>Reincidente</option>
-                                        <option>Outro</option>
-                                      </select>
-                                    </div>
-                                  </div>
-                                  {/* Linha 3 — Unidade */}
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade</label>
-                                      <select value={newMotivoInFicha.unit} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, unit: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                        <option value="">Selecione...</option>
-                                        <option>ESF Praia</option>
-                                        <option>ESF Mindelo</option>
-                                        <option>ESF Santa Catarina</option>
-                                        <option>ESF São Vicente</option>
-                                        <option>DP Praia</option>
-                                        <option>DP Mindelo</option>
-                                        <option>DP Santa Cruz</option>
-                                        <option>DP Tarrafal</option>
-                                      </select>
-                                    </div>
-                                  </div>
-                                  {/* Linha 4 — Nº Ocorrência, Medidas */}
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</label>
-                                      <input type="text" value={newMotivoInFicha.refNo} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, refNo: e.target.value})} placeholder="Ex: OC-2024-0001" className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all" />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medidas Aplicadas</label>
-                                      <select value={newMotivoInFicha.measures} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, measures: e.target.value})} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-all">
-                                        <option value="">Selecione...</option>
-                                        <option>Prisão Preventiva</option>
-                                        <option>Termo de Identidade e Residência</option>
-                                        <option>Liberdade Provisória</option>
-                                        <option>Obrigação de Apresentação Periódica</option>
-                                        <option>Proibição de Contacto</option>
-                                        <option>Suspensão de Pena</option>
-                                        <option>Multa</option>
-                                        <option>Sem medidas aplicadas</option>
-                                        <option>Outro</option>
-                                      </select>
-                                    </div>
-                                  </div>
-                                  <div className="flex justify-end gap-3">
-                                    <button onClick={() => { setShowAddMotivoInFicha(false); setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' }); }} className="px-4 py-2 bg-white text-slate-600 border-2 border-slate-200 font-bold rounded-xl hover:bg-slate-50 transition-all text-xs">Cancelar</button>
-                                    <button
-                                      onClick={() => {
-                                        if (!newMotivoInFicha.refNo) return;
-                                        const newReg = { ...newMotivoInFicha, id: Date.now(), status: 'Ativo' };
-                                        setSelectedFicha((prev: any) => ({ ...prev, registrationReasons: [...(prev.registrationReasons || []), newReg] }));
-                                        setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
-                                        setShowAddMotivoInFicha(false);
-                                      }}
-                                      className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-700 transition-all text-xs flex items-center gap-2"
-                                    >
-                                      <Plus size={14} />
-                                      Adicionar
-                                    </button>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
 
                           {/* Lista de registos — card por registo */}
                           <div className="space-y-4">
-                            {(selectedFicha?.registrationReasons || []).map((reg: any) => (
+                            {(selectedFicha?.registrationReasons || []).length === 0 && (
+                              <p className="text-center text-xs font-bold text-slate-400 py-8">Nenhum motivo de cadastro registado.</p>
+                            )}
+                            {[...(selectedFicha?.registrationReasons || [])].sort((a: any, b: any) => (b.id || 0) - (a.id || 0)).map((reg: any) => (
                               <div key={reg.id} className="relative border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm">
                                 {/* Botão editar — canto superior direito */}
                                 <button
@@ -10123,21 +9618,40 @@ export default function App() {
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
                           <div className="flex justify-end gap-3">
-                            <Button variant="outline" icon={Plus}>Anexar Fotografia</Button>
+                            <Button
+                              variant="outline"
+                              icon={Plus}
+                              disabled={!selectedFicha?.activePhotoGroup || FICHA_PHOTO_TITLES.every(t => (selectedFicha.activePhotoGroup.photos || []).some((p: any) => p.label === t))}
+                              onClick={() => {
+                                const existing = new Set((selectedFicha?.activePhotoGroup?.photos || []).map((p: any) => p.label));
+                                const firstAvailable = FICHA_PHOTO_TITLES.find(t => !existing.has(t)) || FICHA_PHOTO_TITLES[0];
+                                setTempFichaPhotos([]);
+                                setFichaPhotoTitle(firstAvailable);
+                                setPhotoGroupMode('add');
+                                setShowAddPhotoModal(true);
+                              }}
+                            >
+                              Anexar Fotografia
+                            </Button>
+                            <Button
+                              variant="outline"
+                              icon={FilePlus}
+                              onClick={() => { setTempFichaPhotos([]); setFichaPhotoTitle('Frontal'); setPhotoGroupMode('new'); setShowAddPhotoModal(true); }}
+                            >
+                              Criar Novo Grupo
+                            </Button>
                           </div>
 
                           <div className="space-y-4">
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fotografias Atuais</h4>
+                            {(selectedFicha?.activePhotoGroup?.photos || []).length === 0 && (
+                              <p className="text-xs font-bold text-slate-400 py-4">Nenhuma fotografia associada.</p>
+                            )}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                              {[
-                                { label: 'Frontal', seed: 'frontal' },
-                                { label: 'Perfil Esquerdo', seed: 'left' },
-                                { label: 'Perfil Direito', seed: 'right' },
-                                { label: 'Tatuagem', seed: 'tattoo' }
-                              ].map((photo) => (
-                                <div key={photo.label} className="flex flex-col items-center gap-3">
+                              {(selectedFicha?.activePhotoGroup?.photos || []).map((photo: any, idx: number) => (
+                                <div key={`${photo.label}-${idx}`} className="flex flex-col items-center gap-3">
                                   <div className="w-full aspect-[3/4] bg-white border-2 border-slate-50 rounded-2xl overflow-hidden shadow-sm group relative cursor-pointer">
-                                    <img src={getPortraitUrl(photo.seed)} alt={photo.label} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                    <img src={photo.url || getPortraitUrl(photo.seed)} alt={photo.label} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                     <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                       <Search className="text-white" size={24} />
                                     </div>
@@ -10332,6 +9846,11 @@ export default function App() {
                         className="overflow-hidden"
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm">
+                          {(selectedFicha.estado || 'Por Completar') !== 'Completo' && (
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">
+                              O envio ao SIGO só fica disponível quando a ficha estiver Completa
+                            </p>
+                          )}
                           <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
                             <table className="w-full text-left border-collapse">
                               <thead>
@@ -10340,15 +9859,49 @@ export default function App() {
                                   <th className="px-4 py-3">Nº Processo / Ocorrência</th>
                                   <th className="px-4 py-3">Unidade</th>
                                   <th className="px-4 py-3">Utilizador</th>
+                                  <th className="px-4 py-3">Estado SIGO</th>
+                                  <th className="px-4 py-3">Data de Envio</th>
+                                  <th className="px-4 py-3">Enviado por</th>
+                                  <th className="px-4 py-3 text-right">Ação</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                <tr className="hover:bg-slate-50 transition-colors">
-                                  <td className="px-4 py-3 text-sm">14/03/2024</td>
-                                  <td className="px-4 py-3 text-sm font-bold text-blue-600">006</td>
-                                  <td className="px-4 py-3 text-sm">ESF</td>
-                                  <td className="px-4 py-3 text-sm">Maria</td>
-                                </tr>
+                                {(selectedFicha.registosAssociados || []).map((r: any) => (
+                                  <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                                    <td className="px-4 py-3 text-sm">{r.date}</td>
+                                    <td className="px-4 py-3 text-sm font-bold text-blue-600">{r.processNumber}</td>
+                                    <td className="px-4 py-3 text-sm">{r.unit}</td>
+                                    <td className="px-4 py-3 text-sm">{r.user}</td>
+                                    <td className="px-4 py-3">
+                                      {r.sigoNotifiedAt ? (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600">
+                                          <CheckCircle size={12} /> Enviado
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-600">
+                                          Pendente
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-slate-600">
+                                      {r.sigoNotifiedAt ? new Date(r.sigoNotifiedAt).toLocaleDateString('pt-BR') : '---'}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-slate-600">
+                                      {r.sigoNotifiedBy || '---'}
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      {!r.sigoNotifiedAt && (
+                                        <button
+                                          onClick={() => { setSigoTargetRecordId(r.id); setShowConfirmSigo(true); }}
+                                          disabled={(selectedFicha.estado || 'Por Completar') !== 'Completo'}
+                                          className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-blue-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
+                                        >
+                                          <ShieldCheck size={12} /> Enviar ao SIGO
+                                        </button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
                               </tbody>
                             </table>
                           </div>
@@ -11236,7 +10789,7 @@ export default function App() {
                       </AnimatePresence>
                 </div>
 
-                {/* Motivo do Cadastro Accordion */}
+                {/* Motivo de Cadastro Accordion */}
                 <div className="space-y-4">
                   <button 
                     onClick={() => toggleSection('records')}
@@ -11244,7 +10797,7 @@ export default function App() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-900 text-white rounded-lg"><ClipboardList size={18} /></div>
-                      <span className="uppercase tracking-widest text-xs">Motivo do Cadastro</span>
+                      <span className="uppercase tracking-widest text-xs">Motivo de Cadastro</span>
                     </div>
                     {expandedSections.records ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </button>
@@ -12036,6 +11589,55 @@ export default function App() {
           )}
         </AnimatePresence>
 
+        {/* Confirmation Modal (Enviar ao SIGO) */}
+        <AnimatePresence>
+          {showConfirmSigo && selectedFicha && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border-2 border-slate-100 overflow-hidden"
+              >
+                <div className="bg-blue-600 px-6 py-8 flex flex-col items-center gap-3">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.1, type: 'spring', stiffness: 400, damping: 20 }}
+                    className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"
+                  >
+                    <ShieldCheck size={32} className="text-white" />
+                  </motion.div>
+                  <h3 className="text-base font-black text-white uppercase tracking-widest">Enviar ao SIGO</h3>
+                </div>
+                <div className="px-6 py-6 text-center space-y-6">
+                  <p className="text-sm font-bold text-slate-600">
+                    Tem a certeza que deseja enviar ao SIGO o registo{' '}
+                    <span className="text-slate-900 font-black">
+                      {(selectedFicha.registosAssociados || []).find((r: any) => r.id === sigoTargetRecordId)?.processNumber}
+                    </span>?
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setShowConfirmSigo(false); setSigoTargetRecordId(null); }}
+                      className="flex-1 py-3 border-2 border-slate-200 text-slate-700 font-black text-xs uppercase tracking-widest rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleComunicarSigo}
+                      className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all"
+                    >
+                      Confirmar
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         {/* Sinais Complementares Modal */}
         <AnimatePresence>
           {showComplementaryModal && (
@@ -12231,6 +11833,492 @@ export default function App() {
             </div>
           )}
         </AnimatePresence>
+
+        {/* Adicionar Informação Modal (Outras Informações da ficha) */}
+        <AnimatePresence>
+          {showAddInfoModal && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded shadow-2xl w-full max-w-3xl overflow-hidden border-2 border-slate-900"
+              >
+                <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-slate-800">Adicionar Informação</h2>
+                  <button onClick={() => setShowAddInfoModal(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                </div>
+
+                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                  <div className="space-y-1">
+                    <label className={addInfoLabelCls}>Tipo de Informação *</label>
+                    <select
+                      value={addInfoType}
+                      onChange={(e) => handleAddInfoTypeChange(e.target.value as typeof addInfoType)}
+                      className="w-full px-4 py-2.5 bg-blue-50 border-2 border-blue-400 rounded text-sm font-bold text-slate-900 outline-none"
+                    >
+                      <option value="document">Documento de Identificação</option>
+                      <option value="group">Grupo</option>
+                      <option value="address">Endereço</option>
+                      <option value="contact">Contacto</option>
+                      <option value="nickname">Alcunha</option>
+                    </select>
+                  </div>
+
+                  {/* Campos dinâmicos conforme o tipo selecionado */}
+                  {addInfoType === 'document' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Tipo</label>
+                        <select value={newDocument.type} onChange={(e) => setNewDocument({ ...newDocument, type: e.target.value })} className={addInfoInputCls}>
+                          <option value="CNI">CNI</option>
+                          <option value="Passaporte">Passaporte</option>
+                          <option value="Título de Residência">Título de Residência</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Número *</label>
+                        <input type="text" value={newDocument.number} onChange={(e) => setNewDocument({ ...newDocument, number: e.target.value })} className={addInfoInputCls} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Local de Emissão</label>
+                        <input type="text" value={newDocument.issueLocation} onChange={(e) => setNewDocument({ ...newDocument, issueLocation: e.target.value })} className={addInfoInputCls} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Data de Emissão</label>
+                        <input type="date" value={newDocument.issueDate} onChange={(e) => setNewDocument({ ...newDocument, issueDate: e.target.value })} className={addInfoInputCls} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Data de Validade</label>
+                        <input type="date" value={newDocument.expiryDate} onChange={(e) => setNewDocument({ ...newDocument, expiryDate: e.target.value })} className={addInfoInputCls} />
+                      </div>
+                    </div>
+                  )}
+
+                  {addInfoType === 'group' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Sigla *</label>
+                        <select
+                          value={newGroup.sigla}
+                          onChange={(e) => {
+                            const selected = paramGroups.find((g: any) => g.sigla === e.target.value);
+                            setNewGroup({ ...newGroup, sigla: e.target.value, nome: selected?.nome || '' });
+                          }}
+                          className={addInfoInputCls}
+                        >
+                          <option value="">-- Selecionar --</option>
+                          {paramGroups.filter((g: any) => g.estado === 'Ativo').map((g: any) => (
+                            <option key={g.id} value={g.sigla}>{g.sigla}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Nome</label>
+                        <input type="text" value={newGroup.nome} readOnly className="w-full px-4 py-2.5 bg-slate-100 border-2 border-slate-200 rounded text-sm font-bold text-slate-500 outline-none cursor-not-allowed" placeholder="Preenchido automaticamente" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Função</label>
+                        <input type="text" value={newGroup.funcao} onChange={(e) => setNewGroup({ ...newGroup, funcao: e.target.value })} placeholder="Ex: Membro, Líder, Associado" className={addInfoInputCls} />
+                      </div>
+                    </div>
+                  )}
+
+                  {addInfoType === 'address' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Tipo *</label>
+                        <select value={newAddress.type} onChange={(e) => setNewAddress({ ...newAddress, type: e.target.value })} className={addInfoInputCls}>
+                          <option value="Residência">Residência</option>
+                          <option value="Trabalho">Trabalho</option>
+                          <option value="Outro">Outro</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Ilha *</label>
+                        <select value={newAddress.island} onChange={(e) => setNewAddress({ ...newAddress, island: e.target.value })} className={addInfoInputCls}>
+                          <option value="">Selecione...</option>
+                          <option value="Santiago">Santiago</option>
+                          <option value="São Vicente">São Vicente</option>
+                          <option value="Sal">Sal</option>
+                          <option value="Fogo">Fogo</option>
+                          <option value="Santo Antão">Santo Antão</option>
+                          <option value="Boa Vista">Boa Vista</option>
+                          <option value="Maio">Maio</option>
+                          <option value="São Nicolau">São Nicolau</option>
+                          <option value="Brava">Brava</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Conselho</label>
+                        <select value={newAddress.council} onChange={(e) => setNewAddress({ ...newAddress, council: e.target.value })} className={addInfoInputCls}>
+                          <option value="">Selecione...</option>
+                          <option value="Praia">Praia</option>
+                          <option value="Mindelo">Mindelo</option>
+                          <option value="Espargos">Espargos</option>
+                          <option value="Assomada">Assomada</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Freguesia</label>
+                        <select value={newAddress.parish} onChange={(e) => setNewAddress({ ...newAddress, parish: e.target.value })} className={addInfoInputCls}>
+                          <option value="">Selecione...</option>
+                          <option value="Nossa Senhora da Graça">Nossa Senhora da Graça</option>
+                          <option value="São Nicolau Tolentino">São Nicolau Tolentino</option>
+                          <option value="Santíssimo Nome de Jesus">Santíssimo Nome de Jesus</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Localidade</label>
+                        <select value={newAddress.locality} onChange={(e) => setNewAddress({ ...newAddress, locality: e.target.value })} className={addInfoInputCls}>
+                          <option value="">Selecione...</option>
+                          <option value="Achada Santo António">Achada Santo António</option>
+                          <option value="Palmarejo">Palmarejo</option>
+                          <option value="Plateau">Plateau</option>
+                          <option value="Fazenda">Fazenda</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Referência</label>
+                        <input type="text" value={newAddress.reference} onChange={(e) => setNewAddress({ ...newAddress, reference: e.target.value })} className={addInfoInputCls} />
+                      </div>
+                    </div>
+                  )}
+
+                  {addInfoType === 'contact' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Tipo</label>
+                        <select value={newContact.type} onChange={(e) => setNewContact({ ...newContact, type: e.target.value })} className={addInfoInputCls}>
+                          <option value="Telemóvel">Telemóvel</option>
+                          <option value="Telefone">Telefone</option>
+                          <option value="Email">Email</option>
+                          <option value="Facebook">Facebook</option>
+                          <option value="Instagram">Instagram</option>
+                          <option value="Twitter / X">Twitter / X</option>
+                          <option value="LinkedIn">LinkedIn</option>
+                          <option value="TikTok">TikTok</option>
+                          <option value="WhatsApp">WhatsApp</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Informação *</label>
+                        <input type="text" value={newContact.info} onChange={(e) => setNewContact({ ...newContact, info: e.target.value })} className={addInfoInputCls} />
+                      </div>
+                    </div>
+                  )}
+
+                  {addInfoType === 'nickname' && (
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="space-y-1">
+                        <label className={addInfoLabelCls}>Alcunha *</label>
+                        <input type="text" value={newNickname.value} onChange={(e) => setNewNickname({ ...newNickname, value: e.target.value })} className={addInfoInputCls} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-6 border-t border-slate-200 flex justify-end gap-4">
+                  <button
+                    onClick={() => setShowAddInfoModal(false)}
+                    className="px-8 py-2 bg-slate-600 text-white font-bold rounded hover:bg-slate-700 transition-colors text-sm shadow-md"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSaveAddInfo}
+                    disabled={!canSaveAddInfo()}
+                    className="px-8 py-2 bg-emerald-600 text-white font-bold rounded hover:bg-emerald-700 transition-colors text-sm shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+      {/* Adicionar Motivo de Cadastro Modal */}
+      <AnimatePresence>
+        {showAddMotivoInFicha && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded shadow-2xl w-full max-w-4xl overflow-hidden border-2 border-slate-900"
+            >
+              <div className="p-6 border-b border-slate-200">
+                <h2 className="text-xl font-bold text-slate-800">Motivo de Cadastro</h2>
+              </div>
+
+              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Tipo *</label>
+                    <select value={newMotivoInFicha.type} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, type: e.target.value})} className="w-full px-3 py-2 border-2 border-blue-400 rounded bg-blue-50 text-sm outline-none">
+                      <option value="Criminal">Criminal</option>
+                      <option value="Policial">Policial</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Tipo de Auto</label>
+                    <select value={newMotivoInFicha.auto_type} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, auto_type: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none">
+                      <option value="">Selecione...</option>
+                      <option>Auto de Notícia</option>
+                      <option>Auto de Detenção</option>
+                      <option>Auto de Flagrante Delito</option>
+                      <option>Auto de Ocorrência</option>
+                      <option>Auto de Apreensão</option>
+                      <option>Outro</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Data</label>
+                    <input type="date" value={newMotivoInFicha.date} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, date: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Natureza de Ocorrência</label>
+                    <select value={newMotivoInFicha.natureza} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, natureza: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none">
+                      <option value="">Selecione...</option>
+                      <option>Crime contra o Património</option>
+                      <option>Crime contra as Pessoas</option>
+                      <option>Crime contra a Ordem Pública</option>
+                      <option>Crime contra o Estado</option>
+                      <option>Crime contra a Família</option>
+                      <option>Crime de Droga / Tráfico</option>
+                      <option>Crime de Natureza Sexual</option>
+                      <option>Outro</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Enquadramento de Crime</label>
+                    <select value={newMotivoInFicha.enquadramento} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, enquadramento: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none">
+                      <option value="">Selecione...</option>
+                      <option>Furto Simples — Art. 193º CP</option>
+                      <option>Furto Qualificado — Art. 197º CP</option>
+                      <option>Roubo — Art. 200º CP</option>
+                      <option>Homicídio — Art. 122º CP</option>
+                      <option>Ofensa à Integridade Física — Art. 131º CP</option>
+                      <option>Violência Doméstica — Art. 134º CP</option>
+                      <option>Tráfico de Droga — Lei 78/III/90</option>
+                      <option>Desordem Pública — Art. 279º CP</option>
+                      <option>Resistência à Autoridade — Art. 283º CP</option>
+                      <option>Outro</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Tipologia</label>
+                    <select value={newMotivoInFicha.tipologia} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, tipologia: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none">
+                      <option value="">Selecione...</option>
+                      <option>Detenção em Flagrante Delito</option>
+                      <option>Suspeito de Crime</option>
+                      <option>Arguido</option>
+                      <option>Investigado</option>
+                      <option>Condenado</option>
+                      <option>Reincidente</option>
+                      <option>Outro</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Unidade</label>
+                    <select value={newMotivoInFicha.unit} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, unit: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none">
+                      <option value="">Selecione...</option>
+                      <option>ESF Praia</option>
+                      <option>ESF Mindelo</option>
+                      <option>ESF Santa Catarina</option>
+                      <option>ESF São Vicente</option>
+                      <option>DP Praia</option>
+                      <option>DP Mindelo</option>
+                      <option>DP Santa Cruz</option>
+                      <option>DP Tarrafal</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Nº Ocorrência</label>
+                    <input type="text" value={newMotivoInFicha.refNo} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, refNo: e.target.value})} placeholder="Ex: OC-2024-0001" className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Medidas Aplicadas</label>
+                    <select value={newMotivoInFicha.measures} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, measures: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none">
+                      <option value="">Selecione...</option>
+                      <option>Prisão Preventiva</option>
+                      <option>Termo de Identidade e Residência</option>
+                      <option>Liberdade Provisória</option>
+                      <option>Obrigação de Apresentação Periódica</option>
+                      <option>Proibição de Contacto</option>
+                      <option>Suspensão de Pena</option>
+                      <option>Multa</option>
+                      <option>Sem medidas aplicadas</option>
+                      <option>Outro</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-200 flex justify-end gap-4">
+                <button
+                  onClick={() => { setShowAddMotivoInFicha(false); setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' }); }}
+                  className="px-8 py-2 bg-slate-600 text-white font-bold rounded hover:bg-slate-700 transition-colors text-sm shadow-md"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    if (currentView === 'ficha_new') {
+                      // Rascunho da ficha nova: ainda não há ficha guardada, entra na lista local
+                      if (!newMotivoInFicha.natureza) return;
+                      setNewFichaReasons([...newFichaReasons, { ...newMotivoInFicha, id: Date.now(), status: 'Ativo' }]);
+                    } else {
+                      // Ficha existente: grava diretamente no registo
+                      if (!newMotivoInFicha.refNo) return;
+                      const newReg = { ...newMotivoInFicha, id: Date.now(), status: 'Ativo' };
+                      setSelectedFicha((prev: any) => ({ ...prev, registrationReasons: [...(prev.registrationReasons || []), newReg] }));
+                    }
+                    setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+                    setShowAddMotivoInFicha(false);
+                  }}
+                  className="px-8 py-2 bg-emerald-600 text-white font-bold rounded hover:bg-emerald-700 transition-colors text-sm shadow-md"
+                >
+                  Guardar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Adicionar Informação Modal (Outras Informações — Nova Ficha) */}
+      <AnimatePresence>
+        {showNfAddInfoModal && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded shadow-2xl w-full max-w-3xl overflow-hidden border-2 border-slate-900"
+            >
+              <div className="p-6 border-b border-slate-200">
+                <h2 className="text-xl font-bold text-slate-800">Adicionar Informação</h2>
+              </div>
+
+              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">Tipo de Informação *</label>
+                  <select
+                    value={nfAddInfoType}
+                    onChange={(e) => setNfAddInfoType(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-blue-50 border-2 border-blue-400 rounded text-sm font-bold text-slate-900 outline-none"
+                  >
+                    <option value="address">Endereço</option>
+                    <option value="contact">Contacto</option>
+                    <option value="nickname">Alcunha</option>
+                  </select>
+                </div>
+
+                {nfAddInfoType === 'address' && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Tipo</label>
+                      <select value={newFichaNewAddress.type} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, type: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none">
+                        {['Residência','Trabalho','Outro'].map(o => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Ilha *</label>
+                      <select value={newFichaNewAddress.island} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, island: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none">
+                        <option value="">Selecione...</option>
+                        {['Santiago','São Vicente','Sal','Boa Vista','Fogo','Santo Antão','Maio','Brava','São Nicolau'].map(o => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Conselho</label>
+                      <input type="text" value={newFichaNewAddress.county} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, county: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Freguesia</label>
+                      <input type="text" value={newFichaNewAddress.parish} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, parish: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Localidade</label>
+                      <input type="text" value={newFichaNewAddress.locality} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, locality: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Zona</label>
+                      <input type="text" value={newFichaNewAddress.zone} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, zone: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                    </div>
+                    <div className="md:col-span-3 space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Ponto de Referência</label>
+                      <input type="text" value={newFichaNewAddress.reference} onChange={(e) => setNewFichaNewAddress({...newFichaNewAddress, reference: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                    </div>
+                  </div>
+                )}
+
+                {nfAddInfoType === 'contact' && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Tipo</label>
+                      <select value={newFichaNewContact.type} onChange={(e) => setNewFichaNewContact({...newFichaNewContact, type: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none">
+                        {['Telemovel','Email','Telefone fixo','Facebook','Instagram','Twitter / X','LinkedIn','TikTok','WhatsApp','Outro'].map(o => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="md:col-span-2 space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Contacto *</label>
+                      <input type="text" value={newFichaNewContact.info} onChange={(e) => setNewFichaNewContact({...newFichaNewContact, info: e.target.value})} placeholder="Número ou email..." className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                    </div>
+                  </div>
+                )}
+
+                {nfAddInfoType === 'nickname' && (
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Alcunha *</label>
+                      <input type="text" value={newFichaNewNickname} onChange={(e) => setNewFichaNewNickname(e.target.value)} placeholder="Ex: Manxedo..." className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-slate-200 flex justify-end gap-4">
+                <button
+                  onClick={() => setShowNfAddInfoModal(false)}
+                  className="px-8 py-2 bg-slate-600 text-white font-bold rounded hover:bg-slate-700 transition-colors text-sm shadow-md"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    const today = new Date().toISOString().slice(0,10);
+                    if (nfAddInfoType === 'address') {
+                      if (!newFichaNewAddress.island) return;
+                      setNewFichaAddresses([...newFichaAddresses, { ...newFichaNewAddress, id: Date.now(), createdAt: today, validFrom: today, validTo: null, user: user?.name || 'Admin' }]);
+                      setNewFichaNewAddress({ type: 'Residência', island: '', county: '', parish: '', locality: '', zone: '', reference: '' });
+                    } else if (nfAddInfoType === 'contact') {
+                      if (!newFichaNewContact.info) return;
+                      setNewFichaContacts([...newFichaContacts, { ...newFichaNewContact, id: Date.now(), validFrom: today, validTo: null, user: user?.name || 'Admin' }]);
+                      setNewFichaNewContact({ type: newFichaNewContact.type, info: '' });
+                    } else {
+                      if (!newFichaNewNickname) return;
+                      setNewFichaNicknames([...newFichaNicknames, newFichaNewNickname]);
+                      setNewFichaNewNickname('');
+                    }
+                    setShowNfAddInfoModal(false);
+                  }}
+                  className="px-8 py-2 bg-emerald-600 text-white font-bold rounded hover:bg-emerald-700 transition-colors text-sm shadow-md"
+                >
+                  Guardar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Documentos Cadastrados Modal */}
       <AnimatePresence>
@@ -13193,7 +13281,7 @@ export default function App() {
                     <div key={idx} className="flex flex-col items-center gap-3">
                       <div className="w-full aspect-[3/4] bg-white border-2 border-slate-200 rounded-xl overflow-hidden shadow-md hover:border-slate-900 transition-all group">
                         <img
-                          src={getPortraitUrl(photo.seed)}
+                          src={photo.url || getPortraitUrl(photo.seed)}
                           alt={photo.label}
                           className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                           referrerPolicy="no-referrer"
@@ -13746,6 +13834,159 @@ export default function App() {
                     onClick={() => {
                       setSavedPhotos([...tempPhotos]);
                       setShowPhotoModal(false);
+                    }}
+                    className="px-8 py-2 bg-emerald-600 text-white font-bold rounded hover:bg-emerald-700 transition-colors text-sm shadow-md"
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Anexar Fotografia (Detalhe da Ficha) — versiona photo_group */}
+        <AnimatePresence>
+          {showAddPhotoModal && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded shadow-2xl w-full max-w-5xl overflow-hidden border-2 border-slate-900"
+              >
+                <div className="p-6 border-b border-slate-200">
+                  <h2 className="text-xl font-bold text-slate-800">
+                    {photoGroupMode === 'new' ? 'Criar Novo Grupo de Fotografias' : 'Anexar Fotografia'}
+                  </h2>
+                  {photoGroupMode === 'new' && (selectedFicha?.activePhotoGroup?.photos?.length || 0) > 0 && (
+                    <p className="text-xs font-medium text-slate-500 mt-1">O grupo atual passa para o histórico e começa um grupo novo.</p>
+                  )}
+                </div>
+
+                <div className="p-6 space-y-8">
+                  <div className="flex flex-col md:flex-row gap-8 items-start">
+                    <div className="w-full md:w-64 space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Título</label>
+                      <select
+                        className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none"
+                        value={fichaPhotoTitle}
+                        onChange={(e) => setFichaPhotoTitle(e.target.value)}
+                      >
+                        {FICHA_PHOTO_TITLES
+                          .filter(t => photoGroupMode !== 'add' || !(selectedFicha?.activePhotoGroup?.photos || []).some((p: any) => p.label === t))
+                          .map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-4 pt-6">
+                      <label className="cursor-pointer px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded hover:bg-blue-100 transition-colors text-xs border border-blue-200 flex items-center gap-2">
+                        <Upload size={16} />
+                        Carregar Anexo ....
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const url = URL.createObjectURL(file);
+                              setTempFichaPhotos([...tempFichaPhotos, { title: fichaPhotoTitle, url, id: Date.now() }]);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="border border-slate-900 overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-200 text-[11px] font-bold text-slate-900 border-b border-slate-900">
+                          <th className="px-4 py-2 border-r border-slate-900">Título</th>
+                          <th className="px-4 py-2 border-r border-slate-900">Fotografia</th>
+                          <th className="px-4 py-2">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tempFichaPhotos.length > 0 ? (
+                          tempFichaPhotos.map((photo, idx) => (
+                            <tr key={photo.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                              <td className="px-4 py-2 text-xs border-r border-slate-900 font-bold">{photo.title}</td>
+                              <td className="px-4 py-2 text-xs border-r border-slate-900">
+                                <div className="w-16 h-12 border border-slate-300 rounded overflow-hidden">
+                                  <img src={photo.url} alt={photo.title} className="w-full h-full object-cover" />
+                                </div>
+                              </td>
+                              <td className="px-4 py-2 text-xs">
+                                <button
+                                  onClick={() => setTempFichaPhotos(tempFichaPhotos.filter(p => p.id !== photo.id))}
+                                  className="text-red-500 hover:text-red-700 p-1"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={3} className="px-4 py-12 text-center text-slate-400 italic text-sm">
+                              Nenhuma fotografia adicionada
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="p-6 border-t border-slate-200 flex justify-end gap-4">
+                  <button
+                    onClick={() => {
+                      setShowAddPhotoModal(false);
+                      setTempFichaPhotos([]);
+                    }}
+                    className="px-8 py-2 bg-slate-600 text-white font-bold rounded hover:bg-slate-700 transition-colors text-sm shadow-md"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (tempFichaPhotos.length === 0 || !selectedFicha) {
+                        setShowAddPhotoModal(false);
+                        return;
+                      }
+                      const today = new Date().toISOString().split('T')[0];
+                      const active = selectedFicha.activePhotoGroup;
+                      const uploaded = tempFichaPhotos.map((p: any) => ({ label: p.title, url: p.url }));
+                      // Sem grupo ativo ainda, não há o que "adicionar" — força a criação do primeiro grupo
+                      const mode = active?.photos?.length ? photoGroupMode : 'new';
+
+                      let updatedFicha;
+                      if (mode === 'add' && active) {
+                        // Adicionar ao grupo atual: título repetido substitui a foto existente desse título
+                        const newTitles = new Set(uploaded.map((p: any) => p.label));
+                        const kept = active.photos.filter((p: any) => !newTitles.has(p.label));
+                        updatedFicha = {
+                          ...selectedFicha,
+                          activePhotoGroup: { ...active, photos: [...kept, ...uploaded] }
+                        };
+                      } else {
+                        // Criar novo grupo: se havia um grupo ativo, fecha-o para o histórico
+                        updatedFicha = {
+                          ...selectedFicha,
+                          activePhotoGroup: { id: Date.now(), createdAt: today, createdBy: user?.name || 'Utilizador', photos: uploaded },
+                          photoHistory: active
+                            ? [{ ...active, updatedAt: today, updatedBy: user?.name || 'Utilizador' }, ...(selectedFicha.photoHistory || [])]
+                            : (selectedFicha.photoHistory || [])
+                        };
+                      }
+
+                      setSelectedFicha(updatedFicha);
+                      setFichas((prev: any) => prev.map((f: any) => f.id === selectedFicha.id ? updatedFicha : f));
+                      setTempFichaPhotos([]);
+                      setPhotoGroupMode('add');
+                      setShowAddPhotoModal(false);
                     }}
                     className="px-8 py-2 bg-emerald-600 text-white font-bold rounded hover:bg-emerald-700 transition-colors text-sm shadow-md"
                   >
