@@ -80,6 +80,14 @@ function getPortraitUrl(seed: string, gender: 'men' | 'women' = 'men'): string {
   return `https://randomuser.me/api/portraits/${gender}/${seedToId(seed)}.jpg`;
 }
 
+// --- Conclusão antecipada do Cadastro de Documento ---
+
+// Tipos de documento que não têm titular associado e por isso dispensam os Dados Pessoais.
+// ATENÇÃO: lista provisória, A CONFIRMAR COM A EQUIPA. Hoje nem o contrato da API nem o
+// domínio "Documentos Extraviados" das Parametrizações fazem esta distinção; os valores
+// aqui são siglas desse domínio (ex.: 'DV' = Documento de Veículo).
+const DOCUMENT_TYPES_SEM_TITULAR = ['DV'];
+
 // Tipos de fotografia da ficha (grupo de "Dados Biométricos")
 const FICHA_PHOTO_TITLES = ['Frontal', 'Perfil Esquerdo', 'Perfil Direito', 'Tatuagem', 'Piercings', 'Marcas de Nascença'];
 
@@ -609,6 +617,7 @@ export default function App() {
       island: 'Santiago',
       county: 'Praia',
       organicUnit: 'PN - Praia',
+      comando: 'Comando Regional Santiago Sul',
       observations: ''
     }
   });
@@ -624,7 +633,7 @@ export default function App() {
       type: 'Civil', name: '', idType: '', idNumber: '', contact: '', foundDate: '',
       location: { island: 'Santiago', county: 'Praia', parish: 'Nossa Senhora da Graça', locality: '', zone: '', reference: '' }
     },
-    storage: { island: 'Santiago', county: 'Praia', organicUnit: 'PN - Praia', observations: '' }
+    storage: { island: 'Santiago', county: 'Praia', organicUnit: 'PN - Praia', comando: 'Comando Regional Santiago Sul', observations: '' }
   });
   // Documentos encontrados adicionados a este registo (Dados Pessoais / Motivo / Anexos são partilhados por todos).
   // `id` só existe em documentos já gravados — os novos ficam sem id até serem criados.
@@ -648,6 +657,131 @@ export default function App() {
     setCurrentDocItem({ ...emptyDocItem });
     setEditingDocItemIdx(null);
   };
+
+  // Documentos que seriam gravados se o registo fosse concluído agora. Quando a lista está
+  // vazia, vale o documento em preenchimento (mesmo fallback usado na gravação).
+  const docItemsParaConcluir: DocItem[] = docItems.length > 0
+    ? docItems
+    : (docData.document.type.trim() && docData.document.number.trim()
+      ? [{
+        type: docData.document.type,
+        number: docData.document.number,
+        issueDate: docData.document.issueDate,
+        expiryDate: docData.document.expiryDate,
+      }]
+      : []);
+  // O titular é partilhado por todo o registo, por isso só é dispensável quando NENHUM dos
+  // documentos o exige.
+  const exigeTitular = docItemsParaConcluir.some(it => !DOCUMENT_TYPES_SEM_TITULAR.includes(it.type));
+  // Permite gravar o registo a partir de qualquer passo, desde que o essencial esteja preenchido.
+  const canConclude = Boolean(
+    docItemsParaConcluir.length > 0 &&
+    docData.document.reason.trim() &&
+    (!exigeTitular || docData.document.fullName.trim())
+  );
+
+  // Gravação do registo, extraída do botão do rodapé para poder ser chamada a partir de
+  // qualquer passo. O comportamento é exatamente o que já existia no Passo 3.
+  const handleConcluirRegisto = () => {
+    if (editingRegistoId) {
+      // Edição do registo completo: dados partilhados + lista de documentos
+      const shared = {
+        reason: docData.document.reason,
+        fullName: docData.document.fullName,
+        birthDate: docData.document.birthDate,
+        nationality: docData.document.nationality,
+        birthPlace: docData.document.birthPlace,
+        fatherName: docData.document.fatherName,
+        motherName: docData.document.motherName,
+        photo: docData.document.photo,
+      };
+      const existentes = mockDocuments.filter(d => (d.registoId || d.id) === editingRegistoId);
+      const maxId = Math.max(0, ...mockDocuments.map(d => parseInt(d.id, 10) || 0));
+      let proximoId = maxId;
+      const registoRecords = docItems.map((it) => {
+        const anterior = it.id ? existentes.find(d => d.id === it.id) : undefined;
+        if (!anterior) proximoId += 1;
+        return {
+          ...(anterior || {}),
+          id: anterior ? anterior.id : String(proximoId).padStart(3, '0'),
+          registoId: editingRegistoId,
+          document: { ...shared, type: it.type, number: it.number, issueDate: it.issueDate, expiryDate: it.expiryDate },
+          finder: docData.finder,
+          storage: docData.storage,
+          attachments: savedAttachments,
+          estado: anterior?.estado || 'Por Levantar',
+          registeredBy: anterior?.registeredBy || user?.name || 'Carlos Mendes',
+          registeredAt: anterior?.registeredAt || new Date().toLocaleDateString('pt-BR'),
+        };
+      });
+      // substitui os documentos do registo no lugar (mantém a ordem e a contiguidade)
+      const substituir = (prev: any[]) => {
+        const out: any[] = [];
+        let inserido = false;
+        prev.forEach(d => {
+          if ((d.registoId || d.id) === editingRegistoId) {
+            if (!inserido) { out.push(...registoRecords); inserido = true; }
+          } else {
+            out.push(d);
+          }
+        });
+        if (!inserido) out.push(...registoRecords);
+        return out;
+      };
+      setMockDocuments(substituir);
+      setDocSearchResults(prev => prev ? substituir(prev) : prev);
+      setRegisteredDoc(registoRecords[0] || null);
+      setEditingRegistoId(null);
+      setDocItems([]);
+      setIsReadOnlyView(true);
+      setSuccessMessage(`Registo ${editingRegistoId} atualizado — ${registoRecords.length} ${registoRecords.length === 1 ? 'documento' : 'documentos'}.`);
+      setShowSuccessModal(true);
+      setCurrentView(registoRecords.length > 0 ? 'document_detail' : 'document_search');
+    } else {
+      const baseId = Math.max(0, ...mockDocuments.map(d => parseInt(d.id, 10) || 0));
+      const items = docItems.length > 0 ? docItems : [{
+        type: docData.document.type,
+        number: docData.document.number,
+        issueDate: docData.document.issueDate,
+        expiryDate: docData.document.expiryDate,
+      }];
+      const shared = {
+        reason: docData.document.reason,
+        fullName: docData.document.fullName,
+        birthDate: docData.document.birthDate,
+        nationality: docData.document.nationality,
+        birthPlace: docData.document.birthPlace,
+        fatherName: docData.document.fatherName,
+        motherName: docData.document.motherName,
+        photo: docData.document.photo,
+      };
+      const registoId = 'REG-' + String(baseId + 1).padStart(3, '0');
+      const newRecords = items.map((it, i) => ({
+        id: String(baseId + 1 + i).padStart(3, '0'),
+        registoId,
+        document: { ...shared, type: it.type, number: it.number, issueDate: it.issueDate, expiryDate: it.expiryDate },
+        finder: docData.finder,
+        storage: docData.storage,
+        attachments: savedAttachments,
+        estado: 'Por Levantar',
+        registeredBy: user?.name || 'Carlos Mendes',
+        registeredAt: new Date().toLocaleDateString('pt-BR')
+      }));
+      setMockDocuments(prev => [...prev, ...newRecords]);
+      setDocItems([]);
+      if (newRecords.length > 1) {
+        setSuccessMessage(`${newRecords.length} documentos cadastrados com sucesso`);
+        setShowSuccessModal(true);
+        setCurrentView('document_search');
+      } else {
+        setRegisteredDoc(newRecords[0]);
+        setSuccessMessage('Cadastro Documento Perdido com Sucesso');
+        setShowSuccessModal(true);
+        setCurrentView('document_detail');
+      }
+    }
+  };
+
   const docEstado = (d: any) => d.estado || (d.levantamento ? 'Levantado' : 'Por Levantar');
   const estadoPillClass = (e: string) => e === 'Levantado'
     ? 'bg-emerald-50 text-emerald-600'
@@ -3219,7 +3353,7 @@ export default function App() {
                       <div className="space-y-8">
                         <div className="space-y-6">
                           <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Localização do Documento</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <DetailField 
                               label="Ilha" 
                               value={docData.storage.island} 
@@ -3236,13 +3370,21 @@ export default function App() {
                               options={['Praia']}
                               onChange={(val: string) => setDocData({...docData, storage: {...docData.storage, county: val}})}
                             />
-                            <DetailField 
-                              label="Unidade Organica" 
-                              value={docData.storage.organicUnit} 
-                              type="select" 
+                            <DetailField
+                              label="Unidade Organica"
+                              value={docData.storage.organicUnit}
+                              type="select"
                               readOnly={false}
                               options={['PN - Praia']}
                               onChange={(val: string) => setDocData({...docData, storage: {...docData.storage, organicUnit: val}})}
+                            />
+                            <DetailField
+                              label="Comando"
+                              value={docData.storage.comando}
+                              type="select"
+                              readOnly={false}
+                              options={['Comando Regional Santiago Sul', 'Comando Regional Santiago Norte', 'Comando Regional Barlavento', 'Comando Regional Sotavento']}
+                              onChange={(val: string) => setDocData({...docData, storage: {...docData.storage, comando: val}})}
                             />
                           </div>
                         </div>
@@ -3276,108 +3418,24 @@ export default function App() {
                       >
                         Cancelar
                       </Button>
+                      {/* Conclusão antecipada: nos Passos 1 e 2, assim que o essencial estiver preenchido */}
+                      {docStep < 3 && canConclude && (
+                        <Button
+                          variant="success"
+                          icon={Check}
+                          onClick={handleConcluirRegisto}
+                        >
+                          Concluir
+                        </Button>
+                      )}
                       <Button
                         variant="primary"
                         icon={docStep === 3 ? Check : ArrowRight}
                         onClick={() => {
                           if (docStep < 3) {
                             setDocStep(docStep + 1);
-                          } else if (editingRegistoId) {
-                            // Edição do registo completo: dados partilhados + lista de documentos
-                            const shared = {
-                              reason: docData.document.reason,
-                              fullName: docData.document.fullName,
-                              birthDate: docData.document.birthDate,
-                              nationality: docData.document.nationality,
-                              birthPlace: docData.document.birthPlace,
-                              fatherName: docData.document.fatherName,
-                              motherName: docData.document.motherName,
-                              photo: docData.document.photo,
-                            };
-                            const existentes = mockDocuments.filter(d => (d.registoId || d.id) === editingRegistoId);
-                            const maxId = Math.max(0, ...mockDocuments.map(d => parseInt(d.id, 10) || 0));
-                            let proximoId = maxId;
-                            const registoRecords = docItems.map((it) => {
-                              const anterior = it.id ? existentes.find(d => d.id === it.id) : undefined;
-                              if (!anterior) proximoId += 1;
-                              return {
-                                ...(anterior || {}),
-                                id: anterior ? anterior.id : String(proximoId).padStart(3, '0'),
-                                registoId: editingRegistoId,
-                                document: { ...shared, type: it.type, number: it.number, issueDate: it.issueDate, expiryDate: it.expiryDate },
-                                finder: docData.finder,
-                                storage: docData.storage,
-                                attachments: savedAttachments,
-                                estado: anterior?.estado || 'Por Levantar',
-                                registeredBy: anterior?.registeredBy || user?.name || 'Carlos Mendes',
-                                registeredAt: anterior?.registeredAt || new Date().toLocaleDateString('pt-BR'),
-                              };
-                            });
-                            // substitui os documentos do registo no lugar (mantém a ordem e a contiguidade)
-                            const substituir = (prev: any[]) => {
-                              const out: any[] = [];
-                              let inserido = false;
-                              prev.forEach(d => {
-                                if ((d.registoId || d.id) === editingRegistoId) {
-                                  if (!inserido) { out.push(...registoRecords); inserido = true; }
-                                } else {
-                                  out.push(d);
-                                }
-                              });
-                              if (!inserido) out.push(...registoRecords);
-                              return out;
-                            };
-                            setMockDocuments(substituir);
-                            setDocSearchResults(prev => prev ? substituir(prev) : prev);
-                            setRegisteredDoc(registoRecords[0] || null);
-                            setEditingRegistoId(null);
-                            setDocItems([]);
-                            setIsReadOnlyView(true);
-                            setSuccessMessage(`Registo ${editingRegistoId} atualizado — ${registoRecords.length} ${registoRecords.length === 1 ? 'documento' : 'documentos'}.`);
-                            setShowSuccessModal(true);
-                            setCurrentView(registoRecords.length > 0 ? 'document_detail' : 'document_search');
                           } else {
-                            const baseId = Math.max(0, ...mockDocuments.map(d => parseInt(d.id, 10) || 0));
-                            const items = docItems.length > 0 ? docItems : [{
-                              type: docData.document.type,
-                              number: docData.document.number,
-                              issueDate: docData.document.issueDate,
-                              expiryDate: docData.document.expiryDate,
-                            }];
-                            const shared = {
-                              reason: docData.document.reason,
-                              fullName: docData.document.fullName,
-                              birthDate: docData.document.birthDate,
-                              nationality: docData.document.nationality,
-                              birthPlace: docData.document.birthPlace,
-                              fatherName: docData.document.fatherName,
-                              motherName: docData.document.motherName,
-                              photo: docData.document.photo,
-                            };
-                            const registoId = 'REG-' + String(baseId + 1).padStart(3, '0');
-                            const newRecords = items.map((it, i) => ({
-                              id: String(baseId + 1 + i).padStart(3, '0'),
-                              registoId,
-                              document: { ...shared, type: it.type, number: it.number, issueDate: it.issueDate, expiryDate: it.expiryDate },
-                              finder: docData.finder,
-                              storage: docData.storage,
-                              attachments: savedAttachments,
-                              estado: 'Por Levantar',
-                              registeredBy: user?.name || 'Carlos Mendes',
-                              registeredAt: new Date().toLocaleDateString('pt-BR')
-                            }));
-                            setMockDocuments(prev => [...prev, ...newRecords]);
-                            setDocItems([]);
-                            if (newRecords.length > 1) {
-                              setSuccessMessage(`${newRecords.length} documentos cadastrados com sucesso`);
-                              setShowSuccessModal(true);
-                              setCurrentView('document_search');
-                            } else {
-                              setRegisteredDoc(newRecords[0]);
-                              setSuccessMessage('Cadastro Documento Perdido com Sucesso');
-                              setShowSuccessModal(true);
-                              setCurrentView('document_detail');
-                            }
+                            handleConcluirRegisto();
                           }
                         }}
                       >
@@ -3585,10 +3643,11 @@ export default function App() {
                     </div>
                     
                     <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                         <DetailField label="Ilha" value={registeredDoc.storage.island} />
                         <DetailField label="Concelho" value={registeredDoc.storage.county} />
                         <DetailField label="Unidade Orgânica" value={registeredDoc.storage.organicUnit} />
+                        <DetailField label="Comando" value={registeredDoc.storage.comando || '---'} />
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observações</label>
