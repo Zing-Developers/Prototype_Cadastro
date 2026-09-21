@@ -3881,7 +3881,7 @@ export default function App() {
                           <th className="px-6 py-4">Numero</th>
                           <th className="px-6 py-4">Nome</th>
                           <th className="px-6 py-4">Data Nascimento</th>
-                          <th className="px-6 py-4">Ilha</th>
+                          <th className="px-6 py-4">Localização do Documento</th>
                           <th className="px-6 py-4">Unidade Organica</th>
                           <th className="px-6 py-4">Estado</th>
                           <th className="px-6 py-4 text-right">Ações</th>
@@ -3908,12 +3908,12 @@ export default function App() {
                                     {doc.registoId || doc.id}
                                   </span>
                                 </td>
-                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.type}</td>
-                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.number}</td>
+                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.type || <span className="text-slate-300">—</span>}</td>
+                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.number || <span className="text-slate-300">—</span>}</td>
                                 <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.fullName || <span className="text-slate-300 italic font-medium">Não identificado</span>}</td>
                                 <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.document.birthDate || <span className="text-slate-300">—</span>}</td>
-                                <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.island}</td>
-                                <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.organicUnit}</td>
+                                <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.island || <span className="text-slate-300">—</span>}</td>
+                                <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.organicUnit || <span className="text-slate-300">—</span>}</td>
                                 <td className="px-6 py-4">
                                   <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${estadoPillClass(estado)}`}>{estado}</span>
                                 </td>
