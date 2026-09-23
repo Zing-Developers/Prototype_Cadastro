@@ -595,6 +595,7 @@ export default function App() {
       name: '',
       idType: '',
       idNumber: '',
+      contactType: '',
       contact: '',
       foundDate: '',
       location: {
@@ -623,7 +624,7 @@ export default function App() {
       nif: '', phone: '', photo: null as string | null, attachments: [] as File[]
     },
     finder: {
-      type: 'Civil', name: '', idType: '', idNumber: '', contact: '', foundDate: '',
+      type: 'Civil', name: '', idType: '', idNumber: '', contactType: '', contact: '', foundDate: '',
       location: { island: 'Santiago', county: 'Praia', parish: 'Nossa Senhora da Graça', locality: '', zone: '', reference: '' }
     },
     storage: { island: 'Santiago', county: 'Praia', organicUnit: 'PN - Praia', comando: 'Comando Regional Santiago Sul', observations: '' }
@@ -812,6 +813,58 @@ export default function App() {
     const rid = doc?.registoId || doc?.id;
     return mockDocuments.filter(d => (d.registoId || d.id) === rid && docEstado(d) !== 'Levantado');
   };
+  // --- Edição por secção nos Detalhes do Registo ---
+  // Só o "Documento Encontrado" pertence ao documento. As restantes secções são dados
+  // partilhados pelo registo, por isso gravam em todos os documentos do mesmo Nº de Registo.
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [editSectionDraft, setEditSectionDraft] = useState<any>(null);
+  const seccaoTitulos: Record<string, string> = {
+    documentoEncontrado: 'Documento Encontrado',
+    dadosPessoais: 'Dados Pessoais',
+    proveniencia: 'Proveniência do Documento',
+    quemEncontrou: 'Informações de Quem Encontrou',
+    localizacao: 'Localização do Documento / Observações',
+  };
+  const abrirEdicaoSeccao = (sec: string) => {
+    setEditSectionDraft({
+      document: { ...registeredDoc.document },
+      finder: { ...registeredDoc.finder, location: { ...registeredDoc.finder.location } },
+      storage: { ...registeredDoc.storage },
+    });
+    setEditingSection(sec);
+  };
+  const fecharEdicaoSeccao = () => {
+    setEditingSection(null);
+    setEditSectionDraft(null);
+  };
+  const guardarSeccao = () => {
+    const sec = editingSection;
+    const d = editSectionDraft;
+    if (!sec || !d) return;
+    const aplicar = (rec: any) => {
+      if (sec === 'documentoEncontrado') return { ...rec, document: { ...rec.document, type: d.document.type, number: d.document.number, issueDate: d.document.issueDate, expiryDate: d.document.expiryDate } };
+      if (sec === 'dadosPessoais') return { ...rec, document: { ...rec.document, fullName: d.document.fullName, birthDate: d.document.birthDate, nationality: d.document.nationality, birthPlace: d.document.birthPlace, fatherName: d.document.fatherName, motherName: d.document.motherName } };
+      if (sec === 'proveniencia') return { ...rec, document: { ...rec.document, reason: d.document.reason } };
+      if (sec === 'quemEncontrou') return { ...rec, finder: { ...rec.finder, name: d.finder.name, idType: d.finder.idType, idNumber: d.finder.idNumber, contactType: d.finder.contactType, contact: d.finder.contact, foundDate: d.finder.foundDate, location: { ...d.finder.location } } };
+      if (sec === 'localizacao') return { ...rec, storage: { ...d.storage } };
+      return rec;
+    };
+    const partilhado = sec !== 'documentoEncontrado';
+    const rid = registeredDoc.registoId || registeredDoc.id;
+    const tocar = (rec: any) => partilhado
+      ? ((rec.registoId || rec.id) === rid ? aplicar(rec) : rec)
+      : (rec.id === registeredDoc.id ? aplicar(rec) : rec);
+    setMockDocuments(prev => prev.map(tocar));
+    setDocSearchResults(prev => prev ? prev.map(tocar) : prev);
+    setRegisteredDoc((prev: any) => aplicar(prev));
+    const nDoRegisto = mockDocuments.filter(x => (x.registoId || x.id) === rid).length;
+    setSuccessMessage(partilhado && nDoRegisto > 1
+      ? `${seccaoTitulos[sec]} atualizado nos ${nDoRegisto} documentos do registo.`
+      : `${seccaoTitulos[sec]} atualizado com sucesso.`);
+    setShowSuccessModal(true);
+    fecharEdicaoSeccao();
+  };
+
   const abrirLevantamento = (doc: any) => {
     setLevantamentoSelecionados(porLevantarDoRegisto(doc).map(d => d.id));
     setLevantamentoIsOwner(null);
@@ -3268,6 +3321,14 @@ export default function App() {
                               readOnly={false}
                               onChange={(val: string) => setDocData({...docData, finder: {...docData.finder, idNumber: val}})}
                             />
+                            <DetailField
+                              label="Tipo Contacto"
+                              value={docData.finder.contactType}
+                              type="select"
+                              readOnly={false}
+                              options={['Telemovel', 'Telefone fixo', 'Email']}
+                              onChange={(val: string) => setDocData({...docData, finder: {...docData.finder, contactType: val}})}
+                            />
                             <DetailField 
                               label="Contacto" 
                               value={docData.finder.contact} 
@@ -3478,17 +3539,6 @@ export default function App() {
                         <div className="p-2 bg-slate-900 text-white rounded-lg"><FileText size={18} /></div>
                         <span className="uppercase tracking-widest text-xs">Dados do Documento</span>
                       </div>
-                      {!isReadOnlyView && (
-                        <button
-                          onClick={() => {
-                            startEditRegisto(registeredDoc);
-                            setDocStep(1);
-                          }}
-                          className="text-slate-400 hover:text-slate-900 transition-colors"
-                        >
-                          <Edit size={16} />
-                        </button>
-                      )}
                     </div>
                     
                     <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
@@ -3501,7 +3551,10 @@ export default function App() {
                         <div className="flex-1 space-y-8">
                           {/* Documento Encontrado */}
                           <div className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Encontrado</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Encontrado</p>
+                              <button onClick={() => abrirEdicaoSeccao('documentoEncontrado')} title="Editar Documento Encontrado" className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={16} /></button>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                               <DetailField label="Tipo Documento" value={registeredDoc.document.type} />
                               <DetailField label="Identificação de Documento" value={registeredDoc.document.number} />
@@ -3511,7 +3564,10 @@ export default function App() {
                           </div>
                           {/* Dados Pessoais */}
                           <div className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Pessoais</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Pessoais</p>
+                              <button onClick={() => abrirEdicaoSeccao('dadosPessoais')} title="Editar Dados Pessoais" className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={16} /></button>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                               <div className="md:col-span-2"><DetailField label="Nome Completo" value={registeredDoc.document.fullName || 'Não identificado'} /></div>
                               <DetailField label="Data Nascimento" value={registeredDoc.document.birthDate || '---'} icon={Calendar} />
@@ -3523,7 +3579,10 @@ export default function App() {
                           </div>
                           {/* Proveniência do Documento */}
                           <div className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Proveniência do Documento</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Proveniência do Documento</p>
+                              <button onClick={() => abrirEdicaoSeccao('proveniencia')} title="Editar Proveniência do Documento" className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={16} /></button>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                               <div className="md:col-span-2"><DetailField label="Proveniência do Documento" value={registeredDoc.document.reason || '---'} /></div>
                             </div>
@@ -3573,17 +3632,13 @@ export default function App() {
                         <div className="p-2 bg-slate-900 text-white rounded-lg"><User size={18} /></div>
                         <span className="uppercase tracking-widest text-xs">Informações de Quem Encontrou</span>
                       </div>
-                      {!isReadOnlyView && (
-                        <button
-                          onClick={() => {
-                            startEditRegisto(registeredDoc);
-                            setDocStep(2);
-                          }}
-                          className="text-slate-400 hover:text-slate-900 transition-colors"
-                        >
-                          <Edit size={16} />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => abrirEdicaoSeccao('quemEncontrou')}
+                        title="Editar InformaÃ§Ãµes de Quem Encontrou"
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                      >
+                        <Edit size={16} />
+                      </button>
                     </div>
                     
                     <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
@@ -3593,6 +3648,7 @@ export default function App() {
                         </div>
                         <DetailField label="Tipo Documento Identificação" value={registeredDoc.finder.idType} />
                         <DetailField label="Número Documento" value={registeredDoc.finder.idNumber} />
+                        <DetailField label="Tipo Contacto" value={registeredDoc.finder.contactType || '---'} />
                         <DetailField label="Contacto" value={registeredDoc.finder.contact} />
                         <DetailField label="Data em que foi encontrado" value={registeredDoc.finder.foundDate} icon={Calendar} />
                       </div>
@@ -3621,17 +3677,13 @@ export default function App() {
                         <span className="uppercase tracking-widest text-xs">Localização do Documento / Observações</span>
                       </div>
                       <div className="flex gap-2">
-                        {!isReadOnlyView && (
-                          <button
-                            onClick={() => {
-                              startEditRegisto(registeredDoc);
-                              setDocStep(3);
-                            }}
-                            className="text-slate-400 hover:text-slate-900 transition-colors"
-                          >
-                            <Edit size={16} />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => abrirEdicaoSeccao('localizacao')}
+                          title="Editar LocalizaÃ§Ã£o do Documento"
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                        >
+                          <Edit size={16} />
+                        </button>
                       </div>
                     </div>
                     
@@ -3877,13 +3929,12 @@ export default function App() {
                           <th className="px-6 py-4">Localização do Documento</th>
                           <th className="px-6 py-4">Unidade Organica</th>
                           <th className="px-6 py-4">Estado</th>
-                          <th className="px-6 py-4 text-right">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {(docSearchResults !== null ? docSearchResults : mockDocuments).length === 0 ? (
                           <tr>
-                            <td colSpan={9} className="px-6 py-12 text-center text-sm font-bold text-slate-400">
+                            <td colSpan={8} className="px-6 py-12 text-center text-sm font-bold text-slate-400">
                               Nenhum documento encontrado para os filtros aplicados.
                             </td>
                           </tr>
@@ -3909,15 +3960,6 @@ export default function App() {
                                 <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.organicUnit || <span className="text-slate-300">—</span>}</td>
                                 <td className="px-6 py-4">
                                   <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${estadoPillClass(estado)}`}>{estado}</span>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                  <button
-                                    title={`Editar registo ${doc.registoId || doc.id}`}
-                                    onClick={(e) => { e.stopPropagation(); startEditRegisto(doc); }}
-                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                  >
-                                    <Edit size={16} />
-                                  </button>
                                 </td>
                               </tr>
                             );
@@ -12366,6 +12408,163 @@ export default function App() {
                 >
                   Guardar
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edição por secção nos Detalhes do Registo */}
+      <AnimatePresence>
+        {editingSection && editSectionDraft && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border-2 border-slate-100"
+            >
+              <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/10 rounded-lg"><Edit size={18} className="text-white" /></div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Editar {seccaoTitulos[editingSection]}</h3>
+                </div>
+                <button onClick={fecharEdicaoSeccao} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {editingSection !== 'documentoEncontrado' && (
+                  <div className="bg-amber-50 border-2 border-amber-100 rounded-xl px-4 py-3">
+                    <p className="text-[11px] font-bold text-amber-700">
+                      Estes dados são partilhados pelo registo {registeredDoc?.registoId || registeredDoc?.id}. As alterações aplicam-se a todos os seus documentos.
+                    </p>
+                  </div>
+                )}
+
+                {editingSection === 'documentoEncontrado' && (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <DetailField label="Tipo Documento" value={editSectionDraft.document.type} type="select" readOnly={false}
+                      options={(paramDomains['Documentos Extraviados'] || []).filter(m => m.estado === 'Ativo').map(m => m.valor)}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, type: v}})} />
+                    <DetailField label="Identificação de Documento" value={editSectionDraft.document.number} readOnly={false}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, number: v}})} />
+                    <DetailField label="Data Emissão" value={editSectionDraft.document.issueDate} type="date" readOnly={false} icon={Calendar}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, issueDate: v}})} />
+                    <DetailField label="Data Validade" value={editSectionDraft.document.expiryDate} type="date" readOnly={false} icon={Calendar}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, expiryDate: v}})} />
+                  </div>
+                )}
+
+                {editingSection === 'dadosPessoais' && (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="md:col-span-2">
+                      <DetailField label="Nome Completo" value={editSectionDraft.document.fullName} readOnly={false}
+                        onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, fullName: v}})} />
+                    </div>
+                    <DetailField label="Data Nascimento" value={editSectionDraft.document.birthDate} type="date" readOnly={false} icon={Calendar}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, birthDate: v}})} />
+                    <DetailField label="Nacionalidade" value={editSectionDraft.document.nationality} type="select" readOnly={false}
+                      options={['Cabo-verdiana', 'Portuguesa', 'Angolana', 'Senegalesa', 'Guineense']}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, nationality: v}})} />
+                    <DetailField label="Naturalidade" value={editSectionDraft.document.birthPlace} readOnly={false}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, birthPlace: v}})} />
+                    <DetailField label="Nome Pai" value={editSectionDraft.document.fatherName} readOnly={false}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, fatherName: v}})} />
+                    <DetailField label="Nome Mãe" value={editSectionDraft.document.motherName} readOnly={false}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, motherName: v}})} />
+                  </div>
+                )}
+
+                {editingSection === 'proveniencia' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <DetailField label="Proveniência do Documento" value={editSectionDraft.document.reason} type="select" readOnly={false}
+                      options={(paramDomains['Motivo Cadastro Documento'] || []).filter(m => m.estado === 'Ativo').map(m => m.descricao)}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, reason: v}})} />
+                  </div>
+                )}
+
+                {editingSection === 'quemEncontrou' && (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="md:col-span-2">
+                      <DetailField label="Nome" value={editSectionDraft.finder.name} readOnly={false}
+                        onChange={(v: string) => setEditSectionDraft({...editSectionDraft, finder: {...editSectionDraft.finder, name: v}})} />
+                    </div>
+                    <DetailField label="Tipo Documento de Identificação" value={editSectionDraft.finder.idType} type="select" readOnly={false}
+                      options={['CNI', 'Passaporte']}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, finder: {...editSectionDraft.finder, idType: v}})} />
+                    <DetailField label="Numero Documento" value={editSectionDraft.finder.idNumber} readOnly={false}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, finder: {...editSectionDraft.finder, idNumber: v}})} />
+                    <DetailField label="Tipo Contacto" value={editSectionDraft.finder.contactType} type="select" readOnly={false}
+                      options={['Telemovel', 'Telefone fixo', 'Email']}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, finder: {...editSectionDraft.finder, contactType: v}})} />
+                    <DetailField label="Contacto" value={editSectionDraft.finder.contact} readOnly={false}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, finder: {...editSectionDraft.finder, contact: v}})} />
+                    <DetailField label="Data em que foi encontrado" value={editSectionDraft.finder.foundDate} type="date" readOnly={false} icon={Calendar}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, finder: {...editSectionDraft.finder, foundDate: v}})} />
+                  </div>
+                )}
+
+                {editingSection === 'quemEncontrou' && (
+                  <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Local Encontrado</h4>
+                )}
+                {editingSection === 'quemEncontrou' && (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <DetailField label="Ilha" value={editSectionDraft.finder.location.island} type="select" readOnly={false}
+                      options={['Santiago', 'São Vicente', 'Sal']}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, finder: {...editSectionDraft.finder, location: {...editSectionDraft.finder.location, island: v}}})} />
+                    <DetailField label="Concelho" value={editSectionDraft.finder.location.county} type="select" readOnly={false}
+                      options={['Praia', 'Santa Catarina']}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, finder: {...editSectionDraft.finder, location: {...editSectionDraft.finder.location, county: v}}})} />
+                    <DetailField label="Freguesia" value={editSectionDraft.finder.location.parish} type="select" readOnly={false}
+                      options={['Nossa Senhora da Graça']}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, finder: {...editSectionDraft.finder, location: {...editSectionDraft.finder.location, parish: v}}})} />
+                    <DetailField label="Localidade" value={editSectionDraft.finder.location.locality} type="select" readOnly={false}
+                      options={['Achada Santo António']}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, finder: {...editSectionDraft.finder, location: {...editSectionDraft.finder.location, locality: v}}})} />
+                    <DetailField label="Zona" value={editSectionDraft.finder.location.zone} type="select" readOnly={false}
+                      options={['Zona 1']}
+                      onChange={(v: string) => setEditSectionDraft({...editSectionDraft, finder: {...editSectionDraft.finder, location: {...editSectionDraft.finder.location, zone: v}}})} />
+                    <div className="md:col-span-2">
+                      <DetailField label="Outro Ponto de Referência" value={editSectionDraft.finder.location.reference} readOnly={false}
+                        onChange={(v: string) => setEditSectionDraft({...editSectionDraft, finder: {...editSectionDraft.finder, location: {...editSectionDraft.finder.location, reference: v}}})} />
+                    </div>
+                  </div>
+                )}
+
+                {editingSection === 'localizacao' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <DetailField label="Ilha" value={editSectionDraft.storage.island} type="select" readOnly={false}
+                        options={['Santiago']}
+                        onChange={(v: string) => setEditSectionDraft({...editSectionDraft, storage: {...editSectionDraft.storage, island: v}})} />
+                      <DetailField label="Concelho" value={editSectionDraft.storage.county} type="select" readOnly={false}
+                        options={['Praia']}
+                        onChange={(v: string) => setEditSectionDraft({...editSectionDraft, storage: {...editSectionDraft.storage, county: v}})} />
+                      <DetailField label="Unidade Organica" value={editSectionDraft.storage.organicUnit} type="select" readOnly={false}
+                        options={['PN - Praia']}
+                        onChange={(v: string) => setEditSectionDraft({...editSectionDraft, storage: {...editSectionDraft.storage, organicUnit: v}})} />
+                      <DetailField label="Comando" value={editSectionDraft.storage.comando} type="select" readOnly={false}
+                        options={['Comando Regional Santiago Sul', 'Comando Regional Santiago Norte', 'Comando Regional Barlavento', 'Comando Regional Sotavento']}
+                        onChange={(v: string) => setEditSectionDraft({...editSectionDraft, storage: {...editSectionDraft.storage, comando: v}})} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observações</label>
+                      <textarea
+                        rows={5}
+                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all resize-none"
+                        value={editSectionDraft.storage.observations}
+                        onChange={(e) => setEditSectionDraft({...editSectionDraft, storage: {...editSectionDraft.storage, observations: e.target.value}})}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-4 border-t-2 border-slate-100 flex gap-3 justify-end">
+                <Button variant="outline" onClick={fecharEdicaoSeccao}>Cancelar</Button>
+                <Button variant="success" icon={Check} onClick={guardarSeccao}>Guardar</Button>
               </div>
             </motion.div>
           </div>
