@@ -82,7 +82,7 @@ function getPortraitUrl(seed: string, gender: 'men' | 'women' = 'men'): string {
 
 // --- Conclusão antecipada do Cadastro de Documento ---
 
-// Tipos de documento que não têm titular associado e por isso dispensam os Dados Pessoais.
+// Tipos de documento que não têm titular associado e por isso dispensam o bloco Titular.
 // ATENÇÃO: lista provisória, A CONFIRMAR COM A EQUIPA. Hoje nem o contrato da API nem o
 // domínio "Documentos Extraviados" das Parametrizações fazem esta distinção; os valores
 // aqui são siglas desse domínio (ex.: 'DV' = Documento de Veículo).
@@ -421,6 +421,8 @@ export default function App() {
   const [savedAttachments, setSavedAttachments] = useState<any[]>([]);
   const [attachmentTitle, setAttachmentTitle] = useState('');
   const [attachmentType, setAttachmentType] = useState('Documento');
+  // Para onde vai o anexo criado no modal: o documento, ou o comprovativo do levantamento
+  const [attachmentTarget, setAttachmentTarget] = useState<'documento' | 'levantamento'>('documento');
   const [tempCharacteristics, setTempCharacteristics] = useState<any[]>([]);
   const [savedCharacteristics, setSavedCharacteristics] = useState<any[]>([]);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
@@ -629,7 +631,7 @@ export default function App() {
     },
     storage: { island: 'Santiago', county: 'Praia', organicUnit: 'PN - Praia', comando: 'Comando Regional Santiago Sul', observations: '' }
   });
-  // Documentos encontrados adicionados a este registo (Dados Pessoais / Motivo / Anexos são partilhados por todos).
+  // Documentos encontrados adicionados a este registo (Titular / Proveniência / Anexos são partilhados por todos).
   // `id` só existe em documentos já gravados — os novos ficam sem id até serem criados.
   const emptyDocItem = { type: '', number: '', issueDate: '', expiryDate: '' };
   type DocItem = { id?: string; type: string; number: string; issueDate: string; expiryDate: string };
@@ -703,6 +705,7 @@ export default function App() {
           finder: docData.finder,
           storage: docData.storage,
           attachments: savedAttachments,
+          observacoes: docObservacoes,
           estado: anterior?.estado || 'Por Levantar',
           registeredBy: anterior?.registeredBy || user?.name || 'Carlos Mendes',
           registeredAt: anterior?.registeredAt || new Date().toLocaleDateString('pt-BR'),
@@ -726,7 +729,7 @@ export default function App() {
       setDocSearchResults(prev => prev ? substituir(prev) : prev);
       setRegisteredDoc(registoRecords[0] || null);
       setEditingRegistoId(null);
-      setDocItems([]);
+      setDocItems([]); setDocObservacoes([]);
       setIsReadOnlyView(true);
       setSuccessMessage(`Registo ${editingRegistoId} atualizado — ${registoRecords.length} ${registoRecords.length === 1 ? 'documento' : 'documentos'}.`);
       setShowSuccessModal(true);
@@ -757,12 +760,13 @@ export default function App() {
         finder: docData.finder,
         storage: docData.storage,
         attachments: savedAttachments,
+        observacoes: docObservacoes,
         estado: 'Por Levantar',
         registeredBy: user?.name || 'Carlos Mendes',
         registeredAt: new Date().toLocaleDateString('pt-BR')
       }));
       setMockDocuments(prev => [...prev, ...newRecords]);
-      setDocItems([]);
+      setDocItems([]); setDocObservacoes([]);
       if (newRecords.length > 1) {
         setSuccessMessage(`${newRecords.length} documentos cadastrados com sucesso`);
         setShowSuccessModal(true);
@@ -787,6 +791,7 @@ export default function App() {
     const base = docsDoRegisto[0] || doc;
     setEditingRegistoId(rid);
     setRegisteredDoc(base);
+    setDocObservacoes(base.observacoes || []);
     setDocItems(docsDoRegisto.map(d => ({
       id: d.id,
       type: d.document.type || '',
@@ -820,10 +825,10 @@ export default function App() {
   const [editSectionDraft, setEditSectionDraft] = useState<any>(null);
   const seccaoTitulos: Record<string, string> = {
     documentoEncontrado: 'Documento Encontrado',
-    dadosPessoais: 'Dados Pessoais',
+    dadosPessoais: 'Titular',
     proveniencia: 'Proveniência do Documento',
     quemEncontrou: 'Informações de Quem Encontrou',
-    localizacao: 'Localização do Documento / Observações',
+    localizacao: 'Localização do Documento',
   };
   const abrirEdicaoSeccao = (sec: string) => {
     setEditSectionDraft({
@@ -865,10 +870,51 @@ export default function App() {
     fecharEdicaoSeccao();
   };
 
+  // Observacoes do registo: bloco proprio nos Detalhes do Registo.
+  // A observacao escrita no cadastro (storage.observations) conta como a primeira da lista.
+  const [showDocObsModal, setShowDocObsModal] = useState(false);
+  // Observacoes escritas durante o cadastro, antes de o registo existir
+  const [docObservacoes, setDocObservacoes] = useState<any[]>([]);
+  // De onde veio o modal: do cadastro, ou dos Detalhes do Registo
+  const [obsTarget, setObsTarget] = useState<'registo' | 'cadastro'>('registo');
+  const [obsTexto, setObsTexto] = useState('');
+  const observacoesDoDoc = (doc: any) => {
+    if (!doc) return [] as any[];
+    const inicial = (doc.storage?.observations || '').trim();
+    const iniciais = inicial
+      ? [{ autor: doc.registeredBy || 'Registo', data: doc.registeredAt || '', texto: inicial }]
+      : [];
+    return [...iniciais, ...(doc.observacoes || [])];
+  };
+  const guardarObservacao = () => {
+    const texto = obsTexto.trim();
+    if (!texto) return;
+    const nova = {
+      autor: user?.name || 'Administrador do Sistema',
+      data: new Date().toLocaleDateString('pt-BR'),
+      texto
+    };
+    if (obsTarget === 'cadastro') {
+      setDocObservacoes(prev => [...prev, nova]);
+    } else {
+      // As observacoes sao do registo, por isso ficam em todos os documentos do mesmo Nº de Registo.
+      const rid = registeredDoc.registoId || registeredDoc.id;
+      const aplicar = (rec: any) => ({ ...rec, observacoes: [...(rec.observacoes || []), nova] });
+      const tocar = (rec: any) => (rec.registoId || rec.id) === rid ? aplicar(rec) : rec;
+      setMockDocuments(prev => prev.map(tocar));
+      setDocSearchResults(prev => prev ? prev.map(tocar) : prev);
+      setRegisteredDoc((prev: any) => aplicar(prev));
+    }
+    setShowDocObsModal(false);
+    setObsTexto('');
+    setObsTarget('registo');
+  };
+
   const abrirLevantamento = (doc: any) => {
+
     setLevantamentoSelecionados(porLevantarDoRegisto(doc).map(d => d.id));
     setLevantamentoIsOwner(null);
-    setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' });
+    setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); setLevantamentoAnexos([]); setLevantamentoTitular({ fullName: '', birthDate: '', docType: 'CNI', docNumber: '' });
     setShowLevantamentoModal(true);
   };
   const [certificateStep, setCertificateStep] = useState(1);
@@ -1293,7 +1339,7 @@ export default function App() {
     number: '',
     fullName: '',
     birthDate: '',
-    island: '',
+    comando: '',
     organicUnit: ''
   });
   const [docSearchResults, setDocSearchResults] = useState<any[] | null>(null);
@@ -1357,6 +1403,7 @@ export default function App() {
         island: 'Santiago',
         county: 'Praia',
         organicUnit: 'Esquadra Fazenda',
+        comando: 'Comando Regional Santiago Sul',
         observations: 'Documento em bom estado.'
       },
       attachments: [
@@ -1398,6 +1445,7 @@ export default function App() {
         island: 'São Vicente',
         county: 'São Vicente',
         organicUnit: 'Esquadra Platô',
+        comando: 'Comando Regional Barlavento',
         observations: 'Passaporte com sinais de uso intenso.'
       },
       attachments: [],
@@ -1436,6 +1484,7 @@ export default function App() {
         island: 'Santiago',
         county: 'Praia',
         organicUnit: 'Esquadra Achada Santo António',
+        comando: 'Comando Regional Santiago Sul',
         observations: ''
       },
       attachments: [
@@ -1451,6 +1500,10 @@ export default function App() {
   const [levantamentoOtherPerson, setLevantamentoOtherPerson] = useState({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' });
   // Ids dos documentos escolhidos para levantar (permite levantamento parcial do registo)
   const [levantamentoSelecionados, setLevantamentoSelecionados] = useState<string[]>([]);
+  // Comprovativos anexados quando quem levanta nao e o titular
+  const [levantamentoAnexos, setLevantamentoAnexos] = useState<any[]>([]);
+  // Titular preenchido a mao, quando o registo nao tem titular
+  const [levantamentoTitular, setLevantamentoTitular] = useState({ fullName: '', birthDate: '', docType: 'CNI', docNumber: '' });
   const toggleLevantamentoDoc = (id: string) => setLevantamentoSelecionados(prev =>
     prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
   );
@@ -3038,7 +3091,7 @@ export default function App() {
                       {docStep === 1 ? <FileText size={18} /> : docStep === 2 ? <User size={18} /> : <MapPin size={18} />}
                     </div>
                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
-                      {docStep === 1 ? 'Dados Documento' : docStep === 2 ? 'Informações de Quem Encontrou' : 'Localização do Documento / Observações'}
+                      {docStep === 1 ? 'Dados Documento' : docStep === 2 ? 'Informações de Quem Encontrou' : 'Localização e Observações'}
                     </h3>
                   </div>
 
@@ -3153,9 +3206,9 @@ export default function App() {
                               )}
                             </div>
 
-                            {/* Dados Pessoais */}
+                            {/* Titular */}
                             <div className="space-y-4">
-                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Pessoais</p>
+                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Titular</p>
                               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                 <div className="md:col-span-2">
                                   <DetailField label="Nome Completo" value={docData.document.fullName} readOnly={false}
@@ -3405,52 +3458,97 @@ export default function App() {
 
                     {docStep === 3 && (
                       <div className="space-y-8">
-                        <div className="space-y-6">
-                          <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Localização do Documento</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <DetailField 
-                              label="Ilha" 
-                              value={docData.storage.island} 
-                              type="select" 
-                              readOnly={false}
-                              options={['Santiago']}
-                              onChange={(val: string) => setDocData({...docData, storage: {...docData.storage, island: val}})}
-                            />
-                            <DetailField 
-                              label="Concelho" 
-                              value={docData.storage.county} 
-                              type="select" 
-                              readOnly={false}
-                              options={['Praia']}
-                              onChange={(val: string) => setDocData({...docData, storage: {...docData.storage, county: val}})}
-                            />
-                            <DetailField
-                              label="Unidade Organica"
-                              value={docData.storage.organicUnit}
-                              type="select"
-                              readOnly={false}
-                              options={['PN - Praia']}
-                              onChange={(val: string) => setDocData({...docData, storage: {...docData.storage, organicUnit: val}})}
-                            />
-                            <DetailField
-                              label="Comando"
-                              value={docData.storage.comando}
-                              type="select"
-                              readOnly={false}
-                              options={['Comando Regional Santiago Sul', 'Comando Regional Santiago Norte', 'Comando Regional Barlavento', 'Comando Regional Sotavento']}
-                              onChange={(val: string) => setDocData({...docData, storage: {...docData.storage, comando: val}})}
-                            />
+                        <div className="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                          <div className="p-4 bg-slate-50 border-b-2 border-slate-100 flex items-center gap-3">
+                            <div className="p-2 bg-slate-900 text-white rounded-lg"><MapPin size={18} /></div>
+                            <span className="text-xs font-black text-slate-900 uppercase tracking-widest">Localização do Documento</span>
+                          </div>
+                          <div className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                              <DetailField 
+                                label="Ilha" 
+                                value={docData.storage.island} 
+                                type="select" 
+                                readOnly={false}
+                                options={['Santiago']}
+                                onChange={(val: string) => setDocData({...docData, storage: {...docData.storage, island: val}})}
+                              />
+                              <DetailField 
+                                label="Concelho" 
+                                value={docData.storage.county} 
+                                type="select" 
+                                readOnly={false}
+                                options={['Praia']}
+                                onChange={(val: string) => setDocData({...docData, storage: {...docData.storage, county: val}})}
+                              />
+                              <DetailField
+                                label="Unidade Organica"
+                                value={docData.storage.organicUnit}
+                                type="select"
+                                readOnly={false}
+                                options={['PN - Praia']}
+                                onChange={(val: string) => setDocData({...docData, storage: {...docData.storage, organicUnit: val}})}
+                              />
+                              <DetailField
+                                label="Comando"
+                                value={docData.storage.comando}
+                                type="select"
+                                readOnly={false}
+                                options={['Comando Regional Santiago Sul', 'Comando Regional Santiago Norte', 'Comando Regional Barlavento', 'Comando Regional Sotavento']}
+                                onChange={(val: string) => setDocData({...docData, storage: {...docData.storage, comando: val}})}
+                              />
+                            </div>
                           </div>
                         </div>
 
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Obs:</label>
-                          <textarea 
-                            rows={6}
-                            className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all resize-none"
-                            value={docData.storage.observations}
-                            onChange={(e) => setDocData({...docData, storage: {...docData.storage, observations: e.target.value}})}
-                          />
+                        <div className="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                          <div className="p-4 bg-slate-50 border-b-2 border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-slate-900 text-white rounded-lg"><MessageSquare size={18} /></div>
+                              <span className="text-xs font-black text-slate-900 uppercase tracking-widest">Observações</span>
+                              {docObservacoes.length > 0 && (
+                                <span className="px-2 py-0.5 bg-slate-900 text-white rounded-full text-[10px] font-black">{docObservacoes.length}</span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => { setObsTarget('cadastro'); setObsTexto(''); setShowDocObsModal(true); }}
+                              className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
+                            >
+                              <Plus size={14} /> Nova Observação
+                            </button>
+                          </div>
+                          <div className="p-6">
+                            {docObservacoes.length > 0 ? (
+                              <div className="space-y-3">
+                                {docObservacoes.map((o: any, i: number) => (
+                                  <div key={i} className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-slate-200 transition-all">
+                                    <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black shadow-lg flex-shrink-0">
+                                      {(o.autor || '?').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0 space-y-1">
+                                      <div className="flex items-center gap-3">
+                                        <p className="font-black text-slate-900 text-xs uppercase tracking-widest">{o.autor}</p>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{o.data}</span>
+                                      </div>
+                                      <p className="text-sm text-slate-600 leading-relaxed font-medium italic">"{o.texto}"</p>
+                                    </div>
+                                    <button
+                                      onClick={() => setDocObservacoes(docObservacoes.filter((_: any, j: number) => j !== i))}
+                                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                      title="Remover"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                                <MessageSquare size={28} className="mx-auto text-slate-200 mb-2" />
+                                <p className="text-slate-400 text-sm italic">Nenhuma observação adicionada</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -3460,7 +3558,7 @@ export default function App() {
                     <Button
                       variant="outline"
                       icon={ArrowLeft}
-                      onClick={() => docStep > 1 ? setDocStep(docStep - 1) : (setEditingRegistoId(null), setDocItems([]), setCurrentView('document_search'))}
+                      onClick={() => docStep > 1 ? setDocStep(docStep - 1) : (setEditingRegistoId(null), setDocItems([]), setDocObservacoes([]), setCurrentView('document_search'))}
                     >
                       Voltar
                     </Button>
@@ -3468,7 +3566,7 @@ export default function App() {
                       <Button
                         variant="outline"
                         className="text-purple-600 border-purple-200 hover:bg-purple-50"
-                        onClick={() => { setEditingRegistoId(null); setDocItems([]); setCurrentView('document_search'); }}
+                        onClick={() => { setEditingRegistoId(null); setDocItems([]); setDocObservacoes([]); setCurrentView('document_search'); }}
                       >
                         Cancelar
                       </Button>
@@ -3562,11 +3660,11 @@ export default function App() {
                               <DetailField label="Data Validade" value={registeredDoc.document.expiryDate} icon={Calendar} />
                             </div>
                           </div>
-                          {/* Dados Pessoais */}
+                          {/* Titular */}
                           <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Pessoais</p>
-                              <button onClick={() => abrirEdicaoSeccao('dadosPessoais')} title="Editar Dados Pessoais" className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={16} /></button>
+                              <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Titular</p>
+                              <button onClick={() => abrirEdicaoSeccao('dadosPessoais')} title="Editar Titular" className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={16} /></button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                               <div className="md:col-span-2"><DetailField label="Nome Completo" value={registeredDoc.document.fullName || 'Não identificado'} /></div>
@@ -3674,12 +3772,12 @@ export default function App() {
                     <div className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 shadow-sm">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-slate-900 text-white rounded-lg"><MapPin size={18} /></div>
-                        <span className="uppercase tracking-widest text-xs">Localização do Documento / Observações</span>
+                        <span className="uppercase tracking-widest text-xs">Localização do Documento</span>
                       </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => abrirEdicaoSeccao('localizacao')}
-                          title="Editar LocalizaÃ§Ã£o do Documento"
+                          title="Editar Localização do Documento"
                           className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                         >
                           <Edit size={16} />
@@ -3694,16 +3792,55 @@ export default function App() {
                         <DetailField label="Unidade Orgânica" value={registeredDoc.storage.organicUnit} />
                         <DetailField label="Comando" value={registeredDoc.storage.comando || '---'} />
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observações</label>
-                        <div className="p-4 bg-slate-50 border-2 border-slate-100 rounded-xl min-h-[100px] text-sm font-bold text-slate-900">
-                          {registeredDoc.storage.observations || '---'}
-                        </div>
+                    </div>
+                  </div>
+
+                  {/* Section: Observações */}
+                  <div className="space-y-4">
+                    <div className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-slate-900 text-white rounded-lg"><MessageSquare size={18} /></div>
+                        <span className="uppercase tracking-widest text-xs">Observações</span>
+                        {observacoesDoDoc(registeredDoc).length > 0 && (
+                          <span className="px-2 py-0.5 bg-slate-900 text-white rounded-full text-[10px] font-black">{observacoesDoDoc(registeredDoc).length}</span>
+                        )}
                       </div>
+                    </div>
+
+                    <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
+                      <div className="flex justify-end">
+                        <Button variant="outline" icon={Plus} onClick={() => { setObsTarget('registo'); setObsTexto(''); setShowDocObsModal(true); }}>Nova Observação</Button>
+                      </div>
+                      {observacoesDoDoc(registeredDoc).length > 0 ? (
+                        <div className="space-y-4">
+                          {observacoesDoDoc(registeredDoc).map((o: any, i: number) => (
+                            <div key={i} className="p-6 bg-slate-50 rounded-2xl border-2 border-slate-50">
+                              <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black text-lg shadow-lg flex-shrink-0">
+                                  {(o.autor || '?').charAt(0).toUpperCase()}
+                                </div>
+                                <div className="flex-1 min-w-0 space-y-2">
+                                  <div className="flex items-center gap-3">
+                                    <p className="font-black text-slate-900 text-xs uppercase tracking-widest">{o.autor}</p>
+                                    {o.data && <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{o.data}</span>}
+                                  </div>
+                                  <p className="text-sm text-slate-600 leading-relaxed font-medium italic">"{o.texto}"</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                          <MessageSquare size={28} className="mx-auto text-slate-200 mb-2" />
+                          <p className="text-slate-400 text-sm italic">Nenhuma observação registada</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Section: Outros documentos deste registo */}
+
                   {(() => {
                     const irmaos = mockDocuments.filter(d => (d.registoId || d.id) === (registeredDoc.registoId || registeredDoc.id) && d.id !== registeredDoc.id);
                     if (irmaos.length === 0) return null;
@@ -3749,7 +3886,7 @@ export default function App() {
                           <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${
                             registeredDoc.levantamento.isOwner ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
                           }`}>
-                            {registeredDoc.levantamento.isOwner ? 'O Próprio Titular' : 'Terceiro Autorizado'}
+                            {registeredDoc.levantamento.isOwner ? 'Titular' : 'Terceiro'}
                           </span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -3768,6 +3905,26 @@ export default function App() {
                           <DetailField label="Registado Por" value={registeredDoc.levantamento.registadoPor} />
                           <DetailField label="Data de Levantamento" value={registeredDoc.levantamento.dataLevantamento} icon={Calendar} />
                         </div>
+                        {registeredDoc.levantamento.anexos?.length > 0 && (
+                          <div className="space-y-2 pt-4 border-t-2 border-slate-100">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">
+                              Comprovativo de Autorização
+                              <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{registeredDoc.levantamento.anexos.length}</span>
+                            </p>
+                            {registeredDoc.levantamento.anexos.map((a: any, i: number) => (
+                              <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                <div className="p-2 rounded-lg bg-blue-100 text-blue-600 flex-shrink-0">
+                                  {a.type === 'Imagem' ? <ImageIcon size={16} /> : <FileText size={16} />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-black text-slate-900 truncate">{a.title}</p>
+                                  <p className="text-[10px] text-slate-400 mt-1"><span className="font-bold">{a.type}</span> · {a.date}</p>
+                                </div>
+                                <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar"><Eye size={16} /></button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -3801,7 +3958,7 @@ export default function App() {
                     <Button variant="primary" icon={Plus} onClick={() => {
                       setEditingRegistoId(null);
                       setDocData(emptyDocData());
-                      setDocItems([]);
+                      setDocItems([]); setDocObservacoes([]);
                       setTempDocItems([]);
                       setCurrentDocItem({ ...emptyDocItem });
                       setSavedAttachments([]);
@@ -3860,16 +4017,17 @@ export default function App() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ilha</label>
-                      <select 
-                        value={docSearchFilters.island}
-                        onChange={(e) => setDocSearchFilters({...docSearchFilters, island: e.target.value})}
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comando</label>
+                      <select
+                        value={docSearchFilters.comando}
+                        onChange={(e) => setDocSearchFilters({...docSearchFilters, comando: e.target.value})}
                         className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
                       >
                         <option value="">Selecione...</option>
-                        <option value="Santiago">Santiago</option>
-                        <option value="São Vicente">São Vicente</option>
-                        <option value="Sal">Sal</option>
+                        <option value="Comando Regional Santiago Sul">Comando Regional Santiago Sul</option>
+                        <option value="Comando Regional Santiago Norte">Comando Regional Santiago Norte</option>
+                        <option value="Comando Regional Barlavento">Comando Regional Barlavento</option>
+                        <option value="Comando Regional Sotavento">Comando Regional Sotavento</option>
                       </select>
                     </div>
                     <div className="space-y-2">
@@ -3888,7 +4046,7 @@ export default function App() {
 
                     <div className="md:col-span-2 flex justify-end gap-3">
                       <Button variant="outline" onClick={() => {
-                        setDocSearchFilters({ type: '', number: '', fullName: '', birthDate: '', island: '', organicUnit: '' });
+                        setDocSearchFilters({ type: '', number: '', fullName: '', birthDate: '', comando: '', organicUnit: '' });
                         setDocSearchResults(null);
                       }}>Limpar</Button>
                       <Button variant="primary" icon={Search} onClick={() => {
@@ -3898,7 +4056,7 @@ export default function App() {
                           if (f.number && !(doc.document.number || '').toLowerCase().includes(f.number.toLowerCase())) return false;
                           if (f.fullName && !(doc.document.fullName || '').toLowerCase().includes(f.fullName.toLowerCase())) return false;
                           if (f.birthDate && doc.document.birthDate !== f.birthDate) return false;
-                          if (f.island && doc.storage.island !== f.island) return false;
+                          if (f.comando && doc.storage.comando !== f.comando) return false;
                           if (f.organicUnit && doc.storage.organicUnit !== f.organicUnit) return false;
                           return true;
                         });
@@ -3926,15 +4084,16 @@ export default function App() {
                           <th className="px-6 py-4">Numero</th>
                           <th className="px-6 py-4">Nome</th>
                           <th className="px-6 py-4">Data Nascimento</th>
-                          <th className="px-6 py-4">Localização do Documento</th>
                           <th className="px-6 py-4">Unidade Organica</th>
+                          <th className="px-6 py-4">Comando</th>
+                          <th className="px-6 py-4">Localização do Documento</th>
                           <th className="px-6 py-4">Estado</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {(docSearchResults !== null ? docSearchResults : mockDocuments).length === 0 ? (
                           <tr>
-                            <td colSpan={8} className="px-6 py-12 text-center text-sm font-bold text-slate-400">
+                            <td colSpan={9} className="px-6 py-12 text-center text-sm font-bold text-slate-400">
                               Nenhum documento encontrado para os filtros aplicados.
                             </td>
                           </tr>
@@ -3956,8 +4115,9 @@ export default function App() {
                                 <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.number || <span className="text-slate-300">—</span>}</td>
                                 <td className="px-6 py-4 text-sm font-bold text-slate-900">{doc.document.fullName || <span className="text-slate-300 italic font-medium">Não identificado</span>}</td>
                                 <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.document.birthDate || <span className="text-slate-300">—</span>}</td>
-                                <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.island || <span className="text-slate-300">—</span>}</td>
                                 <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.organicUnit || <span className="text-slate-300">—</span>}</td>
+                                <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.comando || <span className="text-slate-300">—</span>}</td>
+                                <td className="px-6 py-4 text-sm font-bold text-slate-600">{doc.storage.island || <span className="text-slate-300">—</span>}</td>
                                 <td className="px-6 py-4">
                                   <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${estadoPillClass(estado)}`}>{estado}</span>
                                 </td>
@@ -12416,7 +12576,35 @@ export default function App() {
 
       {/* Edição por secção nos Detalhes do Registo */}
       <AnimatePresence>
+        {/* Modal: Nova Observação (Gestão de Documentos) */}
+        {showDocObsModal && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden">
+              <div className="px-6 py-4 border-b-2 border-slate-100 flex items-center gap-3">
+                <div className="p-2 bg-slate-900 text-white rounded-lg"><MessageSquare size={18} /></div>
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Nova Observação</h3>
+              </div>
+              <div className="p-6 space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observação <span className="text-red-500">*</span></label>
+                <textarea
+                  rows={5}
+                  autoFocus
+                  value={obsTexto}
+                  onChange={(e) => setObsTexto(e.target.value)}
+                  placeholder="Escreva a observação"
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all resize-none"
+                />
+              </div>
+              <div className="px-6 py-4 border-t-2 border-slate-100 flex gap-3 justify-end">
+                <Button variant="outline" onClick={() => { setShowDocObsModal(false); setObsTexto(''); setObsTarget('registo'); }}>Cancelar</Button>
+                <Button variant="success" icon={Check} disabled={!obsTexto.trim()} onClick={guardarObservacao}>Guardar</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {editingSection && editSectionDraft && (
+
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -12548,15 +12736,6 @@ export default function App() {
                       <DetailField label="Comando" value={editSectionDraft.storage.comando} type="select" readOnly={false}
                         options={['Comando Regional Santiago Sul', 'Comando Regional Santiago Norte', 'Comando Regional Barlavento', 'Comando Regional Sotavento']}
                         onChange={(v: string) => setEditSectionDraft({...editSectionDraft, storage: {...editSectionDraft.storage, comando: v}})} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observações</label>
-                      <textarea
-                        rows={5}
-                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all resize-none"
-                        value={editSectionDraft.storage.observations}
-                        onChange={(e) => setEditSectionDraft({...editSectionDraft, storage: {...editSectionDraft.storage, observations: e.target.value}})}
-                      />
                     </div>
                   </div>
                 )}
@@ -14320,7 +14499,7 @@ export default function App() {
         {/* Anexo Modal */}
         <AnimatePresence>
           {showAttachmentModal && (
-            <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -14361,16 +14540,19 @@ export default function App() {
                       <input type="file" className="hidden" onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file && attachmentTitle) {
-                          setSavedAttachments([
-                            ...savedAttachments, 
-                            { 
-                              title: attachmentTitle, 
-                              type: attachmentType, 
-                              date: new Date().toLocaleDateString('pt-BR') 
-                            }
-                          ]);
+                          const novo = {
+                            title: attachmentTitle,
+                            type: attachmentType,
+                            date: new Date().toLocaleDateString('pt-BR')
+                          };
+                          if (attachmentTarget === 'levantamento') {
+                            setLevantamentoAnexos(prev => [...prev, novo]);
+                          } else {
+                            setSavedAttachments([...savedAttachments, novo]);
+                          }
                           setShowAttachmentModal(false);
                           setAttachmentTitle('');
+                          setAttachmentTarget('documento');
                         }
                       }} />
                     </label>
@@ -14379,7 +14561,7 @@ export default function App() {
 
                 <div className="p-6 border-t border-slate-200 flex justify-end gap-4">
                   <button 
-                    onClick={() => setShowAttachmentModal(false)}
+                    onClick={() => { setShowAttachmentModal(false); setAttachmentTarget('documento'); }}
                     className="px-8 py-2 bg-slate-600 text-white font-bold rounded hover:bg-slate-700 transition-colors text-sm shadow-md"
                   >
                     Cancelar
@@ -14737,7 +14919,7 @@ export default function App() {
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border-2 border-slate-100 overflow-hidden"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl border-2 border-slate-100 overflow-hidden"
             >
               {/* Header */}
               <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
@@ -14745,7 +14927,7 @@ export default function App() {
                   <div className="p-2 bg-white/10 rounded-lg"><Check size={18} className="text-white" /></div>
                   <h3 className="text-sm font-black text-white uppercase tracking-widest">Realizar Levantamento</h3>
                 </div>
-                <button onClick={() => { setShowLevantamentoModal(false); setLevantamentoIsOwner(null); setLevantamentoSelecionados([]); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); }}
+                <button onClick={() => { setShowLevantamentoModal(false); setLevantamentoIsOwner(null); setLevantamentoSelecionados([]); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); setLevantamentoAnexos([]); setLevantamentoTitular({ fullName: '', birthDate: '', docType: 'CNI', docNumber: '' }); }}
                   className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
                   <X size={18} />
                 </button>
@@ -14765,7 +14947,9 @@ export default function App() {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <p className="text-[10px] text-slate-400 font-bold uppercase">Titular</p>
-                          <p className="text-sm font-black text-slate-900">{registeredDoc?.document?.fullName || 'Não identificado'}</p>
+                          <p className={`text-sm font-black ${registeredDoc?.document?.fullName ? 'text-slate-900' : 'text-amber-600'}`}>
+                            {registeredDoc?.document?.fullName || 'Não identificado'}
+                          </p>
                         </div>
                         <div>
                           <p className="text-[10px] text-slate-400 font-bold uppercase">Data Nascimento</p>
@@ -14813,22 +14997,29 @@ export default function App() {
                 <div className="space-y-3">
                   <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Quem está a realizar o levantamento?</p>
                   <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => { setLevantamentoIsOwner(true); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); }}
-                      className={`p-4 rounded-xl border-2 text-left transition-all ${
-                        levantamentoIsOwner === true
-                          ? 'border-emerald-500 bg-emerald-50'
-                          : 'border-slate-100 bg-slate-50 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${levantamentoIsOwner === true ? 'border-emerald-500' : 'border-slate-300'}`}>
-                          {levantamentoIsOwner === true && <div className="w-2 h-2 rounded-full bg-emerald-500" />}
-                        </div>
-                        <span className="text-xs font-black text-slate-900">O Próprio Titular</span>
-                      </div>
-                      <p className="text-[10px] text-slate-500 font-medium pl-6">O dono do documento</p>
-                    </button>
+                    {(() => {
+                      const temTitular = Boolean((registeredDoc?.document?.fullName || '').trim());
+                      return (
+                        <button
+                          onClick={() => { setLevantamentoIsOwner(true); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); setLevantamentoAnexos([]); }}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            levantamentoIsOwner === true
+                              ? 'border-emerald-500 bg-emerald-50'
+                              : 'border-slate-100 bg-slate-50 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${levantamentoIsOwner === true ? 'border-emerald-500' : 'border-slate-300'}`}>
+                              {levantamentoIsOwner === true && <div className="w-2 h-2 rounded-full bg-emerald-500" />}
+                            </div>
+                            <span className="text-xs font-black text-slate-900">Titular</span>
+                          </div>
+                          <p className={`text-[10px] font-medium pl-6 ${temTitular ? 'text-slate-500' : 'text-amber-600'}`}>
+                            {temTitular ? registeredDoc.document.fullName : 'Este registo não tem titular. Preencha abaixo.'}
+                          </p>
+                        </button>
+                      );
+                    })()}
                     <button
                       onClick={() => setLevantamentoIsOwner(false)}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${
@@ -14841,18 +15032,59 @@ export default function App() {
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${levantamentoIsOwner === false ? 'border-blue-500' : 'border-slate-300'}`}>
                           {levantamentoIsOwner === false && <div className="w-2 h-2 rounded-full bg-blue-500" />}
                         </div>
-                        <span className="text-xs font-black text-slate-900">Outra Pessoa</span>
+                        <span className="text-xs font-black text-slate-900">Terceiro</span>
                       </div>
-                      <p className="text-[10px] text-slate-500 font-medium pl-6">Terceiro autorizado</p>
+                      <p className="text-[10px] text-slate-500 font-medium pl-6">Pessoa autorizada pelo titular</p>
                     </button>
                   </div>
                 </div>
 
-                {/* Campos para outra pessoa */}
+                {/* Titular por identificar: preencher aqui */}
+                {levantamentoIsOwner === true && !(registeredDoc?.document?.fullName || '').trim() && (
+                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-emerald-500 pl-3">Dados do Titular</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome Completo <span className="text-red-500">*</span></label>
+                        <input type="text" value={levantamentoTitular.fullName}
+                          onChange={(e) => setLevantamentoTitular({...levantamentoTitular, fullName: e.target.value})}
+                          placeholder="Nome completo do titular"
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-emerald-500 focus:bg-white transition-all" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data de Nascimento <span className="text-red-500">*</span></label>
+                        <input type="date" value={levantamentoTitular.birthDate}
+                          onChange={(e) => setLevantamentoTitular({...levantamentoTitular, birthDate: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-emerald-500 focus:bg-white transition-all" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo Documento <span className="text-red-500">*</span></label>
+                        <select value={levantamentoTitular.docType}
+                          onChange={(e) => setLevantamentoTitular({...levantamentoTitular, docType: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-emerald-500 focus:bg-white transition-all">
+                          <option value="CNI">CNI</option>
+                          <option value="BI">BI</option>
+                          <option value="Passaporte">Passaporte</option>
+                          <option value="TRE">TRE</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Documento <span className="text-red-500">*</span></label>
+                        <input type="text" value={levantamentoTitular.docNumber}
+                          onChange={(e) => setLevantamentoTitular({...levantamentoTitular, docNumber: e.target.value})}
+                          placeholder="Nº de identificação"
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-emerald-500 focus:bg-white transition-all" />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Campos para terceiro */}
+
                 {levantamentoIsOwner === false && (
                   <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
                     <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-blue-500 pl-3">Dados do Coletor</p>
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome Completo <span className="text-red-500">*</span></label>
                         <input type="text" value={levantamentoOtherPerson.fullName}
@@ -14866,39 +15098,79 @@ export default function App() {
                           onChange={(e) => setLevantamentoOtherPerson({...levantamentoOtherPerson, birthDate: e.target.value})}
                           className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all" />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo Documento <span className="text-red-500">*</span></label>
-                          <select value={levantamentoOtherPerson.docType}
-                            onChange={(e) => setLevantamentoOtherPerson({...levantamentoOtherPerson, docType: e.target.value})}
-                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all">
-                            <option value="CNI">CNI</option>
-                            <option value="BI">BI</option>
-                            <option value="Passaporte">Passaporte</option>
-                            <option value="TRE">TRE</option>
-                          </select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Documento <span className="text-red-500">*</span></label>
-                          <input type="text" value={levantamentoOtherPerson.docNumber}
-                            onChange={(e) => setLevantamentoOtherPerson({...levantamentoOtherPerson, docNumber: e.target.value})}
-                            placeholder="Nº de identificação"
-                            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all" />
-                        </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo Documento <span className="text-red-500">*</span></label>
+                        <select value={levantamentoOtherPerson.docType}
+                          onChange={(e) => setLevantamentoOtherPerson({...levantamentoOtherPerson, docType: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all">
+                          <option value="CNI">CNI</option>
+                          <option value="BI">BI</option>
+                          <option value="Passaporte">Passaporte</option>
+                          <option value="TRE">TRE</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Documento <span className="text-red-500">*</span></label>
+                        <input type="text" value={levantamentoOtherPerson.docNumber}
+                          onChange={(e) => setLevantamentoOtherPerson({...levantamentoOtherPerson, docNumber: e.target.value})}
+                          placeholder="Nº de identificação"
+                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all" />
                       </div>
                     </div>
+                      <div className="space-y-4 pt-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-blue-500 pl-3">
+                            Comprovativo de Autorização {levantamentoAnexos.length > 0 && <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{levantamentoAnexos.length}</span>}
+                          </p>
+                          <button
+                            onClick={() => { setAttachmentTarget('levantamento'); setShowAttachmentModal(true); }}
+                            className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
+                          >
+                            <Plus size={14} /> Adicionar Anexo
+                          </button>
+                        </div>
+                        {levantamentoAnexos.length > 0 ? (
+                          <div className="space-y-2">
+                            {levantamentoAnexos.map((att: any, idx: number) => {
+                              const isImg = att.type === 'Imagem';
+                              return (
+                                <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 group hover:border-slate-200 transition-all">
+                                  <div className={`p-3 rounded-xl flex-shrink-0 ${isImg ? 'bg-blue-100 text-blue-600' : att.type === 'Relatório' ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'}`}>
+                                    {isImg ? <ImageIcon size={20} /> : <FileText size={20} />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-black text-slate-900 truncate">{att.title}</p>
+                                    <p className="text-[10px] text-slate-400 mt-1"><span className="font-bold">{att.type}</span> · {att.date}</p>
+                                  </div>
+                                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar"><Eye size={16} /></button>
+                                    <button onClick={() => setLevantamentoAnexos(levantamentoAnexos.filter((_: any, i: number) => i !== idx))} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Eliminar"><Trash2 size={16} /></button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="py-6 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                            <Paperclip size={22} className="mx-auto text-slate-200 mb-2" />
+                            <p className="text-slate-400 text-sm italic">Nenhum anexo associado</p>
+                          </div>
+                        )}
+                      </div>
                   </motion.div>
                 )}
               </div>
 
               {/* Footer */}
               <div className="px-6 py-4 border-t-2 border-slate-100 flex gap-3 justify-between">
-                <Button variant="outline" onClick={() => { setShowLevantamentoModal(false); setLevantamentoIsOwner(null); setLevantamentoSelecionados([]); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); }}>
+                <Button variant="outline" onClick={() => { setShowLevantamentoModal(false); setLevantamentoIsOwner(null); setLevantamentoSelecionados([]); setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); setLevantamentoAnexos([]); setLevantamentoTitular({ fullName: '', birthDate: '', docType: 'CNI', docNumber: '' }); }}>
                   Cancelar
                 </Button>
                 {(() => {
                   const otherPersonValid = levantamentoOtherPerson.fullName.trim() && levantamentoOtherPerson.birthDate && levantamentoOtherPerson.docNumber.trim();
-                  const quemValido = levantamentoIsOwner === true || (levantamentoIsOwner === false && otherPersonValid);
+                  const temTitular = Boolean((registeredDoc?.document?.fullName || '').trim());
+                  const titularValido = temTitular || (levantamentoTitular.fullName.trim() && levantamentoTitular.birthDate && levantamentoTitular.docNumber.trim());
+                  const quemValido = (levantamentoIsOwner === true && titularValido) || (levantamentoIsOwner === false && otherPersonValid);
                   const canSubmit = quemValido && levantamentoSelecionados.length > 0;
                   return (
                     <button
@@ -14906,12 +15178,13 @@ export default function App() {
                       onClick={() => {
                         const levantamento = {
                           isOwner: levantamentoIsOwner,
-                          nome: levantamentoIsOwner ? registeredDoc?.document?.fullName : levantamentoOtherPerson.fullName,
-                          dataNascimento: levantamentoIsOwner ? registeredDoc?.document?.birthDate : levantamentoOtherPerson.birthDate,
-                          docType: levantamentoIsOwner ? registeredDoc?.document?.type : levantamentoOtherPerson.docType,
-                          docNumber: levantamentoIsOwner ? registeredDoc?.document?.number : levantamentoOtherPerson.docNumber,
+                          nome: levantamentoIsOwner ? (registeredDoc?.document?.fullName || levantamentoTitular.fullName) : levantamentoOtherPerson.fullName,
+                          dataNascimento: levantamentoIsOwner ? (registeredDoc?.document?.birthDate || levantamentoTitular.birthDate) : levantamentoOtherPerson.birthDate,
+                          docType: levantamentoIsOwner ? (registeredDoc?.document?.fullName ? registeredDoc?.document?.type : levantamentoTitular.docType) : levantamentoOtherPerson.docType,
+                          docNumber: levantamentoIsOwner ? (registeredDoc?.document?.fullName ? registeredDoc?.document?.number : levantamentoTitular.docNumber) : levantamentoOtherPerson.docNumber,
                           registadoPor: user?.name || 'Administrador do Sistema',
-                          dataLevantamento: new Date().toLocaleDateString('pt-BR')
+                          dataLevantamento: new Date().toLocaleDateString('pt-BR'),
+                          anexos: levantamentoIsOwner ? [] : [...levantamentoAnexos]
                         };
                         const escolhidos = [...levantamentoSelecionados];
                         // só os documentos escolhidos são libertados; os restantes ficam "Por Levantar"
@@ -14922,7 +15195,7 @@ export default function App() {
                         setShowLevantamentoModal(false);
                         setLevantamentoIsOwner(null);
                         setLevantamentoSelecionados([]);
-                        setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' });
+                        setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); setLevantamentoAnexos([]); setLevantamentoTitular({ fullName: '', birthDate: '', docType: 'CNI', docNumber: '' });
                         const rid = registeredDoc.registoId || registeredDoc.id;
                         const restantes = mockDocuments.filter(d => (d.registoId || d.id) === rid && docEstado(d) !== 'Levantado' && !escolhidos.includes(d.id)).length;
                         setSuccessMessage(
