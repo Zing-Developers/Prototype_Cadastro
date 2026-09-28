@@ -910,11 +910,79 @@ export default function App() {
     setObsTarget('registo');
   };
 
+  // Documentos sem titular (ex.: documento de veiculo) nao dao para conferir pelos Dados Pessoais,
+  // por isso quem os levanta tem de anexar prova. Decisao da equipa: olha para a SELECAO, nao para
+  // o registo — numa bolsa com CNI + livrete, so e exigido se o livrete for levantado.
+  const levantamentoExigeComprovativo = () => {
+    if (!registeredDoc) return false;
+    return porLevantarDoRegisto(registeredDoc)
+      .filter((d: any) => levantamentoSelecionados.includes(d.id))
+      .some((d: any) => DOCUMENT_TYPES_SEM_TITULAR.includes(d.document?.type));
+  };
+
+  const blocoComprovativo = (titulo: string, obrigatorio: boolean) => (
+    <div className="space-y-4 pt-2">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-blue-500 pl-3">
+          {titulo} {obrigatorio && <span className="text-red-500">*</span>}
+          {levantamentoAnexos.length > 0 && <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{levantamentoAnexos.length}</span>}
+        </p>
+        <button
+          onClick={() => { setAttachmentTarget('levantamento'); setShowAttachmentModal(true); }}
+          className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
+        >
+          <Plus size={14} /> Adicionar Anexo
+        </button>
+      </div>
+      {obrigatorio && levantamentoAnexos.length === 0 && (
+        <p className="text-[10px] font-bold text-amber-600">
+          A seleção inclui um documento sem titular. É preciso anexar prova para concluir.
+        </p>
+      )}
+      {levantamentoAnexos.length > 0 ? (
+        <div className="space-y-2">
+          {levantamentoAnexos.map((att: any, idx: number) => {
+            const isImg = att.type === 'Imagem';
+            return (
+              <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 group hover:border-slate-200 transition-all">
+                <div className={`p-3 rounded-xl flex-shrink-0 ${isImg ? 'bg-blue-100 text-blue-600' : att.type === 'Relatório' ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'}`}>
+                  {isImg ? <ImageIcon size={20} /> : <FileText size={20} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black text-slate-900 truncate">{att.title}</p>
+                  <p className="text-[10px] text-slate-400 mt-1"><span className="font-bold">{att.type}</span> · {att.date}</p>
+                </div>
+                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar"><Eye size={16} /></button>
+                  <button onClick={() => setLevantamentoAnexos(levantamentoAnexos.filter((_: any, i: number) => i !== idx))} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Eliminar"><Trash2 size={16} /></button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="py-6 text-center border-2 border-dashed border-slate-100 rounded-xl">
+          <Paperclip size={22} className="mx-auto text-slate-200 mb-2" />
+          <p className="text-slate-400 text-sm italic">Nenhum anexo associado</p>
+        </div>
+      )}
+    </div>
+  );
+
   const abrirLevantamento = (doc: any) => {
+
 
     setLevantamentoSelecionados(porLevantarDoRegisto(doc).map(d => d.id));
     setLevantamentoIsOwner(null);
-    setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); setLevantamentoAnexos([]); setLevantamentoTitular({ fullName: '', birthDate: '', docType: 'CNI', docNumber: '' });
+    setLevantamentoOtherPerson({ fullName: '', birthDate: '', docNumber: '', docType: 'CNI' }); setLevantamentoAnexos([]);
+    // Traz o titular dos Dados Pessoais ja preenchido; fica editavel e da para pesquisar
+    const dp = doc?.document || {};
+    setLevantamentoTitular({
+      fullName: dp.fullName || '',
+      birthDate: dp.birthDate || '',
+      docType: dp.type || 'CNI',
+      docNumber: dp.number || ''
+    });
     setShowLevantamentoModal(true);
   };
   const [certificateStep, setCertificateStep] = useState(1);
@@ -922,7 +990,9 @@ export default function App() {
     orderNumber: '',
     name: '',
     birthDate: '',
-    requestDate: ''
+    requestDate: '',
+    docType: '',
+    docNumber: ''
   });
   const [certificateData, setCertificateData] = useState({
     fullName: '',
@@ -951,8 +1021,12 @@ export default function App() {
   const [mockCertificates, setMockCertificates] = useState<any[]>([
     {
       id: '000003',
+      docType: 'CNI',
+      docNumber: 'PRE-1000/N/2026',
       name: 'Bruno Fonseca',
       birthDate: '29/04/1998',
+      nationality: 'Cabo Verdiano',
+      island: 'Santiago',
       requestDate: '19/02/2023',
       status: 'Por Pagar'
     }
@@ -1006,7 +1080,7 @@ export default function App() {
   const [bioSearchDocNumber, setBioSearchDocNumber] = useState('');
   const [bioSearchResults, setBioSearchResults] = useState<any[]>([]);
   const [showBioSearchModal, setShowBioSearchModal] = useState(false);
-  const [bioSearchTarget, setBioSearchTarget] = useState<'certificate' | 'certificate_extravio' | 'document' | 'document_finder' | 'ficha' | null>(null);
+  const [bioSearchTarget, setBioSearchTarget] = useState<'certificate' | 'certificate_extravio' | 'document' | 'document_finder' | 'ficha' | 'levantamento_titular' | 'levantamento_terceiro' | null>(null);
 
   // Lost Document Search States (Certificado de Extravio)
   const [lostDocSearchType, setLostDocSearchType] = useState('CNI');
@@ -1156,6 +1230,20 @@ export default function App() {
           idNumber: person.docNumber || person.number || '',
           contact: person.contacts?.find((c: any) => c.type === 'Telemovel')?.info || docData.finder.contact,
         }
+      });
+    } else if (bioSearchTarget === 'levantamento_terceiro') {
+      setLevantamentoOtherPerson({
+        fullName: person.name || '',
+        birthDate: person.birthDate || '',
+        docType: person.docType || bioSearchDocType,
+        docNumber: person.docNumber || person.number || ''
+      });
+    } else if (bioSearchTarget === 'levantamento_titular') {
+      setLevantamentoTitular({
+        fullName: person.name || '',
+        birthDate: person.birthDate || '',
+        docType: person.docType || bioSearchDocType,
+        docNumber: person.docNumber || person.number || ''
       });
     } else if (bioSearchTarget === 'ficha') {
       setNewFichaData({
@@ -4156,7 +4244,7 @@ export default function App() {
                 <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">N.º Pedido</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Processo</label>
                       <input 
                         type="text" 
                         value={certificateSearchFilters.orderNumber}
@@ -4166,7 +4254,7 @@ export default function App() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome Requerente</label>
                       <input 
                         type="text" 
                         value={certificateSearchFilters.name}
@@ -4199,13 +4287,39 @@ export default function App() {
                         <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo Documento</label>
+                      <select
+                        value={certificateSearchFilters.docType}
+                        onChange={(e) => setCertificateSearchFilters({...certificateSearchFilters, docType: e.target.value})}
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                      >
+                        <option value="">Clique para selecionar...</option>
+                        <option value="BI">BI</option>
+                        <option value="CNI">CNI</option>
+                        <option value="Passaporte">Passaporte</option>
+                        <option value="TRE">TRE</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Documento</label>
+                      <input
+                        type="text"
+                        value={certificateSearchFilters.docNumber}
+                        onChange={(e) => setCertificateSearchFilters({...certificateSearchFilters, docNumber: e.target.value})}
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
+                        placeholder="Ex: PRE-1000/N/2026"
+                      />
+                    </div>
 
                     <div className="md:col-span-4 flex justify-end gap-3">
                       <Button variant="outline" onClick={() => setCertificateSearchFilters({
                         orderNumber: '',
                         name: '',
                         birthDate: '',
-                        requestDate: ''
+                        requestDate: '',
+                        docType: '',
+                        docNumber: ''
                       })}>Limpar</Button>
                       <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
                     </div>
@@ -4221,10 +4335,12 @@ export default function App() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Número Pedido</th>
-                          <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Nº Processo</th>
+                          <th className="px-6 py-4">Nº Documento</th>
+                          <th className="px-6 py-4">Nome Requerente</th>
                           <th className="px-6 py-4">Data Nascimento</th>
-                          <th className="px-6 py-4">Data Pedido</th>
+                          <th className="px-6 py-4">Nacionalidade</th>
+                          <th className="px-6 py-4">Ilha</th>
                           <th className="px-6 py-4">Estado</th>
                         </tr>
                       </thead>
@@ -4235,9 +4351,11 @@ export default function App() {
                             className="hover:bg-blue-50 cursor-pointer transition-colors group"
                           >
                             <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.id}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.docNumber || <span className="text-slate-300">—</span>}</td>
                             <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
                             <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.nationality || <span className="text-slate-300">—</span>}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.island || <span className="text-slate-300">—</span>}</td>
                             <td className="px-6 py-4">
                               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                                 cert.status === 'Por Pagar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
@@ -4516,8 +4634,12 @@ export default function App() {
                           <Button variant="primary" icon={Check} onClick={() => {
                             setMockCertificates([...mockCertificates, {
                               id: '000004',
+                              docType: certificateData.docType,
+                              docNumber: certificateData.docNumber,
                               name: certificateData.fullName || 'Novo Pedido',
                               birthDate: certificateData.birthDate || '---',
+                              nationality: certificateData.nationality,
+                              island: certificateData.island,
                               requestDate: new Date().toLocaleDateString('pt-BR'),
                               status: 'Por Pagar'
                             }]);
@@ -14588,7 +14710,7 @@ export default function App() {
       {/* Biographical Search Results Modal */}
       <AnimatePresence>
         {showBioSearchModal && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className={`fixed inset-0 ${bioSearchTarget === 'levantamento_titular' || bioSearchTarget === 'levantamento_terceiro' ? 'z-[120]' : 'z-[60]'} flex items-center justify-center p-4`}>
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -15039,11 +15161,37 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Titular por identificar: preencher aqui */}
-                {levantamentoIsOwner === true && !(registeredDoc?.document?.fullName || '').trim() && (
+                {/* Dados do titular: vem preenchido dos Dados Pessoais, da para corrigir ou pesquisar */}
+                {levantamentoIsOwner === true && (
                   <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-emerald-500 pl-3">Dados do Titular</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-emerald-500 pl-3">Dados do Titular</p>
+                      {!(registeredDoc?.document?.fullName || '').trim() && (
+                        <span className="text-[10px] font-bold text-amber-600">Sem titular nos Dados Pessoais</span>
+                      )}
+                    </div>
+                    <div className="bg-blue-50 border-2 border-blue-100 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-end">
+                      <div className="flex-1 w-full space-y-1">
+                        <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Nome</label>
+                        <input type="text" value={bioSearchName} onChange={(e) => setBioSearchName(e.target.value)}
+                          placeholder="Nome do titular"
+                          className="w-full px-3 py-2 bg-white border-2 border-blue-200 rounded-lg text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
+                      </div>
+                      <div className="flex-1 w-full space-y-1">
+                        <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Nº Documento</label>
+                        <input type="text" value={bioSearchDocNumber} onChange={(e) => setBioSearchDocNumber(e.target.value)}
+                          placeholder="Nº de identificação"
+                          className="w-full px-3 py-2 bg-white border-2 border-blue-200 rounded-lg text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
+                      </div>
+                      <button
+                        onClick={() => { setBioSearchTarget('levantamento_titular'); handleBioSearch(); }}
+                        className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg text-xs flex items-center gap-2 hover:bg-blue-700 transition-colors whitespace-nowrap"
+                      >
+                        <Search size={14} /> Pesquisar
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome Completo <span className="text-red-500">*</span></label>
                         <input type="text" value={levantamentoTitular.fullName}
@@ -15076,6 +15224,7 @@ export default function App() {
                           className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-emerald-500 focus:bg-white transition-all" />
                       </div>
                     </div>
+                    {blocoComprovativo('Comprovativo de Titularidade', levantamentoExigeComprovativo())}
                   </motion.div>
                 )}
 
@@ -15084,7 +15233,28 @@ export default function App() {
                 {levantamentoIsOwner === false && (
                   <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
                     <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-blue-500 pl-3">Dados do Coletor</p>
+                    <div className="bg-blue-50 border-2 border-blue-100 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-end">
+                      <div className="flex-1 w-full space-y-1">
+                        <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Nome</label>
+                        <input type="text" value={bioSearchName} onChange={(e) => setBioSearchName(e.target.value)}
+                          placeholder="Nome do coletor"
+                          className="w-full px-3 py-2 bg-white border-2 border-blue-200 rounded-lg text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
+                      </div>
+                      <div className="flex-1 w-full space-y-1">
+                        <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Nº Documento</label>
+                        <input type="text" value={bioSearchDocNumber} onChange={(e) => setBioSearchDocNumber(e.target.value)}
+                          placeholder="Nº de identificação"
+                          className="w-full px-3 py-2 bg-white border-2 border-blue-200 rounded-lg text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
+                      </div>
+                      <button
+                        onClick={() => { setBioSearchTarget('levantamento_terceiro'); handleBioSearch(); }}
+                        className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg text-xs flex items-center gap-2 hover:bg-blue-700 transition-colors whitespace-nowrap"
+                      >
+                        <Search size={14} /> Pesquisar
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome Completo <span className="text-red-500">*</span></label>
                         <input type="text" value={levantamentoOtherPerson.fullName}
@@ -15117,46 +15287,7 @@ export default function App() {
                           className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all" />
                       </div>
                     </div>
-                      <div className="space-y-4 pt-2">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-blue-500 pl-3">
-                            Comprovativo de Autorização {levantamentoAnexos.length > 0 && <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{levantamentoAnexos.length}</span>}
-                          </p>
-                          <button
-                            onClick={() => { setAttachmentTarget('levantamento'); setShowAttachmentModal(true); }}
-                            className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
-                          >
-                            <Plus size={14} /> Adicionar Anexo
-                          </button>
-                        </div>
-                        {levantamentoAnexos.length > 0 ? (
-                          <div className="space-y-2">
-                            {levantamentoAnexos.map((att: any, idx: number) => {
-                              const isImg = att.type === 'Imagem';
-                              return (
-                                <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 group hover:border-slate-200 transition-all">
-                                  <div className={`p-3 rounded-xl flex-shrink-0 ${isImg ? 'bg-blue-100 text-blue-600' : att.type === 'Relatório' ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'}`}>
-                                    {isImg ? <ImageIcon size={20} /> : <FileText size={20} />}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-black text-slate-900 truncate">{att.title}</p>
-                                    <p className="text-[10px] text-slate-400 mt-1"><span className="font-bold">{att.type}</span> · {att.date}</p>
-                                  </div>
-                                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar"><Eye size={16} /></button>
-                                    <button onClick={() => setLevantamentoAnexos(levantamentoAnexos.filter((_: any, i: number) => i !== idx))} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Eliminar"><Trash2 size={16} /></button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="py-6 text-center border-2 border-dashed border-slate-100 rounded-xl">
-                            <Paperclip size={22} className="mx-auto text-slate-200 mb-2" />
-                            <p className="text-slate-400 text-sm italic">Nenhum anexo associado</p>
-                          </div>
-                        )}
-                      </div>
+                      {blocoComprovativo('Comprovativo de Autorização', levantamentoExigeComprovativo())}
                   </motion.div>
                 )}
               </div>
@@ -15169,22 +15300,23 @@ export default function App() {
                 {(() => {
                   const otherPersonValid = levantamentoOtherPerson.fullName.trim() && levantamentoOtherPerson.birthDate && levantamentoOtherPerson.docNumber.trim();
                   const temTitular = Boolean((registeredDoc?.document?.fullName || '').trim());
-                  const titularValido = temTitular || (levantamentoTitular.fullName.trim() && levantamentoTitular.birthDate && levantamentoTitular.docNumber.trim());
+                  const titularValido = Boolean(levantamentoTitular.fullName.trim() && levantamentoTitular.birthDate && levantamentoTitular.docNumber.trim());
                   const quemValido = (levantamentoIsOwner === true && titularValido) || (levantamentoIsOwner === false && otherPersonValid);
-                  const canSubmit = quemValido && levantamentoSelecionados.length > 0;
+                  const canSubmit = quemValido && levantamentoSelecionados.length > 0
+                    && (!levantamentoExigeComprovativo() || levantamentoAnexos.length > 0);
                   return (
                     <button
                       disabled={!canSubmit}
                       onClick={() => {
                         const levantamento = {
                           isOwner: levantamentoIsOwner,
-                          nome: levantamentoIsOwner ? (registeredDoc?.document?.fullName || levantamentoTitular.fullName) : levantamentoOtherPerson.fullName,
-                          dataNascimento: levantamentoIsOwner ? (registeredDoc?.document?.birthDate || levantamentoTitular.birthDate) : levantamentoOtherPerson.birthDate,
-                          docType: levantamentoIsOwner ? (registeredDoc?.document?.fullName ? registeredDoc?.document?.type : levantamentoTitular.docType) : levantamentoOtherPerson.docType,
-                          docNumber: levantamentoIsOwner ? (registeredDoc?.document?.fullName ? registeredDoc?.document?.number : levantamentoTitular.docNumber) : levantamentoOtherPerson.docNumber,
+                          nome: levantamentoIsOwner ? levantamentoTitular.fullName : levantamentoOtherPerson.fullName,
+                          dataNascimento: levantamentoIsOwner ? levantamentoTitular.birthDate : levantamentoOtherPerson.birthDate,
+                          docType: levantamentoIsOwner ? levantamentoTitular.docType : levantamentoOtherPerson.docType,
+                          docNumber: levantamentoIsOwner ? levantamentoTitular.docNumber : levantamentoOtherPerson.docNumber,
                           registadoPor: user?.name || 'Administrador do Sistema',
                           dataLevantamento: new Date().toLocaleDateString('pt-BR'),
-                          anexos: levantamentoIsOwner ? [] : [...levantamentoAnexos]
+                          anexos: [...levantamentoAnexos]
                         };
                         const escolhidos = [...levantamentoSelecionados];
                         // só os documentos escolhidos são libertados; os restantes ficam "Por Levantar"
