@@ -1011,13 +1011,48 @@ export default function App() {
     parish: '',
     locality: '',
     reference: '',
-    phone: '',
-    email: '',
+    contactType: '',
+    contact: '',
     reason: '',
     photo: null as string | null,
     attachments: [] as any[]
   });
   const [ducGenerated, setDucGenerated] = useState(false);
+  // Pedido aberto a partir da Listagem de Pedidos
+  const [selectedCertificateRequest, setSelectedCertificateRequest] = useState<any>(null);
+  const [certificateSearchResults, setCertificateSearchResults] = useState<any[] | null>(null);
+  // Edicao bloco a bloco no Detalhe do Pedido
+  const [editingCertSection, setEditingCertSection] = useState<string | null>(null);
+  const [editCertDraft, setEditCertDraft] = useState<any>(null);
+  const certSeccaoTitulos: Record<string, string> = {
+    pedido: 'Dados do Pedido',
+    requerente: 'Dados do Requerente',
+  };
+  // As datas do pedido estao guardadas em dd/mm/aaaa e o input de data usa aaaa-mm-dd
+  const dataParaInput = (d: string) => (d && d.includes('/')) ? d.split('/').reverse().join('-') : (d || '');
+  const dataParaGuardar = (d: string) => (d && d.includes('-')) ? d.split('-').reverse().join('/') : (d || '');
+  const abrirEdicaoCert = (sec: string) => {
+    setEditCertDraft({ ...selectedCertificateRequest });
+    setEditingCertSection(sec);
+  };
+  const fecharEdicaoCert = () => {
+    setEditingCertSection(null);
+    setEditCertDraft(null);
+  };
+  const guardarCert = () => {
+    const sec = editingCertSection;
+    const d = editCertDraft;
+    if (!sec || !d) return;
+    const atualizado = { ...selectedCertificateRequest, ...d };
+    const trocar = (c: any) => c.id === atualizado.id ? atualizado : c;
+    setMockCertificates(prev => prev.map(trocar));
+    setCertificateSearchResults(prev => prev ? prev.map(trocar) : prev);
+    setSelectedCertificateRequest(atualizado);
+    setSuccessMessage(`${certSeccaoTitulos[sec]} atualizado com sucesso.`);
+    setShowSuccessModal(true);
+    fecharEdicaoCert();
+  };
+
   const [mockCertificates, setMockCertificates] = useState<any[]>([
     {
       id: '000003',
@@ -1027,6 +1062,9 @@ export default function App() {
       birthDate: '29/04/1998',
       nationality: 'Cabo Verdiano',
       island: 'Santiago',
+      contactType: 'Telemovel',
+      contact: '9912345',
+      reason: 'Concurso Público',
       requestDate: '19/02/2023',
       status: 'Por Pagar'
     }
@@ -4313,23 +4351,42 @@ export default function App() {
                     </div>
 
                     <div className="md:col-span-4 flex justify-end gap-3">
-                      <Button variant="outline" onClick={() => setCertificateSearchFilters({
+                      <Button variant="outline" onClick={() => { setCertificateSearchFilters({
                         orderNumber: '',
                         name: '',
                         birthDate: '',
                         requestDate: '',
                         docType: '',
                         docNumber: ''
-                      })}>Limpar</Button>
-                      <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
+                      }); setCertificateSearchResults(null); }}>Limpar</Button>
+                      <Button variant="primary" icon={Search} onClick={() => {
+                        const f = certificateSearchFilters;
+                        // As datas do mock estao em dd/mm/aaaa e o input devolve aaaa-mm-dd
+                        const mesmaData = (valor: string, filtro: string) => {
+                          if (!filtro) return true;
+                          if (!valor) return false;
+                          const iso = valor.includes('/') ? valor.split('/').reverse().join('-') : valor;
+                          return iso === filtro;
+                        };
+                        const results = mockCertificates.filter((cert) => {
+                          if (f.orderNumber && !(cert.id || '').toLowerCase().includes(f.orderNumber.toLowerCase())) return false;
+                          if (f.name && !(cert.name || '').toLowerCase().includes(f.name.toLowerCase())) return false;
+                          if (!mesmaData(cert.birthDate, f.birthDate)) return false;
+                          if (!mesmaData(cert.requestDate, f.requestDate)) return false;
+                          if (f.docType && cert.docType !== f.docType) return false;
+                          if (f.docNumber && !(cert.docNumber || '').toLowerCase().includes(f.docNumber.toLowerCase())) return false;
+                          return true;
+                        });
+                        setCertificateSearchResults(results);
+                      }}>Pesquisar</Button>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Listagem de Pedidos</h3>
-                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {mockCertificates.length.toString().padStart(2, '0')}</span>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">{certificateSearchResults !== null ? 'Resultados da Pesquisa' : 'Listagem de Pedidos'}</h3>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {(certificateSearchResults !== null ? certificateSearchResults : mockCertificates).length.toString().padStart(2, '0')}</span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -4345,9 +4402,16 @@ export default function App() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {mockCertificates.map((cert) => (
+                        {(certificateSearchResults !== null ? certificateSearchResults : mockCertificates).length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-6 py-12 text-center text-sm font-bold text-slate-400">
+                              Nenhum pedido encontrado para os filtros aplicados.
+                            </td>
+                          </tr>
+                        ) : (certificateSearchResults !== null ? certificateSearchResults : mockCertificates).map((cert) => (
                           <tr 
                             key={cert.id}
+                            onClick={() => { setSelectedCertificateRequest(cert); setCurrentView('certificate_detail'); }}
                             className="hover:bg-blue-50 cursor-pointer transition-colors group"
                           >
                             <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.id}</td>
@@ -4380,6 +4444,82 @@ export default function App() {
 
                 <div className="flex justify-start">
                   <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar</Button>
+                </div>
+              </motion.div>
+            ) : currentView === 'certificate_detail' && selectedCertificateRequest ? (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Detalhe do Pedido</h2>
+                    <p className="text-xs font-bold text-slate-400 mt-1">Nº Processo {selectedCertificateRequest.id}</p>
+                  </div>
+                  <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                    selectedCertificateRequest.status === 'Por Pagar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                  }`}>
+                    {selectedCertificateRequest.status}
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><FileText size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Dados do Pedido</span>
+                    </div>
+                    <button
+                      onClick={() => abrirEdicaoCert('pedido')}
+                      title="Editar Dados do Pedido"
+                      className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border-2 border-slate-100 hover:border-blue-200 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all"
+                    >
+                      <Edit size={14} /> Editar
+                    </button>
+                  </div>
+                  <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                      <DetailField label="Nº Processo" value={selectedCertificateRequest.id} />
+                      <DetailField label="Data Pedido" value={selectedCertificateRequest.requestDate || '---'} />
+                      <DetailField label="Estado" value={selectedCertificateRequest.status || '---'} />
+                      <DetailField label="Motivo" value={selectedCertificateRequest.reason || '---'} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><User size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Dados do Requerente</span>
+                    </div>
+                    <button
+                      onClick={() => abrirEdicaoCert('requerente')}
+                      title="Editar Dados do Requerente"
+                      className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border-2 border-slate-100 hover:border-blue-200 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all"
+                    >
+                      <Edit size={14} /> Editar
+                    </button>
+                  </div>
+                  <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                      <div className="md:col-span-2"><DetailField label="Nome Requerente" value={selectedCertificateRequest.name || '---'} /></div>
+                      <DetailField label="Data Nascimento" value={selectedCertificateRequest.birthDate || '---'} />
+                      <DetailField label="Nacionalidade" value={selectedCertificateRequest.nationality || '---'} />
+                      <DetailField label="Tipo Documento" value={selectedCertificateRequest.docType || '---'} />
+                      <DetailField label="Nº Documento" value={selectedCertificateRequest.docNumber || '---'} />
+                      <DetailField label="Ilha" value={selectedCertificateRequest.island || '---'} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                      <DetailField label="Tipo Contacto" value={selectedCertificateRequest.contactType || '---'} />
+                      <DetailField label="Contacto" value={selectedCertificateRequest.contact || '---'} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-start">
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_list')}>Voltar</Button>
                 </div>
               </motion.div>
             ) : currentView === 'certificate_registration' ? (
@@ -4519,8 +4659,8 @@ export default function App() {
                         <div className="space-y-4">
                           <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contacto</p>
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <DetailField label="Telemóvel" value={certificateData.phone} readOnly={false} onChange={(v) => setCertificateData({...certificateData, phone: v})} />
-                            <DetailField label="Email" value={certificateData.email} readOnly={false} onChange={(v) => setCertificateData({...certificateData, email: v})} />
+                            <DetailField label="Tipo Contacto" value={certificateData.contactType} type="select" options={['Telemovel', 'Telefone fixo', 'Email']} readOnly={false} onChange={(v) => setCertificateData({...certificateData, contactType: v})} />
+                            <DetailField label="Contacto" value={certificateData.contact} readOnly={false} onChange={(v) => setCertificateData({...certificateData, contact: v})} />
                           </div>
                         </div>
 
@@ -4528,7 +4668,7 @@ export default function App() {
                         <div className="space-y-4">
                           <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Motivo de Solicitação</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <DetailField label="Motivo" value={certificateData.reason} readOnly={false} onChange={(v) => setCertificateData({...certificateData, reason: v})} />
+                            <DetailField label="Motivo" value={certificateData.reason} type="select" options={(paramDomains['Finalidade de Certificado'] || []).filter(m => m.estado === 'Ativo').map(m => m.descricao)} readOnly={false} onChange={(v) => setCertificateData({...certificateData, reason: v})} />
                           </div>
                         </div>
 
@@ -4640,6 +4780,9 @@ export default function App() {
                               birthDate: certificateData.birthDate || '---',
                               nationality: certificateData.nationality,
                               island: certificateData.island,
+                              contactType: certificateData.contactType,
+                              contact: certificateData.contact,
+                              reason: certificateData.reason,
                               requestDate: new Date().toLocaleDateString('pt-BR'),
                               status: 'Por Pagar'
                             }]);
@@ -12725,6 +12868,71 @@ export default function App() {
           </div>
         )}
 
+        {/* Modal: editar um bloco do Detalhe do Pedido */}
+        {editingCertSection && editCertDraft && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border-2 border-slate-100"
+            >
+              <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/10 rounded-lg"><Edit size={18} className="text-white" /></div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Editar {certSeccaoTitulos[editingCertSection]}</h3>
+                </div>
+                <button onClick={fecharEdicaoCert} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pedido {editCertDraft.id}</p>
+
+                {editingCertSection === 'pedido' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <DetailField label="Data Pedido" value={dataParaInput(editCertDraft.requestDate)} type="date" readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, requestDate: dataParaGuardar(v)})} />
+                    <DetailField label="Motivo" value={editCertDraft.reason} type="select" options={(paramDomains['Finalidade de Certificado'] || []).filter(m => m.estado === 'Ativo').map(m => m.descricao)} readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, reason: v})} />
+                  </div>
+                )}
+
+                {editingCertSection === 'requerente' && (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="md:col-span-2">
+                      <DetailField label="Nome Requerente" value={editCertDraft.name} readOnly={false}
+                        onChange={(v: string) => setEditCertDraft({...editCertDraft, name: v})} />
+                    </div>
+                    <DetailField label="Data Nascimento" value={dataParaInput(editCertDraft.birthDate)} type="date" readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, birthDate: dataParaGuardar(v)})} />
+                    <DetailField label="Nacionalidade" value={editCertDraft.nationality} readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, nationality: v})} />
+                    <DetailField label="Tipo Documento" value={editCertDraft.docType} type="select" readOnly={false}
+                      options={['BI', 'CNI', 'Passaporte', 'TRE']}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, docType: v})} />
+                    <DetailField label="Nº Documento" value={editCertDraft.docNumber} readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, docNumber: v})} />
+                    <DetailField label="Ilha" value={editCertDraft.island} type="select" readOnly={false}
+                      options={['Santiago', 'São Vicente', 'Sal', 'Boa Vista', 'Fogo', 'Maio', 'Brava', 'Santo Antão', 'São Nicolau']}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, island: v})} />
+                    <DetailField label="Tipo Contacto" value={editCertDraft.contactType} type="select" readOnly={false}
+                      options={['Telemovel', 'Telefone fixo', 'Email']}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, contactType: v})} />
+                    <DetailField label="Contacto" value={editCertDraft.contact} readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, contact: v})} />
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-4 border-t-2 border-slate-100 flex gap-3 justify-end">
+                <Button variant="outline" onClick={fecharEdicaoCert}>Cancelar</Button>
+                <Button variant="success" icon={Check} onClick={guardarCert}>Guardar</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {editingSection && editSectionDraft && (
 
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -15224,7 +15432,6 @@ export default function App() {
                           className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-emerald-500 focus:bg-white transition-all" />
                       </div>
                     </div>
-                    {blocoComprovativo('Comprovativo de Titularidade', levantamentoExigeComprovativo())}
                   </motion.div>
                 )}
 
@@ -15303,7 +15510,7 @@ export default function App() {
                   const titularValido = Boolean(levantamentoTitular.fullName.trim() && levantamentoTitular.birthDate && levantamentoTitular.docNumber.trim());
                   const quemValido = (levantamentoIsOwner === true && titularValido) || (levantamentoIsOwner === false && otherPersonValid);
                   const canSubmit = quemValido && levantamentoSelecionados.length > 0
-                    && (!levantamentoExigeComprovativo() || levantamentoAnexos.length > 0);
+                    && (levantamentoIsOwner === true || !levantamentoExigeComprovativo() || levantamentoAnexos.length > 0);
                   return (
                     <button
                       disabled={!canSubmit}
