@@ -5308,6 +5308,9 @@ export default function App() {
                       else setCertificateStep(certificateStep - 1);
                     }}>Voltar</Button>
                     <div className="flex gap-3">
+                      {certificateStep === 3 && (
+                        <Button variant="outline" icon={X} onClick={() => setCurrentView('certificate_list')}>Fechar</Button>
+                      )}
                       <Button variant="outline" onClick={() => setCurrentView('certificate_list')}>Cancelar</Button>
                       {certificateStep === 1 ? (
                         <Button variant="primary" icon={ArrowRight} onClick={entrarNoPagamento}>Próximo</Button>
