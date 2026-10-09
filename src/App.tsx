@@ -1070,6 +1070,8 @@ export default function App() {
   // Pedido aberto a partir da Listagem de Pedidos
   const [selectedCertificateRequest, setSelectedCertificateRequest] = useState<any>(null);
   const [certificateSearchResults, setCertificateSearchResults] = useState<any[] | null>(null);
+  // Rascunho que esta a ser retomado (null = solicitacao nova)
+  const [certificateEditingId, setCertificateEditingId] = useState<string | null>(null);
   const [showCertAdvancedFilters, setShowCertAdvancedFilters] = useState(false);
   const [certDetailExpanded, setCertDetailExpanded] = useState<Record<string, boolean>>({ identificacao: true, anexos: false, duc: false });
   // Documento de cobranca que esta a ser consultado no backend
@@ -1078,7 +1080,7 @@ export default function App() {
   const [editingCertSection, setEditingCertSection] = useState<string | null>(null);
   const [editCertDraft, setEditCertDraft] = useState<any>(null);
   const certSeccaoTitulos: Record<string, string> = {
-    identificacao: 'Dados de Identificação',
+    identificacao: 'Dados de Identificação e Motivo',
   };
   // As datas do pedido estao guardadas em dd/mm/aaaa e o input de data usa aaaa-mm-dd
   const dataParaInput = (d: string) => (d && d.includes('/')) ? d.split('/').reverse().join('-') : (d || '');
@@ -1129,7 +1131,102 @@ export default function App() {
     }, 800);
   };
 
+  // Grava a solicitacao. 'Por Concluir' e o rascunho do botao Fechar: o processo
+  // ainda nao terminou mas os dados ficam guardados e podem ser retomados.
+  const gravarSolicitacao = (estado: string) => {
+    const temDuc = Boolean(paymentData.codigoTransacao);
+    const registo: any = {
+      id: certificateEditingId || (() => {
+        const seqAtual = Math.max(100, ...mockCertificates.map((c: any) => {
+          const m = /FICAD-(\d+)/.exec(c.id || '');
+          return m ? parseInt(m[1], 10) : 0;
+        }));
+        const codigoConcelho = (certificateData.county || 'Praia').slice(0, 2).toUpperCase();
+        return `FICAD-${seqAtual + 1}/N-${codigoConcelho}/${new Date().getFullYear()}`;
+      })(),
+      docType: certificateData.docType,
+      docNumber: certificateData.docNumber,
+      name: certificateData.fullName || 'Novo Pedido',
+      birthDate: certificateData.birthDate || '---',
+      nationality: certificateData.nationality,
+      gender: certificateData.gender,
+      civilStatus: certificateData.civilStatus,
+      birthPlace: certificateData.birthPlace,
+      fatherName: certificateData.fatherName,
+      motherName: certificateData.motherName,
+      nif: certificateData.nif,
+      profession: certificateData.profession,
+      island: certificateData.island,
+      county: certificateData.county,
+      parish: certificateData.parish,
+      locality: certificateData.locality,
+      zone: certificateData.zone,
+      reference: certificateData.reference,
+      contactType: certificateData.contactType,
+      contact: certificateData.contact,
+      reason: certificateData.reason,
+      photo: certificateData.photo,
+      attachments: [...savedAttachments],
+      ducs: temDuc ? [{
+        estado: 'Por Pagar',
+        valor: String(totalRubricas(paymentData.rubricas)),
+        moeda: paymentData.moeda,
+        codigoTransacao: paymentData.codigoTransacao,
+        recebedoria: paymentData.recebedoria,
+        rubricas: [...paymentData.rubricas],
+        observacao: paymentData.observacao,
+        descricao: paymentData.descricao,
+        metodo: paymentData.metodo,
+        emailSigov: paymentData.emailSigov,
+        dataEmissao: new Date().toLocaleDateString('pt-BR'),
+      }] : [],
+      requestDate: new Date().toLocaleDateString('pt-BR'),
+      status: estado,
+    };
+    setMockCertificates(prev => certificateEditingId
+      ? prev.map((c: any) => c.id === certificateEditingId ? registo : c)
+      : [...prev, registo]);
+    setCertificateEditingId(null);
+    setSuccessMessage(estado === 'Por Concluir'
+      ? `Solicitação ${registo.id} guardada. Pode retomá-la a partir da listagem.`
+      : 'Solicitação de Certificado Registada com Sucesso.');
+    setShowSuccessModal(true);
+    setCurrentView('certificate_list');
+  };
+
+  // Reabre um rascunho no wizard, com tudo o que ja tinha sido preenchido
+  const retomarSolicitacao = (cert: any) => {
+    setCertificateEditingId(cert.id);
+    setCertificateData({
+      fullName: cert.name || '', birthDate: cert.birthDate || '', gender: cert.gender || '',
+      civilStatus: cert.civilStatus || '', birthPlace: cert.birthPlace || '', nationality: cert.nationality || '',
+      fatherName: cert.fatherName || '', motherName: cert.motherName || '', profession: cert.profession || '',
+      docType: cert.docType || '', docNumber: cert.docNumber || '', nif: cert.nif || '',
+      island: cert.island || '', county: cert.county || '', parish: cert.parish || '',
+      locality: cert.locality || '', zone: cert.zone || '', reference: cert.reference || '',
+      contactType: cert.contactType || '', contact: cert.contact || '', reason: cert.reason || '',
+      photo: cert.photo || null, attachments: [],
+    });
+    setSavedAttachments(cert.attachments || []);
+    const duc = (cert.ducs || [])[0];
+    setPaymentData({
+      ...emptyPaymentData(),
+      nome: cert.name || '', nif: cert.nif || '',
+      email: cert.contactType === 'Email' ? cert.contact : '',
+      emailSigov: duc?.emailSigov || user?.email || '',
+      moeda: duc?.moeda || 'Escudos Cabo Verde (ECV)',
+      codigoTransacao: duc?.codigoTransacao || '',
+      recebedoria: duc?.recebedoria || '',
+      rubricas: duc?.rubricas || [],
+      observacao: duc?.observacao || '',
+      metodo: duc?.metodo || '',
+    });
+    setCertificateStep(1);
+    setCurrentView('certificate_registration');
+  };
+
   const atualizarEstadoDuc = (idx: number) => {
+
 
     const atual = selectedCertificateRequest;
     if (!atual || ducAAtualizar !== null) return;
@@ -4411,6 +4508,7 @@ export default function App() {
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Solicitação de Certificado de Cadastro</h2>
                   <Button icon={Plus} onClick={() => {
                     setCertificateStep(1);
+                    setCertificateEditingId(null);
                     setPaymentData(emptyPaymentData());
                     setCurrentView('certificate_registration');
                   }}>Nova Solicitação</Button>
@@ -4669,7 +4767,9 @@ export default function App() {
                         ) : (certificateSearchResults !== null ? certificateSearchResults : mockCertificates).map((cert) => (
                           <tr 
                             key={cert.id}
-                            onClick={() => { setSelectedCertificateRequest(cert); setCurrentView('certificate_detail'); }}
+                            onClick={() => cert.status === 'Por Concluir'
+                              ? retomarSolicitacao(cert)
+                              : (setSelectedCertificateRequest(cert), setCurrentView('certificate_detail'))}
                             className="hover:bg-blue-50 cursor-pointer transition-colors group"
                           >
                             <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.id}</td>
@@ -4680,7 +4780,7 @@ export default function App() {
                             <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.island || <span className="text-slate-300">—</span>}</td>
                             <td className="px-6 py-4">
                               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                cert.status === 'Por Pagar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                                cert.status === 'Por Concluir' ? 'bg-slate-100 text-slate-500' : cert.status === 'Por Pagar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
                               }`}>
                                 {cert.status}
                               </span>
@@ -4758,9 +4858,9 @@ export default function App() {
 
                   return (
                     <>
-                      {/* Dados de Identificação */}
+                      {/* Dados de Identificação e Motivo */}
                       <div className="space-y-4">
-                        {cabecalho('identificacao', 'Dados de Identificação', User, 'identificacao')}
+                        {cabecalho('identificacao', 'Dados de Identificação e Motivo', User, 'identificacao')}
                         <AnimatePresence>
                           {certDetailExpanded.identificacao && (
                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -5012,7 +5112,7 @@ export default function App() {
                       {certificateStep === 1 ? <User size={18} /> : certificateStep === 2 ? <CreditCard size={18} /> : <FileText size={18} />}
                     </div>
                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
-                      {certificateStep === 1 ? 'Dados de Identificação' : certificateStep === 2 ? 'Informações de Pagamento' : 'Pagamento'}
+                      {certificateStep === 1 ? 'Dados de Identificação e Motivo' : certificateStep === 2 ? 'Informações de Pagamento' : 'Pagamento'}
                     </h3>
                   </div>
 
@@ -5309,7 +5409,7 @@ export default function App() {
                     }}>Voltar</Button>
                     <div className="flex gap-3">
                       {certificateStep === 3 && (
-                        <Button variant="outline" icon={X} onClick={() => setCurrentView('certificate_list')}>Fechar</Button>
+                        <Button variant="outline" onClick={() => gravarSolicitacao('Por Concluir')}>Fechar</Button>
                       )}
                       <Button variant="outline" onClick={() => setCurrentView('certificate_list')}>Cancelar</Button>
                       {certificateStep === 1 ? (
@@ -5324,65 +5424,14 @@ export default function App() {
                           {ducAPedir ? 'A gerar DUC...' : 'Gerar DUC'}
                         </Button>
                       ) : (
-                        (
-                          <Button
-                            variant="primary"
-                            icon={Check}
-                            disabled={!paymentData.codigoTransacao || !paymentData.metodo || paymentData.rubricas.length === 0}
-                            onClick={() => {
-                            // Nº Processo no formato FICAD-nnn/N-PR/aaaa, a seguir ao maior ja existente
-                            const seqAtual = Math.max(100, ...mockCertificates.map((c: any) => {
-                              const m = /FICAD-(\d+)/.exec(c.id || '');
-                              return m ? parseInt(m[1], 10) : 0;
-                            }));
-                            const codigoConcelho = (certificateData.county || 'Praia').slice(0, 2).toUpperCase();
-                            const novoNumero = `FICAD-${seqAtual + 1}/N-${codigoConcelho}/${new Date().getFullYear()}`;
-                            setMockCertificates([...mockCertificates, {
-                              id: novoNumero,
-                              docType: certificateData.docType,
-                              docNumber: certificateData.docNumber,
-                              name: certificateData.fullName || 'Novo Pedido',
-                              birthDate: certificateData.birthDate || '---',
-                              nationality: certificateData.nationality,
-                              gender: certificateData.gender,
-                              civilStatus: certificateData.civilStatus,
-                              birthPlace: certificateData.birthPlace,
-                              fatherName: certificateData.fatherName,
-                              motherName: certificateData.motherName,
-                              nif: certificateData.nif,
-                              profession: certificateData.profession,
-                              island: certificateData.island,
-                              county: certificateData.county,
-                              parish: certificateData.parish,
-                              locality: certificateData.locality,
-                              zone: certificateData.zone,
-                              reference: certificateData.reference,
-                              contactType: certificateData.contactType,
-                              contact: certificateData.contact,
-                              reason: certificateData.reason,
-                              photo: certificateData.photo,
-                              attachments: [...savedAttachments],
-                              ducs: [{
-                                estado: 'Por Pagar',
-                                valor: String(totalRubricas(paymentData.rubricas)),
-                                moeda: paymentData.moeda,
-                                codigoTransacao: paymentData.codigoTransacao,
-                                recebedoria: paymentData.recebedoria,
-                                rubricas: [...paymentData.rubricas],
-                                observacao: paymentData.observacao,
-                                descricao: paymentData.descricao,
-                                metodo: paymentData.metodo,
-                                emailSigov: paymentData.emailSigov,
-                                dataEmissao: new Date().toLocaleDateString('pt-BR'),
-                              }],
-                              requestDate: new Date().toLocaleDateString('pt-BR'),
-                              status: 'Por Pagar'
-                            }]);
-                            setSuccessMessage('Solicitação de Certificado Registada com Sucesso.');
-                            setShowSuccessModal(true);
-                            setCurrentView('certificate_list');
-                          }}>Concluir</Button>
-                        )
+                        <Button
+                          variant="primary"
+                          icon={Check}
+                          disabled={!paymentData.codigoTransacao || !paymentData.metodo || paymentData.rubricas.length === 0}
+                          onClick={() => gravarSolicitacao('Por Pagar')}
+                        >
+                          Concluir
+                        </Button>
                       )}
                     </div>
                   </div>
