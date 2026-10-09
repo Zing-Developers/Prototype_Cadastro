@@ -52,7 +52,8 @@ import {
   UserPlus,
   Lock,
   SlidersHorizontal,
-  Star
+  Star,
+  CreditCard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -63,6 +64,7 @@ interface UserProfile {
   username: string;
   name: string;
   role: string;
+  email: string;
 }
 
 // --- Photo helpers ---
@@ -87,6 +89,34 @@ function getPortraitUrl(seed: string, gender: 'men' | 'women' = 'men'): string {
 // domínio "Documentos Extraviados" das Parametrizações fazem esta distinção; os valores
 // aqui são siglas desse domínio (ex.: 'DV' = Documento de Veículo).
 const DOCUMENT_TYPES_SEM_TITULAR = ['DV'];
+
+// Recebedorias e respetivas rubricas económicas.
+// ATENÇÃO: valores provisórios, A CONFIRMAR COM A EQUIPA — devem vir das Parametrizações
+// ou do próprio gateway de pagamento, não ficar fixos aqui.
+const HIERARQUIA_DUC = [
+  {
+    recebedoria: 'Recebedoria da Praia',
+    rubricas: [
+      { codigo: '12456900', descricao: 'Taxa de emissão do Certificado de Cadastro Policial' },
+      { codigo: '12456901', descricao: 'Taxa de urgência' },
+      { codigo: '12456902', descricao: 'Segunda via de certificado' },
+    ],
+  },
+  {
+    recebedoria: 'Recebedoria do Mindelo',
+    rubricas: [
+      { codigo: '12456900', descricao: 'Taxa de emissão do Certificado de Cadastro Policial' },
+      { codigo: '12456901', descricao: 'Taxa de urgência' },
+    ],
+  },
+];
+// Lista unica de rubricas, ja que a recebedoria e escrita a mao
+const TODAS_RUBRICAS = Array.from(
+  new Map(HIERARQUIA_DUC.flatMap(r => r.rubricas).map(x => [x.codigo, x])).values()
+);
+const totalRubricas = (rubricas: any[]) =>
+  (rubricas || []).reduce((soma, r) => soma + (parseFloat(r.valor) || 0), 0);
+
 
 // Tipos de fotografia da ficha (grupo de "Dados Biométricos")
 const FICHA_PHOTO_TITLES = ['Frontal', 'Perfil Esquerdo', 'Perfil Direito', 'Tatuagem', 'Piercings', 'Marcas de Nascença'];
@@ -171,7 +201,7 @@ const SectionHeader = ({ title, icon: Icon }: { title: string, icon?: any }) => 
   </div>
 );
 
-const DetailField = ({ label, value, type = 'text', options = [], icon: Icon, readOnly = true, onChange }: { label: string, value: string, type?: 'text' | 'select' | 'date', options?: string[], icon?: any, readOnly?: boolean, onChange?: (val: string) => void }) => (
+const DetailField = ({ label, value, type = 'text', options = [], icon: Icon, readOnly = true, onChange, placeholder }: { label: string, value: string, type?: 'text' | 'select' | 'date', options?: string[], icon?: any, readOnly?: boolean, onChange?: (val: string) => void, placeholder?: string }) => (
   <div className="space-y-1.5 group">
     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-focus-within:text-blue-600 transition-colors">{label}</label>
     <div className="relative">
@@ -180,6 +210,7 @@ const DetailField = ({ label, value, type = 'text', options = [], icon: Icon, re
           type={type} 
           readOnly={readOnly} 
           value={value || ''} 
+          placeholder={placeholder}
           onChange={(e) => onChange?.(e.target.value)}
           className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
         />
@@ -992,7 +1023,13 @@ export default function App() {
     birthDate: '',
     requestDate: '',
     docType: '',
-    docNumber: ''
+    docNumber: '',
+    nationality: '',
+    island: '',
+    county: '',
+    parish: '',
+    locality: '',
+    zone: ''
   });
   const [certificateData, setCertificateData] = useState({
     fullName: '',
@@ -1003,6 +1040,7 @@ export default function App() {
     nationality: '',
     fatherName: '',
     motherName: '',
+    profession: '',
     docType: '',
     docNumber: '',
     nif: '',
@@ -1010,6 +1048,7 @@ export default function App() {
     county: '',
     parish: '',
     locality: '',
+    zone: '',
     reference: '',
     contactType: '',
     contact: '',
@@ -1017,16 +1056,29 @@ export default function App() {
     photo: null as string | null,
     attachments: [] as any[]
   });
-  const [ducGenerated, setDucGenerated] = useState(false);
+  const emptyPaymentData = () => ({
+    nome: '', nif: '', email: '',
+    moeda: 'Escudos Cabo Verde (ECV)', codigoTransacao: '',
+    recebedoria: '', rubricas: [] as any[],
+    emailSigov: '', observacao: '',
+    descricao: 'Taxa de emissão do Certificado de Cadastro Policial',
+    metodo: ''
+  });
+  const [paymentData, setPaymentData] = useState(emptyPaymentData());
+  const [ducAPedir, setDucAPedir] = useState(false);
+
   // Pedido aberto a partir da Listagem de Pedidos
   const [selectedCertificateRequest, setSelectedCertificateRequest] = useState<any>(null);
   const [certificateSearchResults, setCertificateSearchResults] = useState<any[] | null>(null);
+  const [showCertAdvancedFilters, setShowCertAdvancedFilters] = useState(false);
+  const [certDetailExpanded, setCertDetailExpanded] = useState<Record<string, boolean>>({ identificacao: true, anexos: false, duc: false });
+  // Documento de cobranca que esta a ser consultado no backend
+  const [ducAAtualizar, setDucAAtualizar] = useState<number | null>(null);
   // Edicao bloco a bloco no Detalhe do Pedido
   const [editingCertSection, setEditingCertSection] = useState<string | null>(null);
   const [editCertDraft, setEditCertDraft] = useState<any>(null);
   const certSeccaoTitulos: Record<string, string> = {
-    pedido: 'Dados do Pedido',
-    requerente: 'Dados do Requerente',
+    identificacao: 'Dados de Identificação',
   };
   // As datas do pedido estao guardadas em dd/mm/aaaa e o input de data usa aaaa-mm-dd
   const dataParaInput = (d: string) => (d && d.includes('/')) ? d.split('/').reverse().join('-') : (d || '');
@@ -1039,7 +1091,66 @@ export default function App() {
     setEditingCertSection(null);
     setEditCertDraft(null);
   };
+  // Vai ao backend buscar o estado do pagamento deste documento de cobranca.
+  // No prototipo simula-se a resposta: o pagamento vem confirmado.
+  // Ao entrar no passo do pagamento, o DUC e emitido no backend pelo gateway de pagamento.
+  // Aqui simula-se a resposta: o gateway devolve o codigo de transacao e a entidade.
+  const entrarNoPagamento = () => {
+    setPaymentData(prev => ({
+      ...prev,
+      nome: prev.nome || certificateData.fullName,
+      nif: prev.nif || certificateData.nif,
+      email: prev.email || (certificateData.contactType === 'Email' ? certificateData.contact : ''),
+      emailSigov: prev.emailSigov || user?.email || '',
+    }));
+    // Recebedoria e rubricas do serviço vêm já definidas; o agente não as escreve
+    setPaymentData(prev => ({
+      ...prev,
+      recebedoria: prev.recebedoria || 'Recebedoria da Praia',
+      rubricas: prev.rubricas.length > 0 ? prev.rubricas : [
+        { codigo: '12456900', descricao: 'Taxa de emissão do Certificado de Cadastro Policial', valor: '5000' },
+        { codigo: '12456901', descricao: 'Taxa de urgência', valor: '600' },
+      ],
+    }));
+    setCertificateStep(2);
+  };
+
+  // O DUC é emitido no backend pelo gateway de pagamento. No protótipo simula-se a resposta.
+  const gerarDuc = () => {
+    if (ducAPedir) return;
+    setDucAPedir(true);
+    setTimeout(() => {
+      setPaymentData(prev => ({
+        ...prev,
+        codigoTransacao: prev.codigoTransacao || String(Math.floor(1000000000 + Math.random() * 8999999999)),
+      }));
+      setDucAPedir(false);
+      setCertificateStep(3);
+    }, 800);
+  };
+
+  const atualizarEstadoDuc = (idx: number) => {
+
+    const atual = selectedCertificateRequest;
+    if (!atual || ducAAtualizar !== null) return;
+    setDucAAtualizar(idx);
+    setTimeout(() => {
+      const ducs = (atual.ducs || []).map((d: any, i: number) =>
+        i === idx ? { ...d, estado: 'Pago' } : d
+      );
+      // O pedido so fica Pago quando todos os documentos de cobranca estiverem pagos
+      const estadoPedido = ducs.length > 0 && ducs.every((d: any) => d.estado === 'Pago') ? 'Pago' : 'Por Pagar';
+      const atualizado = { ...atual, ducs, status: estadoPedido };
+      const trocar = (c: any) => c.id === atualizado.id ? atualizado : c;
+      setMockCertificates(prev => prev.map(trocar));
+      setCertificateSearchResults(prev => prev ? prev.map(trocar) : prev);
+      setSelectedCertificateRequest(atualizado);
+      setDucAAtualizar(null);
+    }, 600);
+  };
+
   const guardarCert = () => {
+
     const sec = editingCertSection;
     const d = editCertDraft;
     if (!sec || !d) return;
@@ -1055,16 +1166,43 @@ export default function App() {
 
   const [mockCertificates, setMockCertificates] = useState<any[]>([
     {
-      id: '000003',
+      id: 'FICAD-102/N-PR/2026',
       docType: 'CNI',
       docNumber: 'PRE-1000/N/2026',
       name: 'Bruno Fonseca',
       birthDate: '29/04/1998',
-      nationality: 'Cabo Verdiano',
+      nationality: 'Cabo-verdiana',
+      gender: 'Masculino',
+      civilStatus: 'Solteiro(a)',
+      birthPlace: 'Praia',
+      fatherName: 'António Fonseca',
+      motherName: 'Maria Fonseca',
+      nif: '123456789',
+      profession: 'Maquinista',
       island: 'Santiago',
+      county: 'Praia',
+      parish: 'Nossa Senhora da Graça',
+      locality: 'Achada Santo António',
+      zone: 'Zona 1',
+      reference: 'Junto à escola',
       contactType: 'Telemovel',
       contact: '9912345',
       reason: 'Concurso Público',
+      ducs: [
+        { estado: 'Por Pagar', valor: '1500', moeda: 'ECV', codigoTransacao: '5180252226',
+          recebedoria: 'Recebedoria da Praia',
+          rubricas: [
+            { codigo: '12456900', descricao: 'Taxa de emissão do Certificado de Cadastro Policial', valor: '1000' },
+            { codigo: '12456901', descricao: 'Taxa de urgência', valor: '500' },
+          ],
+          descricao: 'Taxa de emissão do Certificado de Cadastro Policial', metodo: 'Vinti4', dataEmissao: '17/08/2026' },
+        { estado: 'Pago', valor: '1000', moeda: 'ECV', codigoTransacao: '5180252227',
+          recebedoria: 'Recebedoria da Praia',
+          rubricas: [
+            { codigo: '12456900', descricao: 'Taxa de emissão do Certificado de Cadastro Policial', valor: '1000' },
+          ],
+          descricao: 'Taxa de emissão do Certificado de Cadastro Policial', metodo: 'Agora', dataEmissao: '17/08/2026' },
+      ],
       requestDate: '19/02/2023',
       status: 'Por Pagar'
     }
@@ -1204,6 +1342,7 @@ export default function App() {
         fatherName: person.fatherName || '',
         motherName: person.motherName || '',
         nif: person.nif || '',
+        profession: person.profession || '',
         // Endereço (if available)
         island: person.addresses?.[0]?.island || '',
         county: person.addresses?.[0]?.council || '',
@@ -2197,7 +2336,7 @@ export default function App() {
     
     setTimeout(() => {
       if (username === 'admin' && password === 'admin123') {
-        setUser({ id: 1, username: 'admin', name: 'Administrador do Sistema', role: 'admin' });
+        setUser({ id: 1, username: 'admin', name: 'Administrador do Sistema', role: 'admin', email: 'admin@sigov.cv' });
       } else {
         setError('Falha no login. Utilize admin / admin123.');
       }
@@ -3426,7 +3565,6 @@ export default function App() {
                           />
                         </div>
 
-                        {docData.finder.type === 'Civil' && (
                           <div className="space-y-8">
                             {/* Biographical Search bar */}
                             <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-6 space-y-4">
@@ -3578,7 +3716,6 @@ export default function App() {
                             </div>
                           </div>
                           </div>
-                        )}
                       </div>
                     )}
 
@@ -4274,13 +4411,72 @@ export default function App() {
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Solicitação de Certificado de Cadastro</h2>
                   <Button icon={Plus} onClick={() => {
                     setCertificateStep(1);
-                    setDucGenerated(false);
+                    setPaymentData(emptyPaymentData());
                     setCurrentView('certificate_registration');
                   }}>Nova Solicitação</Button>
                 </div>
 
-                <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                  <div className="flex flex-wrap items-center gap-3 px-8 pt-8 pb-6 border-b border-slate-100">
+                    <div className="p-2 bg-slate-900 text-white rounded-lg"><Search size={16} /></div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex-1">Identificação do Processo</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowCertAdvancedFilters(v => !v)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all border-2 ${
+                        showCertAdvancedFilters
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900'
+                      }`}
+                    >
+                      <SlidersHorizontal size={13} />
+                      Filtros Avançados
+                    </button>
+                      <Button variant="outline" onClick={() => { setCertificateSearchFilters({
+                        orderNumber: '',
+                        name: '',
+                        birthDate: '',
+                        requestDate: '',
+                        docType: '',
+                        docNumber: '',
+                        nationality: '',
+                        island: '',
+                        county: '',
+                        parish: '',
+                        locality: '',
+                        zone: ''
+                      }); setCertificateSearchResults(null); }}>Limpar</Button>
+                      <Button variant="primary" icon={Search} onClick={() => {
+                        const f = certificateSearchFilters;
+                        // As datas do mock estao em dd/mm/aaaa e o input devolve aaaa-mm-dd
+                        const mesmaData = (valor: string, filtro: string) => {
+                          if (!filtro) return true;
+                          if (!valor) return false;
+                          const iso = valor.includes('/') ? valor.split('/').reverse().join('-') : valor;
+                          return iso === filtro;
+                        };
+                        const results = mockCertificates.filter((cert) => {
+                          if (f.orderNumber && !(cert.id || '').toLowerCase().includes(f.orderNumber.toLowerCase())) return false;
+                          if (f.name && !(cert.name || '').toLowerCase().includes(f.name.toLowerCase())) return false;
+                          if (!mesmaData(cert.birthDate, f.birthDate)) return false;
+                          if (!mesmaData(cert.requestDate, f.requestDate)) return false;
+                          if (f.docType && cert.docType !== f.docType) return false;
+                          if (f.docNumber && !(cert.docNumber || '').toLowerCase().includes(f.docNumber.toLowerCase())) return false;
+                          if (f.nationality && cert.nationality !== f.nationality) return false;
+                          if (f.island && cert.island !== f.island) return false;
+                          if (f.county && cert.county !== f.county) return false;
+                          if (f.parish && cert.parish !== f.parish) return false;
+                          if (f.locality && cert.locality !== f.locality) return false;
+                          if (f.zone && cert.zone !== f.zone) return false;
+                          return true;
+                        });
+                        setCertificateSearchResults(results);
+                      }}>Pesquisar</Button>
+                  </div>
+
+                  <div className="px-8 py-6 space-y-6">
+                    <p className="text-sm font-bold text-slate-500">Insira os dados do Processo</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Processo</label>
                       <input 
@@ -4288,7 +4484,7 @@ export default function App() {
                         value={certificateSearchFilters.orderNumber}
                         onChange={(e) => setCertificateSearchFilters({...certificateSearchFilters, orderNumber: e.target.value})}
                         className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                        placeholder="Ex: 000003"
+                        placeholder="Ex: FICAD-102/N-PR/2026"
                       />
                     </div>
                     <div className="space-y-2">
@@ -4350,36 +4546,98 @@ export default function App() {
                       />
                     </div>
 
-                    <div className="md:col-span-4 flex justify-end gap-3">
-                      <Button variant="outline" onClick={() => { setCertificateSearchFilters({
-                        orderNumber: '',
-                        name: '',
-                        birthDate: '',
-                        requestDate: '',
-                        docType: '',
-                        docNumber: ''
-                      }); setCertificateSearchResults(null); }}>Limpar</Button>
-                      <Button variant="primary" icon={Search} onClick={() => {
-                        const f = certificateSearchFilters;
-                        // As datas do mock estao em dd/mm/aaaa e o input devolve aaaa-mm-dd
-                        const mesmaData = (valor: string, filtro: string) => {
-                          if (!filtro) return true;
-                          if (!valor) return false;
-                          const iso = valor.includes('/') ? valor.split('/').reverse().join('-') : valor;
-                          return iso === filtro;
-                        };
-                        const results = mockCertificates.filter((cert) => {
-                          if (f.orderNumber && !(cert.id || '').toLowerCase().includes(f.orderNumber.toLowerCase())) return false;
-                          if (f.name && !(cert.name || '').toLowerCase().includes(f.name.toLowerCase())) return false;
-                          if (!mesmaData(cert.birthDate, f.birthDate)) return false;
-                          if (!mesmaData(cert.requestDate, f.requestDate)) return false;
-                          if (f.docType && cert.docType !== f.docType) return false;
-                          if (f.docNumber && !(cert.docNumber || '').toLowerCase().includes(f.docNumber.toLowerCase())) return false;
-                          return true;
-                        });
-                        setCertificateSearchResults(results);
-                      }}>Pesquisar</Button>
-                    </div>
+                  </div>
+                    {showCertAdvancedFilters && (
+                      <div className="space-y-6 pt-6 border-t border-slate-100">
+                        <p className="text-sm font-bold text-slate-500">Dados de Origem e Localização</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nacionalidade</label>
+                            <select
+                              value={certificateSearchFilters.nationality}
+                              onChange={(e) => setCertificateSearchFilters({...certificateSearchFilters, nationality: e.target.value})}
+                              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                            >
+                              <option value="">Clique para selecionar...</option>
+                              <option value="Cabo-verdiana">Cabo-verdiana</option>
+                              <option value="Portuguesa">Portuguesa</option>
+                              <option value="Angolana">Angolana</option>
+                              <option value="Outra">Outra</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ilha</label>
+                            <select
+                              value={certificateSearchFilters.island}
+                              onChange={(e) => setCertificateSearchFilters({...certificateSearchFilters, island: e.target.value})}
+                              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                            >
+                              <option value="">Clique para selecionar...</option>
+                              <option value="Santiago">Santiago</option>
+                              <option value="São Vicente">São Vicente</option>
+                              <option value="Sal">Sal</option>
+                              <option value="Boa Vista">Boa Vista</option>
+                              <option value="Fogo">Fogo</option>
+                              <option value="Maio">Maio</option>
+                              <option value="Brava">Brava</option>
+                              <option value="Santo Antão">Santo Antão</option>
+                              <option value="São Nicolau">São Nicolau</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Concelho</label>
+                            <select
+                              value={certificateSearchFilters.county}
+                              onChange={(e) => setCertificateSearchFilters({...certificateSearchFilters, county: e.target.value})}
+                              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                            >
+                              <option value="">Clique para selecionar...</option>
+                              <option value="Praia">Praia</option>
+                              <option value="Santa Catarina">Santa Catarina</option>
+                              <option value="São Vicente">São Vicente</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Freguesia</label>
+                            <select
+                              value={certificateSearchFilters.parish}
+                              onChange={(e) => setCertificateSearchFilters({...certificateSearchFilters, parish: e.target.value})}
+                              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                            >
+                              <option value="">Clique para selecionar...</option>
+                              <option value="Nossa Senhora da Graça">Nossa Senhora da Graça</option>
+                              <option value="São Nicolau Tolentino">São Nicolau Tolentino</option>
+                              <option value="Santíssimo Nome de Jesus">Santíssimo Nome de Jesus</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localidade</label>
+                            <select
+                              value={certificateSearchFilters.locality}
+                              onChange={(e) => setCertificateSearchFilters({...certificateSearchFilters, locality: e.target.value})}
+                              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                            >
+                              <option value="">Clique para selecionar...</option>
+                              <option value="Achada Santo António">Achada Santo António</option>
+                              <option value="Platô">Platô</option>
+                              <option value="Fazenda">Fazenda</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zona</label>
+                            <select
+                              value={certificateSearchFilters.zone}
+                              onChange={(e) => setCertificateSearchFilters({...certificateSearchFilters, zone: e.target.value})}
+                              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none"
+                            >
+                              <option value="">Clique para selecionar...</option>
+                              <option value="Zona 1">Zona 1</option>
+                              <option value="Zona 2">Zona 2</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -4464,59 +4722,242 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-900 text-white rounded-lg"><FileText size={18} /></div>
-                      <span className="uppercase tracking-widest text-xs">Dados do Pedido</span>
+                {(() => {
+                  const c = selectedCertificateRequest;
+                  const ducs = c.ducs || [];
+                  const anexos = c.attachments || [];
+                  const alternar = (k: string) => setCertDetailExpanded((p: any) => ({ ...p, [k]: !p[k] }));
+                  const cabecalho = (k: string, titulo: string, Icone: any, sec?: string, badge?: number) => (
+                    <div className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-slate-900 text-white rounded-lg"><Icone size={18} /></div>
+                        <span className="uppercase tracking-widest text-xs">{titulo}</span>
+                        {badge !== undefined && badge > 0 && (
+                          <span className="px-2 py-0.5 bg-slate-900 text-white rounded-full text-[10px] font-black">{badge}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {sec && (
+                          <button
+                            onClick={() => abrirEdicaoCert(sec)}
+                            title={`Editar ${titulo}`}
+                            className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border-2 border-slate-100 hover:border-blue-200 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all"
+                          >
+                            <Edit size={14} /> Editar
+                          </button>
+                        )}
+                        <button
+                          onClick={() => alternar(k)}
+                          className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"
+                        >
+                          {certDetailExpanded[k] ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => abrirEdicaoCert('pedido')}
-                      title="Editar Dados do Pedido"
-                      className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border-2 border-slate-100 hover:border-blue-200 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all"
-                    >
-                      <Edit size={14} /> Editar
-                    </button>
-                  </div>
-                  <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                      <DetailField label="Nº Processo" value={selectedCertificateRequest.id} />
-                      <DetailField label="Data Pedido" value={selectedCertificateRequest.requestDate || '---'} />
-                      <DetailField label="Estado" value={selectedCertificateRequest.status || '---'} />
-                      <DetailField label="Motivo" value={selectedCertificateRequest.reason || '---'} />
-                    </div>
-                  </div>
-                </div>
+                  );
 
-                <div className="space-y-4">
-                  <div className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-900 text-white rounded-lg"><User size={18} /></div>
-                      <span className="uppercase tracking-widest text-xs">Dados do Requerente</span>
-                    </div>
-                    <button
-                      onClick={() => abrirEdicaoCert('requerente')}
-                      title="Editar Dados do Requerente"
-                      className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border-2 border-slate-100 hover:border-blue-200 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all"
-                    >
-                      <Edit size={14} /> Editar
-                    </button>
-                  </div>
-                  <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                      <div className="md:col-span-2"><DetailField label="Nome Requerente" value={selectedCertificateRequest.name || '---'} /></div>
-                      <DetailField label="Data Nascimento" value={selectedCertificateRequest.birthDate || '---'} />
-                      <DetailField label="Nacionalidade" value={selectedCertificateRequest.nationality || '---'} />
-                      <DetailField label="Tipo Documento" value={selectedCertificateRequest.docType || '---'} />
-                      <DetailField label="Nº Documento" value={selectedCertificateRequest.docNumber || '---'} />
-                      <DetailField label="Ilha" value={selectedCertificateRequest.island || '---'} />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                      <DetailField label="Tipo Contacto" value={selectedCertificateRequest.contactType || '---'} />
-                      <DetailField label="Contacto" value={selectedCertificateRequest.contact || '---'} />
-                    </div>
-                  </div>
-                </div>
+                  return (
+                    <>
+                      {/* Dados de Identificação */}
+                      <div className="space-y-4">
+                        {cabecalho('identificacao', 'Dados de Identificação', User, 'identificacao')}
+                        <AnimatePresence>
+                          {certDetailExpanded.identificacao && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                              <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-8">
+                                <div className="space-y-6">
+                                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Dados Pessoais</p>
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                                    <div className="md:col-span-2"><DetailField label="Nome Completo" value={c.name || '---'} /></div>
+                                    <DetailField label="Data Nascimento" value={c.birthDate || '---'} />
+                                    <DetailField label="Género" value={c.gender || '---'} />
+                                    <DetailField label="Estado Civil" value={c.civilStatus || '---'} />
+                                    <DetailField label="Naturalidade" value={c.birthPlace || '---'} />
+                                    <DetailField label="Nacionalidade" value={c.nationality || '---'} />
+                                    <DetailField label="NIF" value={c.nif || '---'} />
+                                    <DetailField label="Profissão" value={c.profession || '---'} />
+                                    <div className="md:col-span-2"><DetailField label="Nome do Pai" value={c.fatherName || '---'} /></div>
+                                    <div className="md:col-span-2"><DetailField label="Nome da Mãe" value={c.motherName || '---'} /></div>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento de Identificação</p>
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                                    <DetailField label="Tipo Documento" value={c.docType || '---'} />
+                                    <DetailField label="Número Documento" value={c.docNumber || '---'} />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Endereço</p>
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                                    <DetailField label="Ilha" value={c.island || '---'} />
+                                    <DetailField label="Concelho" value={c.county || '---'} />
+                                    <DetailField label="Freguesia" value={c.parish || '---'} />
+                                    <DetailField label="Localidade" value={c.locality || '---'} />
+                                    <DetailField label="Zona" value={c.zone || '---'} />
+                                    <div className="md:col-span-2"><DetailField label="Ponto de Referência" value={c.reference || '---'} /></div>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contacto</p>
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                                    <DetailField label="Tipo Contacto" value={c.contactType || '---'} />
+                                    <DetailField label="Contacto" value={c.contact || '---'} />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Motivo de Solicitação</p>
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                                    <div className="md:col-span-2"><DetailField label="Motivo" value={c.reason || '---'} /></div>
+                                    <DetailField label="Data Pedido" value={c.requestDate || '---'} />
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* Anexos */}
+                      <div className="space-y-4">
+                        {cabecalho('anexos', 'Anexos', Paperclip, undefined, anexos.length)}
+                        <AnimatePresence>
+                          {certDetailExpanded.anexos && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                              <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
+                                <div className="flex justify-end">
+                                  <Button variant="outline" icon={Upload} onClick={() => { setAttachmentTarget('documento'); setShowAttachmentModal(true); }}>Carregar Anexo</Button>
+                                </div>
+
+                                {anexos.length === 0 ? (
+                                  <div className="text-center py-12 text-slate-400">
+                                    <Paperclip size={32} className="mx-auto mb-3 opacity-30" />
+                                    <p className="text-xs font-bold uppercase tracking-widest">Sem anexos</p>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    {anexos.map((att: any, idx: number) => {
+                                      const isPdf = att.type === 'PDF';
+                                      const isImg = att.type === 'Imagem';
+                                      const sizeKb = att.size ? Math.round(att.size / 1024) : 0;
+                                      const sizeLabel = sizeKb >= 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${sizeKb} KB`;
+                                      return (
+                                        <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 group hover:border-slate-200 transition-all">
+                                          <div className={`p-3 rounded-xl flex-shrink-0 ${isPdf ? 'bg-red-100 text-red-600' : isImg ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-600'}`}>
+                                            {isImg ? <ImageIcon size={20} /> : <FileText size={20} />}
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-black text-slate-900 truncate">{att.name || att.title}</p>
+                                            {att.description && <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{att.description}</p>}
+                                            <p className="text-[10px] text-slate-400 mt-1">
+                                              <span className="font-bold">{att.type}</span>{att.size ? ` · ${sizeLabel}` : ''}{att.uploadedBy ? <> · Carregado por <span className="font-bold">{att.uploadedBy}</span></> : ''}{att.uploadedAt || att.date ? ` em ${att.uploadedAt || att.date}` : ''}
+                                            </p>
+                                          </div>
+                                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Download">
+                                              <Download size={16} />
+                                            </button>
+                                            <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Eliminar">
+                                              <Trash2 size={16} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* Informações do DUC */}
+                      <div className="space-y-4">
+                        {cabecalho('duc', 'Informações do DUC', CreditCard, undefined, ducs.length)}
+                        <AnimatePresence>
+                          {certDetailExpanded.duc && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                              <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
+                                {ducs.length === 0 ? (
+                                  <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                                    <CreditCard size={28} className="mx-auto text-slate-200 mb-2" />
+                                    <p className="text-slate-400 text-sm italic">Nenhum documento de cobrança emitido</p>
+                                  </div>
+                                ) : (
+                                  ducs.map((duc: any, idx: number) => (
+                                    <div key={idx} className="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                                      <div className="px-6 py-4 bg-slate-50 border-b-2 border-slate-100 flex items-center justify-between gap-3">
+                                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Documento de Cobrança {idx + 1}</span>
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            onClick={() => atualizarEstadoDuc(idx)}
+                                            disabled={ducAAtualizar !== null}
+                                            className="px-3 py-1.5 bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-500 hover:text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                          >
+                                            <RotateCcw size={13} className={ducAAtualizar === idx ? 'animate-spin' : ''} />
+                                            {ducAAtualizar === idx ? 'A atualizar...' : 'Atualizar Estado'}
+                                          </button>
+                                          <button className="px-3 py-1.5 bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-900 hover:text-slate-900 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all">
+                                            <Printer size={13} /> Imprimir
+                                          </button>
+                                          <button className="px-3 py-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all">
+                                            <Download size={13} /> Download
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <div className="p-6 space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                                          <div className="space-y-2">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</p>
+                                            <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                              duc.estado === 'Pago' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                            }`}>
+                                              {duc.estado}
+                                            </span>
+                                          </div>
+                                          <DetailField label="Valor Total" value={duc.valor ? `${duc.valor} ${duc.moeda || ''}`.trim() : '---'} />
+                                          <DetailField label="Moeda" value={duc.moeda || '---'} />
+                                          <DetailField label="Código Transação" value={duc.codigoTransacao || '---'} />
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                                          <DetailField label="Recebedoria" value={duc.recebedoria || '---'} />
+                                          <div className="md:col-span-3"><DetailField label="Descrição do Movimento" value={duc.descricao || '---'} /></div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                                          <DetailField label="Método de Pagamento" value={duc.metodo || '---'} />
+                                          <DetailField label="Data Emissão" value={duc.dataEmissao || '---'} />
+                                        </div>
+                                        {(duc.rubricas || []).length > 0 && (
+                                          <div className="space-y-3">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rubricas</p>
+                                            <div className="space-y-2">
+                                              {duc.rubricas.map((r: any, j: number) => (
+                                                <div key={j} className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                  <span className="text-[10px] font-black bg-slate-900 text-white px-2.5 py-1 rounded-lg tracking-tight whitespace-nowrap">{r.codigo}</span>
+                                                  <p className="flex-1 min-w-0 text-sm font-bold text-slate-700 truncate">{r.descricao}</p>
+                                                  <span className="text-sm font-black text-slate-900 whitespace-nowrap">{r.valor} {duc.moeda}</span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </>
+                  );
+                })()}
 
                 <div className="flex justify-start">
                   <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_list')}>Voltar</Button>
@@ -4534,15 +4975,16 @@ export default function App() {
                 </div>
 
                 {/* Steps — igual ao cadastro de documentos */}
-                <div className="flex items-center justify-between max-w-2xl mx-auto relative px-4">
+                <div className="flex items-center justify-between max-w-3xl mx-auto relative px-4">
                   <div className="absolute top-6 left-12 right-12 h-1 bg-slate-100 rounded-full"></div>
                   <div
                     className="absolute top-6 left-12 h-1 bg-blue-600 rounded-full transition-all duration-500"
-                    style={{ width: certificateStep === 1 ? '0%' : '100%' }}
+                    style={{ width: certificateStep === 1 ? '0%' : certificateStep === 2 ? '50%' : '100%' }}
                   ></div>
                   {[
                     { id: 1, label: 'Identificação', icon: User },
-                    { id: 2, label: 'DUC', icon: FileText }
+                    { id: 2, label: 'Gerar DUC', icon: CreditCard },
+                    { id: 3, label: 'Pagamento', icon: FileText }
                   ].map((step) => (
                     <div key={step.id} className="relative z-10 flex flex-col items-center gap-3">
                       <div className={`w-12 h-12 rounded-2xl border-2 flex items-center justify-center transition-all duration-300 ${
@@ -4567,10 +5009,10 @@ export default function App() {
                   {/* Card header */}
                   <div className="p-6 bg-slate-50 border-b-2 border-slate-100 flex items-center gap-3">
                     <div className="p-2 bg-slate-900 text-white rounded-lg">
-                      {certificateStep === 1 ? <User size={18} /> : <FileText size={18} />}
+                      {certificateStep === 1 ? <User size={18} /> : certificateStep === 2 ? <CreditCard size={18} /> : <FileText size={18} />}
                     </div>
                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
-                      {certificateStep === 1 ? 'Dados de Identificação' : 'Documento Único de Cobrança'}
+                      {certificateStep === 1 ? 'Dados de Identificação' : certificateStep === 2 ? 'Informações de Pagamento' : 'Pagamento'}
                     </h3>
                   </div>
 
@@ -4621,13 +5063,14 @@ export default function App() {
                                 <DetailField label="Nome Completo" value={certificateData.fullName} readOnly={false} onChange={(v) => setCertificateData({...certificateData, fullName: v})} />
                               </div>
                               <DetailField label="Data Nascimento" value={certificateData.birthDate} type="date" readOnly={false} icon={Calendar} onChange={(v) => setCertificateData({...certificateData, birthDate: v})} />
-                              <DetailField label="Sexo" value={certificateData.gender} type="select" options={['Masculino', 'Feminino']} readOnly={false} onChange={(v) => setCertificateData({...certificateData, gender: v})} />
+                              <DetailField label="Género" value={certificateData.gender} type="select" options={['Masculino', 'Feminino']} readOnly={false} onChange={(v) => setCertificateData({...certificateData, gender: v})} />
                               <DetailField label="Estado Civil" value={certificateData.civilStatus} type="select" options={['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)']} readOnly={false} onChange={(v) => setCertificateData({...certificateData, civilStatus: v})} />
                               <DetailField label="Naturalidade" value={certificateData.birthPlace} readOnly={false} onChange={(v) => setCertificateData({...certificateData, birthPlace: v})} />
                               <DetailField label="Nacionalidade" value={certificateData.nationality} type="select" options={['Cabo-verdiana', 'Portuguesa', 'Angolana', 'Outra']} readOnly={false} onChange={(v) => setCertificateData({...certificateData, nationality: v})} />
                               <DetailField label="Nome Pai" value={certificateData.fatherName} readOnly={false} onChange={(v) => setCertificateData({...certificateData, fatherName: v})} />
                               <DetailField label="Nome Mãe" value={certificateData.motherName} readOnly={false} onChange={(v) => setCertificateData({...certificateData, motherName: v})} />
                               <DetailField label="NIF" value={certificateData.nif} readOnly={false} onChange={(v) => setCertificateData({...certificateData, nif: v})} />
+                              <DetailField label="Profissão" value={certificateData.profession} readOnly={false} onChange={(v) => setCertificateData({...certificateData, profession: v})} />
                             </div>
                           </div>
                         </div>
@@ -4650,6 +5093,7 @@ export default function App() {
                             <DetailField label="Freguesia" value={certificateData.parish} readOnly={false} onChange={(v) => setCertificateData({...certificateData, parish: v})} />
                             <DetailField label="Localidade" value={certificateData.locality} readOnly={false} onChange={(v) => setCertificateData({...certificateData, locality: v})} />
                             <div className="md:col-span-2">
+                              <DetailField label="Zona" value={certificateData.zone} type="select" options={['Zona 1', 'Zona 2']} readOnly={false} onChange={(v) => setCertificateData({...certificateData, zone: v})} />
                               <DetailField label="Ponto de Referência" value={certificateData.reference} readOnly={false} icon={MapPin} onChange={(v) => setCertificateData({...certificateData, reference: v})} />
                             </div>
                           </div>
@@ -4669,6 +5113,125 @@ export default function App() {
                           <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Motivo de Solicitação</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <DetailField label="Motivo" value={certificateData.reason} type="select" options={(paramDomains['Finalidade de Certificado'] || []).filter(m => m.estado === 'Ativo').map(m => m.descricao)} readOnly={false} onChange={(v) => setCertificateData({...certificateData, reason: v})} />
+                          </div>
+                        </div>
+
+
+                      </div>
+                    ) : certificateStep === 2 ? (
+                      <div className="space-y-8">
+                        {/* Dados de Pagamento */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dados de Pagamento</p>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <DetailField label="Recebedoria" value={paymentData.recebedoria} readOnly={false} placeholder="Nome Recebedoria"
+                              onChange={(v: string) => setPaymentData({...paymentData, recebedoria: v})} />
+                            <DetailField label="Valor Total" value={String(totalRubricas(paymentData.rubricas))} />
+                            <DetailField label="Moeda" value={paymentData.moeda} readOnly={false}
+                              onChange={(v: string) => setPaymentData({...paymentData, moeda: v})} />
+                            <DetailField label="Email Utilizador SIGOV" value={paymentData.emailSigov} readOnly={false}
+                              onChange={(v: string) => setPaymentData({...paymentData, emailSigov: v})} />
+                          </div>
+                        </div>
+
+                        {/* Rubricas Económicas */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rubricas Económicas</p>
+                          <div className="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b-2 border-slate-100">
+                                  <th className="px-6 py-3 w-56">Código</th>
+                                  <th className="px-6 py-3">Descrição</th>
+                                  <th className="px-6 py-3 w-40 text-right">Valor</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {paymentData.rubricas.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={3} className="px-6 py-10 text-center text-sm font-bold text-slate-400 italic">
+                                      Nenhuma rubrica associada a este pedido
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  paymentData.rubricas.map((r: any, i: number) => (
+                                    <tr key={i}>
+                                      <td className="px-6 py-4 text-sm font-bold text-slate-900">{r.codigo}</td>
+                                      <td className="px-6 py-4 text-sm font-bold text-slate-600">{r.descricao}</td>
+                                      <td className="px-6 py-4 text-sm font-black text-slate-900 text-right">{r.valor}</td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Dados Contribuinte */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dados Contribuinte</p>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <DetailField label="NIF" value={paymentData.nif} readOnly={false}
+                              onChange={(v: string) => setPaymentData({...paymentData, nif: v})} />
+                            <DetailField label="Nome" value={paymentData.nome} readOnly={false}
+                              onChange={(v: string) => setPaymentData({...paymentData, nome: v})} />
+                            <DetailField label="Email" value={paymentData.email} readOnly={false}
+                              onChange={(v: string) => setPaymentData({...paymentData, email: v})} />
+                          </div>
+                        </div>
+
+                        {/* Observação */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observação</p>
+                          <textarea
+                            rows={3}
+                            value={paymentData.observacao}
+                            onChange={(e) => setPaymentData({...paymentData, observacao: e.target.value})}
+                            placeholder="Inserir"
+                            className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all resize-none"
+                          />
+                        </div>
+
+                      </div>
+                    ) : (
+                      <div className="space-y-8">
+                        {/* Documento Único de Cobrança */}
+                        <div className="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                          <div className="px-6 py-4 bg-slate-50 border-b-2 border-slate-100 flex items-center justify-between gap-3">
+                            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Documento Único de Cobrança</span>
+                            <div className="flex items-center gap-2">
+                              <button className="px-3 py-1.5 bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-900 hover:text-slate-900 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all">
+                                <Printer size={13} /> Imprimir
+                              </button>
+                              <button className="px-3 py-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all">
+                                <Download size={13} /> Download
+                              </button>
+                            </div>
+                          </div>
+                          <div className="p-6 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                              <DetailField label="Código Transação" value={paymentData.codigoTransacao || '---'} />
+                              <DetailField label="Valor Total" value={`${totalRubricas(paymentData.rubricas)} ${paymentData.moeda}`} />
+                              <DetailField label="Data Emissão" value={new Date().toLocaleDateString('pt-BR')} />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                              <DetailField label="Recebedoria" value={paymentData.recebedoria || '---'} />
+                              <div className="md:col-span-3"><DetailField label="Descrição do Movimento" value={paymentData.descricao || '---'} /></div>
+                            </div>
+                            {paymentData.rubricas.length > 0 && (
+                              <div className="space-y-3">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rubricas Económicas</p>
+                                <div className="space-y-2">
+                                  {paymentData.rubricas.map((r: any, i: number) => (
+                                    <div key={i} className="flex items-center gap-4 py-2 border-b border-slate-50 last:border-0">
+                                      <span className="text-xs font-medium text-slate-400 w-24 flex-shrink-0">{r.codigo}</span>
+                                      <p className="flex-1 min-w-0 text-sm font-medium text-slate-600 truncate">{r.descricao}</p>
+                                      <span className="text-sm font-bold text-slate-900 whitespace-nowrap">{r.valor}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -4709,52 +5272,31 @@ export default function App() {
                           </div>
                         </div>
 
-                      </div>
-                    ) : (
-                      <div className="space-y-8">
-                        {!ducGenerated ? (
-                          <div className="flex flex-col items-center justify-center py-16 space-y-6">
-                            <div className="p-6 bg-blue-50 text-blue-600 rounded-2xl">
-                              <FileText size={48} />
-                            </div>
-                            <div className="text-center space-y-2">
-                              <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Gerar Documento de Cobrança</h3>
-                              <p className="text-sm text-slate-400 font-medium">Clique no botão abaixo para gerar o DUC para este pedido.</p>
-                            </div>
-                            <Button variant="secondary" onClick={() => setDucGenerated(true)}>Gerar DUC</Button>
+                        {/* Meio de Pagamento */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meio de Pagamento</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl">
+                            {[
+                              { id: 'Agora', sigla: 'a.' },
+                              { id: 'Vinti4', sigla: 'v4' },
+                              { id: 'Banco', sigla: 'BCO' },
+                            ].map((m) => (
+
+                              <button
+                                key={m.id}
+                                onClick={() => setPaymentData({...paymentData, metodo: m.id})}
+                                className={`py-5 px-4 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${
+                                  paymentData.metodo === m.id
+                                    ? 'border-blue-500 bg-blue-50 shadow-sm'
+                                    : 'border-slate-100 bg-white hover:border-slate-300'
+                                }`}
+                              >
+                                <span className={`text-lg font-black ${paymentData.metodo === m.id ? 'text-blue-600' : 'text-slate-400'}`}>{m.sigla}</span>
+                                <span className={`text-[10px] font-bold ${paymentData.metodo === m.id ? 'text-blue-600' : 'text-slate-400'}`}>{m.id}</span>
+                              </button>
+                            ))}
                           </div>
-                        ) : (
-                          <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-left border-collapse">
-                                <thead>
-                                  <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                                    <th className="px-6 py-4">Número DUC</th>
-                                    <th className="px-6 py-4">Total a Pagar</th>
-                                    <th className="px-6 py-4">Estado</th>
-                                    <th className="px-6 py-4 text-right">Ações</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  <tr className="border-b border-slate-50">
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">9865457</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">500$</td>
-                                    <td className="px-6 py-4">
-                                      <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black uppercase tracking-tighter">Por Pagar</span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                      <div className="flex justify-end gap-2">
-                                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"><Eye size={16} /></button>
-                                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"><Printer size={16} /></button>
-                                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"><History size={16} /></button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -4763,26 +5305,73 @@ export default function App() {
                   <div className="p-6 bg-slate-50 border-t-2 border-slate-100 flex justify-between items-center">
                     <Button variant="outline" icon={ArrowLeft} onClick={() => {
                       if (certificateStep === 1) setCurrentView('certificate_list');
-                      else setCertificateStep(1);
+                      else setCertificateStep(certificateStep - 1);
                     }}>Voltar</Button>
                     <div className="flex gap-3">
                       <Button variant="outline" onClick={() => setCurrentView('certificate_list')}>Cancelar</Button>
                       {certificateStep === 1 ? (
-                        <Button variant="primary" icon={ArrowRight} onClick={() => setCertificateStep(2)}>Próximo</Button>
+                        <Button variant="primary" icon={ArrowRight} onClick={entrarNoPagamento}>Próximo</Button>
+                      ) : certificateStep === 2 ? (
+                        <Button
+                          variant="primary"
+                          icon={FileText}
+                          disabled={ducAPedir || paymentData.rubricas.length === 0}
+                          onClick={gerarDuc}
+                        >
+                          {ducAPedir ? 'A gerar DUC...' : 'Gerar DUC'}
+                        </Button>
                       ) : (
-                        ducGenerated && (
-                          <Button variant="primary" icon={Check} onClick={() => {
+                        (
+                          <Button
+                            variant="primary"
+                            icon={Check}
+                            disabled={!paymentData.codigoTransacao || !paymentData.metodo || paymentData.rubricas.length === 0}
+                            onClick={() => {
+                            // Nº Processo no formato FICAD-nnn/N-PR/aaaa, a seguir ao maior ja existente
+                            const seqAtual = Math.max(100, ...mockCertificates.map((c: any) => {
+                              const m = /FICAD-(\d+)/.exec(c.id || '');
+                              return m ? parseInt(m[1], 10) : 0;
+                            }));
+                            const codigoConcelho = (certificateData.county || 'Praia').slice(0, 2).toUpperCase();
+                            const novoNumero = `FICAD-${seqAtual + 1}/N-${codigoConcelho}/${new Date().getFullYear()}`;
                             setMockCertificates([...mockCertificates, {
-                              id: '000004',
+                              id: novoNumero,
                               docType: certificateData.docType,
                               docNumber: certificateData.docNumber,
                               name: certificateData.fullName || 'Novo Pedido',
                               birthDate: certificateData.birthDate || '---',
                               nationality: certificateData.nationality,
+                              gender: certificateData.gender,
+                              civilStatus: certificateData.civilStatus,
+                              birthPlace: certificateData.birthPlace,
+                              fatherName: certificateData.fatherName,
+                              motherName: certificateData.motherName,
+                              nif: certificateData.nif,
+                              profession: certificateData.profession,
                               island: certificateData.island,
+                              county: certificateData.county,
+                              parish: certificateData.parish,
+                              locality: certificateData.locality,
+                              zone: certificateData.zone,
+                              reference: certificateData.reference,
                               contactType: certificateData.contactType,
                               contact: certificateData.contact,
                               reason: certificateData.reason,
+                              photo: certificateData.photo,
+                              attachments: [...savedAttachments],
+                              ducs: [{
+                                estado: 'Por Pagar',
+                                valor: String(totalRubricas(paymentData.rubricas)),
+                                moeda: paymentData.moeda,
+                                codigoTransacao: paymentData.codigoTransacao,
+                                recebedoria: paymentData.recebedoria,
+                                rubricas: [...paymentData.rubricas],
+                                observacao: paymentData.observacao,
+                                descricao: paymentData.descricao,
+                                metodo: paymentData.metodo,
+                                emailSigov: paymentData.emailSigov,
+                                dataEmissao: new Date().toLocaleDateString('pt-BR'),
+                              }],
                               requestDate: new Date().toLocaleDateString('pt-BR'),
                               status: 'Por Pagar'
                             }]);
@@ -12869,6 +13458,7 @@ export default function App() {
         )}
 
         {/* Modal: editar um bloco do Detalhe do Pedido */}
+
         {editingCertSection && editCertDraft && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
@@ -12889,25 +13479,36 @@ export default function App() {
               <div className="p-6 space-y-6">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pedido {editCertDraft.id}</p>
 
-                {editingCertSection === 'pedido' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <DetailField label="Data Pedido" value={dataParaInput(editCertDraft.requestDate)} type="date" readOnly={false}
-                      onChange={(v: string) => setEditCertDraft({...editCertDraft, requestDate: dataParaGuardar(v)})} />
-                    <DetailField label="Motivo" value={editCertDraft.reason} type="select" options={(paramDomains['Finalidade de Certificado'] || []).filter(m => m.estado === 'Ativo').map(m => m.descricao)} readOnly={false}
-                      onChange={(v: string) => setEditCertDraft({...editCertDraft, reason: v})} />
-                  </div>
-                )}
-
-                {editingCertSection === 'requerente' && (
+                {editingCertSection === 'identificacao' && (
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="md:col-span-2">
-                      <DetailField label="Nome Requerente" value={editCertDraft.name} readOnly={false}
+                      <DetailField label="Nome Completo" value={editCertDraft.name} readOnly={false}
                         onChange={(v: string) => setEditCertDraft({...editCertDraft, name: v})} />
                     </div>
                     <DetailField label="Data Nascimento" value={dataParaInput(editCertDraft.birthDate)} type="date" readOnly={false}
                       onChange={(v: string) => setEditCertDraft({...editCertDraft, birthDate: dataParaGuardar(v)})} />
+                    <DetailField label="Género" value={editCertDraft.gender} type="select" readOnly={false}
+                      options={['Masculino', 'Feminino']}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, gender: v})} />
+                    <DetailField label="Estado Civil" value={editCertDraft.civilStatus} type="select" readOnly={false}
+                      options={['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)']}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, civilStatus: v})} />
+                    <DetailField label="Naturalidade" value={editCertDraft.birthPlace} readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, birthPlace: v})} />
                     <DetailField label="Nacionalidade" value={editCertDraft.nationality} readOnly={false}
                       onChange={(v: string) => setEditCertDraft({...editCertDraft, nationality: v})} />
+                    <DetailField label="NIF" value={editCertDraft.nif} readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, nif: v})} />
+                    <DetailField label="Profissão" value={editCertDraft.profession} readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, profession: v})} />
+                    <div className="md:col-span-2">
+                      <DetailField label="Nome do Pai" value={editCertDraft.fatherName} readOnly={false}
+                        onChange={(v: string) => setEditCertDraft({...editCertDraft, fatherName: v})} />
+                    </div>
+                    <div className="md:col-span-2">
+                      <DetailField label="Nome da Mãe" value={editCertDraft.motherName} readOnly={false}
+                        onChange={(v: string) => setEditCertDraft({...editCertDraft, motherName: v})} />
+                    </div>
                     <DetailField label="Tipo Documento" value={editCertDraft.docType} type="select" readOnly={false}
                       options={['BI', 'CNI', 'Passaporte', 'TRE']}
                       onChange={(v: string) => setEditCertDraft({...editCertDraft, docType: v})} />
@@ -12916,11 +13517,31 @@ export default function App() {
                     <DetailField label="Ilha" value={editCertDraft.island} type="select" readOnly={false}
                       options={['Santiago', 'São Vicente', 'Sal', 'Boa Vista', 'Fogo', 'Maio', 'Brava', 'Santo Antão', 'São Nicolau']}
                       onChange={(v: string) => setEditCertDraft({...editCertDraft, island: v})} />
+                    <DetailField label="Concelho" value={editCertDraft.county} readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, county: v})} />
+                    <DetailField label="Freguesia" value={editCertDraft.parish} readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, parish: v})} />
+                    <DetailField label="Localidade" value={editCertDraft.locality} readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, locality: v})} />
+                    <DetailField label="Zona" value={editCertDraft.zone} type="select" readOnly={false}
+                      options={['Zona 1', 'Zona 2']}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, zone: v})} />
+                    <div className="md:col-span-2">
+                      <DetailField label="Ponto de Referência" value={editCertDraft.reference} readOnly={false}
+                        onChange={(v: string) => setEditCertDraft({...editCertDraft, reference: v})} />
+                    </div>
                     <DetailField label="Tipo Contacto" value={editCertDraft.contactType} type="select" readOnly={false}
                       options={['Telemovel', 'Telefone fixo', 'Email']}
                       onChange={(v: string) => setEditCertDraft({...editCertDraft, contactType: v})} />
                     <DetailField label="Contacto" value={editCertDraft.contact} readOnly={false}
                       onChange={(v: string) => setEditCertDraft({...editCertDraft, contact: v})} />
+                    <div className="md:col-span-2">
+                      <DetailField label="Motivo" value={editCertDraft.reason} type="select" readOnly={false}
+                        options={(paramDomains['Finalidade de Certificado'] || []).filter(m => m.estado === 'Ativo').map(m => m.descricao)}
+                        onChange={(v: string) => setEditCertDraft({...editCertDraft, reason: v})} />
+                    </div>
+                    <DetailField label="Data Pedido" value={dataParaInput(editCertDraft.requestDate)} type="date" readOnly={false}
+                      onChange={(v: string) => setEditCertDraft({...editCertDraft, requestDate: dataParaGuardar(v)})} />
                   </div>
                 )}
               </div>
@@ -14872,7 +15493,12 @@ export default function App() {
                         if (file && attachmentTitle) {
                           const novo = {
                             title: attachmentTitle,
+                            name: file.name,
+                            description: attachmentTitle,
+                            size: file.size,
                             type: attachmentType,
+                            uploadedBy: user?.name || 'Administrador do Sistema',
+                            uploadedAt: new Date().toLocaleDateString('pt-BR'),
                             date: new Date().toLocaleDateString('pt-BR')
                           };
                           if (attachmentTarget === 'levantamento') {
