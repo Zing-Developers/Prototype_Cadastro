@@ -22,6 +22,7 @@ import {
   ChevronUp,
   ChevronLeft,
   ChevronRight,
+  Home,
   LayoutDashboard,
   Users,
   Settings,
@@ -89,6 +90,53 @@ function getPortraitUrl(seed: string, gender: 'men' | 'women' = 'men'): string {
 // domínio "Documentos Extraviados" das Parametrizações fazem esta distinção; os valores
 // aqui são siglas desse domínio (ex.: 'DV' = Documento de Veículo).
 const DOCUMENT_TYPES_SEM_TITULAR = ['DV'];
+
+// Datas vindas de <input type="date"> (aaaa-mm-dd) mostradas como dd/mm/aaaa
+const dataPt = (v?: string) => (v && v.includes('-') ? v.split('-').reverse().join('/') : v);
+const dataHoraPt = (v?: string) => {
+  if (!v || !v.includes('T')) return dataPt(v);
+  const [d, h] = v.split('T');
+  return `${dataPt(d)} ${h.slice(0, 5)}`;
+};
+
+// Reabilitacao recusada. Existem dois formatos: o que a acao Recusar escreve
+// (status 'Recusado' + rejectionReason/rejectedAt/rejectedBy) e o usado ao abrir
+// um pedido antigo (rejectedRehabilitation: { reason, rejectedAt, rejectedBy }).
+// Pedido de reabilitacao a aguardar decisao (nem aceite, nem recusado)
+const aguardaReabilitacao = (reg: any) =>
+  reg?.status === 'Aguardando Reabilitação' ||
+  (reg?.status === 'Ativo' && !!reg?.rehabilitationDetails && !recusaDe(reg));
+
+const recusaDe = (reg: any) => {
+
+  if (!reg) return null;
+  if (reg.status === 'Recusado') {
+    return { rejectedAt: reg.rejectedAt, rejectedBy: reg.rejectedBy, reason: reg.rejectionReason };
+  }
+  if (reg.rejectedRehabilitation) {
+    const r = reg.rejectedRehabilitation;
+    return { rejectedAt: r.rejectedAt, rejectedBy: r.rejectedBy, reason: r.reason };
+  }
+  return null;
+};
+
+// Todos os pedidos de reabilitacao de um motivo (anteriores + atual), do mais recente para o mais antigo
+const reabilitacoesDe = (reg: any) => {
+  if (!reg) return [];
+  const lista = (reg.historicoReabilitacao || []).map((h: any) => ({ ...h, estado: 'Recusado', decidedAt: h.rejectedAt, decidedBy: h.rejectedBy }));
+  const d = reg.rehabilitationDetails;
+  const rec = recusaDe(reg);
+  if (d || rec) {
+    const estado = rec ? 'Recusado' : reg.status === 'Reabilitado' ? 'Aceite' : 'Pendente';
+    lista.push({
+      ...(d || {}), estado, rejectionReason: rec?.reason,
+      decidedAt: rec ? rec.rejectedAt : d?.acceptedAt,
+      decidedBy: rec ? rec.rejectedBy : d?.acceptedBy,
+    });
+  }
+  return lista.reverse();
+};
+
 
 // Recebedorias e respetivas rubricas económicas.
 // ATENÇÃO: valores provisórios, A CONFIRMAR COM A EQUIPA — devem vir das Parametrizações
@@ -239,7 +287,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [currentView, setCurrentView] = useState<'dashboard' | 'person_list' | 'person_detail' | 'ficha_list' | 'ficha_new' | 'ficha_detail' | 'recognition' | 'rehabilitation_list' | 'document_registration' | 'document_detail' | 'document_search' | 'certificate_list' | 'certificate_registration' | 'certificate_list_extravio' | 'certificate_registration_extravio' | 'certificate_analysis_extravio' | 'certificate_analysis_extravio_detail' | 'certificate_decision_extravio' | 'certificate_decision_extravio_detail' | 'certificate_history_extravio' | 'certificate_history_extravio_detail' | 'parametrizacoes'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'person_list' | 'person_detail' | 'ficha_list' | 'ficha_new' | 'ficha_detail' | 'recognition' | 'rehabilitation_list' | 'rehabilitation_detail' | 'document_registration' | 'document_detail' | 'document_search' | 'certificate_list' | 'certificate_registration' | 'certificate_list_extravio' | 'certificate_registration_extravio' | 'certificate_analysis_extravio' | 'certificate_analysis_extravio_detail' | 'certificate_decision_extravio' | 'certificate_decision_extravio_detail' | 'certificate_history_extravio' | 'certificate_history_extravio_detail' | 'parametrizacoes'>('dashboard');
   const [selectedPerson, setSelectedPerson] = useState<any>(null);
   const [selectedFicha, setSelectedFicha] = useState<any>(null);
   const [persons, setPersons] = useState<any[]>([
@@ -330,42 +378,17 @@ export default function App() {
       documents: [
         { id: 1, createdAt: '2024-02-24', validFrom: '2024-02-24', validTo: null, user: 'Paulo', type: 'CNI', number: '001234567LA041', issueDate: '2020-01-01', expiryDate: '2030-01-01', issueLocation: 'Praia' }
       ],
+      observations: [
+        { id: 1, author: 'Mascarenha', date: '2023-03-20', content: 'Indivíduo referenciado em várias ocorrências na zona de Achada Santo António.' }
+      ],
       groups: [
         { id: 1, createdAt: '2023-05-12', validFrom: '2023-05-12', validTo: null, user: 'Carlos Mascarenha', sigla: 'TL', nome: 'Thug Life', funcao: 'Membro', areaAtuacao: 'Tráfico de estupefacientes', ilha: 'Santiago', cidade: 'Praia', freguesia: 'Achada Santo António', localidade: 'Achada Santo António', referencia: 'Zona do Mercado' }
       ],
       registrationReasons: [
-        { id: 1, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1042', unit: 'ESF Praia', comando: 'Comando Regional Santiago Sul', measures: 'Prisão Preventiva', type: 'Criminal', auto_type: 'Auto de Detenção', natureza: 'Crime contra as Pessoas', enquadramento: 'Ofensa à Integridade Física — Art. 131º CP', tipologia: 'Detenção em Flagrante Delito', status: 'Ativo',
-          rehabilitationDetails: {
-            reason: 'O indivíduo cumpriu a pena e demonstrou bom comportamento nos últimos 5 anos, sem novos registros criminais.',
-            attachments: [
-              { name: 'certidao_judicial.pdf', size: 1024 * 450 },
-              { name: 'comprovativo_residencia.pdf', size: 1024 * 120 }
-            ],
-            requestedAt: '29/04/2025',
-            requestedBy: 'Bruno Fonseca'
-          }
-        },
-        { id: 2, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1078', unit: 'ESF Mindelo', comando: 'Comando Regional Barlavento', measures: 'Termo de Identidade e Residência', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Desordem Pública — Art. 279º CP', tipologia: 'Arguido', status: 'Ativo' },
-        { id: 3, date: '15/03/2023', reason: 'Suspeito de furto qualificado', refNo: 'OC-2023-0821', unit: 'DP Praia', comando: 'Comando Regional Santiago Sul', measures: 'Liberdade Provisória', type: 'Criminal', auto_type: 'Auto de Notícia', natureza: 'Crime contra o Património', enquadramento: 'Furto Qualificado — Art. 197º CP', tipologia: 'Suspeito de Crime', status: 'Ativo',
-          rejectedRehabilitation: {
-            reason: 'O período mínimo de 3 anos após a condenação ainda não foi cumprido. A reabilitação só poderá ser solicitada novamente após 15/03/2026.',
-            rejectedAt: '02/01/2025',
-            rejectedBy: 'Carlos Mendes'
-          }
-        },
-        { id: 4, date: '20/06/2021', reason: 'Desordem pública e resistência à autoridade', refNo: 'OC-2021-0345', unit: 'ESF Praia', comando: 'Comando Regional Santiago Sul', measures: 'Multa', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Resistência à Autoridade — Art. 283º CP', tipologia: 'Arguido', status: 'Reabilitado',
-          rehabilitationDetails: {
-            reason: 'O indivíduo cumpriu integralmente as obrigações impostas, pagou a multa e não registou novos incidentes nos últimos 4 anos. A reabilitação é amplamente justificada.',
-            attachments: [
-              { name: 'comprovativo_multa_paga.pdf', size: 1024 * 85 },
-              { name: 'declaracao_bom_comportamento.pdf', size: 1024 * 210 }
-            ],
-            requestedAt: '10/07/2025',
-            requestedBy: 'Mónica Tavares',
-            acceptedAt: '18/07/2025',
-            acceptedBy: 'Carlos Mendes'
-          }
-        }
+        { id: 1, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1042', detentionDate: '10/10/2024', unit: 'ESF Praia', comando: 'Comando Regional Santiago Sul', measures: 'Prisão Preventiva', type: 'Criminal', auto_type: 'Auto de Detenção', natureza: 'Crime contra as Pessoas', enquadramento: 'Ofensa à Integridade Física — Art. 131º CP', tipologia: 'Detenção em Flagrante Delito', status: 'Ativo' },
+        { id: 2, date: '10/10/2024', reason: 'Detenção em flagrante delito', refNo: 'OC-2024-1078', detentionDate: '09/10/2024', unit: 'ESF Mindelo', comando: 'Comando Regional Barlavento', measures: 'Termo de Identidade e Residência', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Desordem Pública — Art. 279º CP', tipologia: 'Arguido', status: 'Ativo' },
+        { id: 3, date: '15/03/2023', reason: 'Suspeito de furto qualificado', refNo: 'OC-2023-0821', unit: 'DP Praia', comando: 'Comando Regional Santiago Sul', measures: 'Liberdade Provisória', type: 'Criminal', auto_type: 'Auto de Notícia', natureza: 'Crime contra o Património', enquadramento: 'Furto Qualificado — Art. 197º CP', tipologia: 'Suspeito de Crime', status: 'Ativo' },
+        { id: 4, date: '20/06/2021', reason: 'Desordem pública e resistência à autoridade', refNo: 'OC-2021-0345', unit: 'ESF Praia', comando: 'Comando Regional Santiago Sul', measures: 'Multa', type: 'Policial', auto_type: 'Auto de Ocorrência', natureza: 'Crime contra a Ordem Pública', enquadramento: 'Resistência à Autoridade — Art. 283º CP', tipologia: 'Arguido', status: 'Ativo' },
       ],
       activePhotoGroup: {
         id: 100,
@@ -414,6 +437,9 @@ export default function App() {
     },
   ]);
   const [showAssociateModal, setShowAssociateModal] = useState(false);
+  // Linha aberta no historico de pedidos de reabilitacao
+  const [histReabAberto, setHistReabAberto] = useState<number | null>(null);
+  const [verHistReab, setVerHistReab] = useState(false);
   const [hideNewCadastroInAssociate, setHideNewCadastroInAssociate] = useState(false);
   const [associateSearchFilters, setAssociateSearchFilters] = useState({
     number: '',
@@ -488,7 +514,7 @@ export default function App() {
   
   // Add Motivo in Ficha State
   const [showAddMotivoInFicha, setShowAddMotivoInFicha] = useState(false);
-  const [newMotivoInFicha, setNewMotivoInFicha] = useState({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+  const [newMotivoInFicha, setNewMotivoInFicha] = useState({ reason: '', type: 'Criminal', date: '', date_end: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '', comando: '', detentionDate: '' });
   const [editingMotivoId, setEditingMotivoId] = useState<number | null>(null);
   const [editingMotivoData, setEditingMotivoData] = useState({ type: 'Criminal', sijNo: '', unit: '', measures: '' });
   const [showEditBiographic, setShowEditBiographic] = useState(false);
@@ -591,6 +617,13 @@ export default function App() {
   const [selectedPhotoGroup, setSelectedPhotoGroup] = useState<any>(null);
   const [rehabilitationReason, setRehabilitationReason] = useState('');
   const [rehabilitationAttachments, setRehabilitationAttachments] = useState<File[]>([]);
+  // true quando o modal Solicitar Reabilitacao esta a editar o pedido pendente
+  const [editandoPedidoReab, setEditandoPedidoReab] = useState(false);
+  // Seccoes abertas no detalhe do pedido de reabilitacao (modulo Reabilitacao)
+  const [rehabSec, setRehabSec] = useState({ bio: true, outras: false, obs: false });
+  // Pesquisa da lista de reabilitacoes: o que esta nos campos e o que foi aplicado com Pesquisar
+  const [reabFiltro, setReabFiltro] = useState({ numero: '', nome: '', nasc: '', estado: '' });
+  const [reabFiltroAplicado, setReabFiltroAplicado] = useState({ numero: '', nome: '', nasc: '', estado: '' });
   const [showApproveConfirmModal, setShowApproveConfirmModal] = useState(false);
   const [showRejectConfirmModal, setShowRejectConfirmModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -907,7 +940,7 @@ export default function App() {
   // Observacoes escritas durante o cadastro, antes de o registo existir
   const [docObservacoes, setDocObservacoes] = useState<any[]>([]);
   // De onde veio o modal: do cadastro, ou dos Detalhes do Registo
-  const [obsTarget, setObsTarget] = useState<'registo' | 'cadastro'>('registo');
+  const [obsTarget, setObsTarget] = useState<'registo' | 'cadastro' | 'analise'>('registo');
   const [obsTexto, setObsTexto] = useState('');
   const observacoesDoDoc = (doc: any) => {
     if (!doc) return [] as any[];
@@ -925,7 +958,14 @@ export default function App() {
       data: new Date().toLocaleDateString('pt-BR'),
       texto
     };
-    if (obsTarget === 'cadastro') {
+    if (obsTarget === 'analise') {
+      // A analise guarda { user, date, text }
+      const obs = { user: nova.autor, date: nova.data, text: nova.texto };
+      const aplicar = (c: any) => ({ ...c, observations: [...(c.observations || []), obs] });
+      setMockAnalysisCertificates(prev => prev.map((c: any) =>
+        c.id === selectedAnalysisCertificate.id ? aplicar(c) : c));
+      setSelectedAnalysisCertificate((prev: any) => aplicar(prev));
+    } else if (obsTarget === 'cadastro') {
       setDocObservacoes(prev => [...prev, nova]);
     } else {
       // As observacoes sao do registo, por isso ficam em todos os documentos do mesmo Nº de Registo.
@@ -1058,7 +1098,7 @@ export default function App() {
   });
   const emptyPaymentData = () => ({
     nome: '', nif: '', email: '',
-    moeda: 'Escudos Cabo Verde (ECV)', codigoTransacao: '',
+    moeda: 'Escudos Cabo Verde (ECV)', entidade: '', referencia: '',
     recebedoria: '', rubricas: [] as any[],
     emailSigov: '', observacao: '',
     descricao: 'Taxa de emissão do Certificado de Cadastro Policial',
@@ -1066,10 +1106,13 @@ export default function App() {
   });
   const [paymentData, setPaymentData] = useState(emptyPaymentData());
   const [ducAPedir, setDucAPedir] = useState(false);
+  // Dados do contribuinte: vem do requerente e so se editam a pedido
 
   // Pedido aberto a partir da Listagem de Pedidos
   const [selectedCertificateRequest, setSelectedCertificateRequest] = useState<any>(null);
   const [certificateSearchResults, setCertificateSearchResults] = useState<any[] | null>(null);
+  // Rascunho que esta a ser retomado (null = solicitacao nova)
+  const [certificateEditingId, setCertificateEditingId] = useState<string | null>(null);
   const [showCertAdvancedFilters, setShowCertAdvancedFilters] = useState(false);
   const [certDetailExpanded, setCertDetailExpanded] = useState<Record<string, boolean>>({ identificacao: true, anexos: false, duc: false });
   // Documento de cobranca que esta a ser consultado no backend
@@ -1078,7 +1121,7 @@ export default function App() {
   const [editingCertSection, setEditingCertSection] = useState<string | null>(null);
   const [editCertDraft, setEditCertDraft] = useState<any>(null);
   const certSeccaoTitulos: Record<string, string> = {
-    identificacao: 'Dados de Identificação',
+    identificacao: 'Dados de Identificação e Motivo',
   };
   // As datas do pedido estao guardadas em dd/mm/aaaa e o input de data usa aaaa-mm-dd
   const dataParaInput = (d: string) => (d && d.includes('/')) ? d.split('/').reverse().join('-') : (d || '');
@@ -1095,14 +1138,50 @@ export default function App() {
   // No prototipo simula-se a resposta: o pagamento vem confirmado.
   // Ao entrar no passo do pagamento, o DUC e emitido no backend pelo gateway de pagamento.
   // Aqui simula-se a resposta: o gateway devolve o codigo de transacao e a entidade.
+  // O contribuinte espelha o requerente ate alguem o editar
+  // O contribuinte e sempre o requerente: nao se pode pagar por outra pessoa
+  const contribuinteAtual = () => ({
+    nif: certificateData.nif,
+    nome: certificateData.fullName,
+    email: certificateData.contactType === 'Email' ? certificateData.contact : '',
+  });
+
+  // Visualizacao do DUC, com impressao e download
+  const imprimirDuc = () => window.print();
+  // O documento como ficheiro autonomo, usado pelo Ver e pelo Download
+  const ducHtml = () => {
+    const doc = document.getElementById('duc-doc');
+    if (!doc) return '';
+    return `<!doctype html><html lang="pt"><head><meta charset="utf-8">`
+      + `<title>DUC ${paymentData.referencia || ''}</title>`
+      + `<style>body{font-family:monospace;padding:24px;background:#fff}`
+      + `table{border-collapse:collapse;width:100%}`
+      + `td,th{border:1px solid #000;padding:4px 6px;font-size:12px}`
+      + `</style></head><body>${doc.innerHTML}</body></html>`;
+  };
+  const verDuc = () => {
+    const html = ducHtml();
+    if (!html) return;
+    const janela = window.open('', '_blank');
+    if (!janela) return;
+    janela.document.write(html);
+    janela.document.close();
+  };
+  const descarregarDuc = () => {
+    const html = ducHtml();
+    if (!html) return;
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `DUC-${paymentData.referencia || 'documento'}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const entrarNoPagamento = () => {
-    setPaymentData(prev => ({
-      ...prev,
-      nome: prev.nome || certificateData.fullName,
-      nif: prev.nif || certificateData.nif,
-      email: prev.email || (certificateData.contactType === 'Email' ? certificateData.contact : ''),
-      emailSigov: prev.emailSigov || user?.email || '',
-    }));
+
+
+    setPaymentData(prev => ({ ...prev, emailSigov: prev.emailSigov || user?.email || '' }));
     // Recebedoria e rubricas do serviço vêm já definidas; o agente não as escreve
     setPaymentData(prev => ({
       ...prev,
@@ -1112,7 +1191,7 @@ export default function App() {
         { codigo: '12456901', descricao: 'Taxa de urgência', valor: '600' },
       ],
     }));
-    setCertificateStep(2);
+    setCertificateStep(3);
   };
 
   // O DUC é emitido no backend pelo gateway de pagamento. No protótipo simula-se a resposta.
@@ -1122,14 +1201,165 @@ export default function App() {
     setTimeout(() => {
       setPaymentData(prev => ({
         ...prev,
-        codigoTransacao: prev.codigoTransacao || String(Math.floor(1000000000 + Math.random() * 8999999999)),
+        entidade: prev.entidade || String(Math.floor(10000 + Math.random() * 89999)),
+        referencia: prev.referencia || String(Math.floor(100000000 + Math.random() * 899999999)),
       }));
       setDucAPedir(false);
-      setCertificateStep(3);
+      setCertificateStep(4);
     }, 800);
   };
 
+  // Grava a solicitacao. 'Por Concluir' e o rascunho do botao Fechar: o processo
+  // ainda nao terminou mas os dados ficam guardados e podem ser retomados.
+  const gravarSolicitacao = (estado: string) => {
+    const temDuc = Boolean(paymentData.entidade);
+    const registo: any = {
+      id: certificateEditingId || (() => {
+        const seqAtual = Math.max(100, ...mockCertificates.map((c: any) => {
+          const m = /FICAD-(\d+)/.exec(c.id || '');
+          return m ? parseInt(m[1], 10) : 0;
+        }));
+        const codigoConcelho = (certificateData.county || 'Praia').slice(0, 2).toUpperCase();
+        return `FICAD-${seqAtual + 1}/N-${codigoConcelho}/${new Date().getFullYear()}`;
+      })(),
+      docType: certificateData.docType,
+      docNumber: certificateData.docNumber,
+      name: certificateData.fullName || 'Novo Pedido',
+      birthDate: certificateData.birthDate || '---',
+      nationality: certificateData.nationality,
+      gender: certificateData.gender,
+      civilStatus: certificateData.civilStatus,
+      birthPlace: certificateData.birthPlace,
+      fatherName: certificateData.fatherName,
+      motherName: certificateData.motherName,
+      nif: certificateData.nif,
+      profession: certificateData.profession,
+      island: certificateData.island,
+      county: certificateData.county,
+      parish: certificateData.parish,
+      locality: certificateData.locality,
+      zone: certificateData.zone,
+      reference: certificateData.reference,
+      contactType: certificateData.contactType,
+      contact: certificateData.contact,
+      reason: certificateData.reason,
+      photo: certificateData.photo,
+      attachments: [...savedAttachments],
+      ducs: temDuc ? [{
+        estado: 'Por Pagar',
+        valor: String(totalRubricas(paymentData.rubricas)),
+        moeda: paymentData.moeda,
+        entidade: paymentData.entidade,
+        referencia: paymentData.referencia,
+        recebedoria: paymentData.recebedoria,
+        rubricas: [...paymentData.rubricas],
+        observacao: paymentData.observacao,
+        descricao: paymentData.descricao,
+        metodo: paymentData.metodo,
+        emailSigov: paymentData.emailSigov,
+        contribuinte: contribuinteAtual(),
+        dataEmissao: new Date().toLocaleDateString('pt-BR'),
+      }] : [],
+      requestDate: new Date().toLocaleDateString('pt-BR'),
+      status: estado,
+    };
+    setMockCertificates(prev => certificateEditingId
+      ? prev.map((c: any) => c.id === certificateEditingId ? registo : c)
+      : [...prev, registo]);
+    setCertificateEditingId(null);
+    setSuccessMessage(estado === 'Por Concluir'
+      ? `Solicitação ${registo.id} guardada. Pode retomá-la a partir da listagem.`
+      : 'Solicitação de Certificado Registada com Sucesso.');
+    setShowSuccessModal(true);
+    setCurrentView('certificate_list');
+  };
+
+  // Reabre um rascunho no wizard, com tudo o que ja tinha sido preenchido
+  const retomarSolicitacao = (cert: any) => {
+    setCertificateEditingId(cert.id);
+    setCertificateData({
+      fullName: cert.name || '', birthDate: cert.birthDate || '', gender: cert.gender || '',
+      civilStatus: cert.civilStatus || '', birthPlace: cert.birthPlace || '', nationality: cert.nationality || '',
+      fatherName: cert.fatherName || '', motherName: cert.motherName || '', profession: cert.profession || '',
+      docType: cert.docType || '', docNumber: cert.docNumber || '', nif: cert.nif || '',
+      island: cert.island || '', county: cert.county || '', parish: cert.parish || '',
+      locality: cert.locality || '', zone: cert.zone || '', reference: cert.reference || '',
+      contactType: cert.contactType || '', contact: cert.contact || '', reason: cert.reason || '',
+      photo: cert.photo || null, attachments: [],
+    });
+    setSavedAttachments(cert.attachments || []);
+    const duc = (cert.ducs || [])[0];
+    setPaymentData({
+      ...emptyPaymentData(),
+      nome: cert.name || '', nif: cert.nif || '',
+      email: cert.contactType === 'Email' ? cert.contact : '',
+      emailSigov: duc?.emailSigov || user?.email || '',
+      moeda: duc?.moeda || 'Escudos Cabo Verde (ECV)',
+      entidade: duc?.entidade || '',
+      referencia: duc?.referencia || '',
+      recebedoria: duc?.recebedoria || '',
+      rubricas: duc?.rubricas || [],
+      observacao: duc?.observacao || '',
+      metodo: duc?.metodo || '',
+    });
+    setCertificateStep(1);
+    setCurrentView('certificate_registration');
+  };
+
+  // Envia o pedido pago para a fila de Analise de Certificado
+  const enviarParaAnalise = () => {
+    const c = selectedCertificateRequest;
+    if (!c || c.status !== 'Pago') return;
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    const paraAnalise = {
+      id: c.id,
+      name: c.name,
+      birthDate: c.birthDate,
+      requestDate: c.requestDate,
+      status: 'Por analisar',
+      biographic: {
+        fullName: c.name,
+        birthDate: c.birthDate,
+        gender: c.gender,
+        civilStatus: c.civilStatus,
+        birthPlace: c.birthPlace,
+        nationality: c.nationality,
+        fatherName: c.fatherName,
+        motherName: c.motherName,
+        nif: c.nif,
+        docType: c.docType,
+        docNumber: c.docNumber,
+      },
+      address: {
+        island: c.island,
+        council: c.county,
+        parish: c.parish,
+        locality: c.locality,
+        zone: c.zone,
+        reference: c.reference,
+      },
+      contact: {
+        mobile: c.contactType === 'Email' ? '' : c.contact,
+        email: c.contactType === 'Email' ? c.contact : '',
+      },
+      reason: c.reason,
+      attachments: c.attachments || [],
+      observations: [],
+      history: [{ date: hoje, phase: 'Análise', status: 'Por analisar', user: user?.name || 'Administrador do Sistema' }],
+    };
+    setMockAnalysisCertificates(prev => [...prev, paraAnalise]);
+    // Sai da Solicitacao: passa a viver na fila da Analise
+    setMockCertificates(prev => prev.filter((x: any) => x.id !== c.id));
+    setCertificateSearchResults(prev => prev ? prev.filter((x: any) => x.id !== c.id) : prev);
+    setSelectedCertificateRequest(null);
+    setSuccessMessage(`Pedido ${c.id} enviado para análise.`);
+    setShowSuccessModal(true);
+    setCurrentView('certificate_list');
+  };
+
   const atualizarEstadoDuc = (idx: number) => {
+
+
 
     const atual = selectedCertificateRequest;
     if (!atual || ducAAtualizar !== null) return;
@@ -1189,14 +1419,14 @@ export default function App() {
       contact: '9912345',
       reason: 'Concurso Público',
       ducs: [
-        { estado: 'Por Pagar', valor: '1500', moeda: 'ECV', codigoTransacao: '5180252226',
+        { estado: 'Por Pagar', valor: '1500', moeda: 'ECV', entidade: '12345', referencia: '518 025 222',
           recebedoria: 'Recebedoria da Praia',
           rubricas: [
             { codigo: '12456900', descricao: 'Taxa de emissão do Certificado de Cadastro Policial', valor: '1000' },
             { codigo: '12456901', descricao: 'Taxa de urgência', valor: '500' },
           ],
           descricao: 'Taxa de emissão do Certificado de Cadastro Policial', metodo: 'Vinti4', dataEmissao: '17/08/2026' },
-        { estado: 'Pago', valor: '1000', moeda: 'ECV', codigoTransacao: '5180252227',
+        { estado: 'Pago', valor: '1000', moeda: 'ECV', entidade: '12345', referencia: '518 025 227',
           recebedoria: 'Recebedoria da Praia',
           rubricas: [
             { codigo: '12456900', descricao: 'Taxa de emissão do Certificado de Cadastro Policial', valor: '1000' },
@@ -1208,7 +1438,30 @@ export default function App() {
     }
   ]);
 
+  // Pesquisa da Analise de Certificado (estado proprio, separado da Solicitacao)
+  const emptyAnalysisFilters = () => ({
+    orderNumber: '', name: '', birthDate: '', requestDate: '', docType: '', docNumber: '',
+    nationality: '', island: '', county: '', parish: '', locality: '', zone: ''
+  });
+  const [analysisSearchFilters, setAnalysisSearchFilters] = useState(emptyAnalysisFilters());
+  const [analysisSearchResults, setAnalysisSearchResults] = useState<any[] | null>(null);
+  const [showAnalysisAdvancedFilters, setShowAnalysisAdvancedFilters] = useState(false);
+  // Abre um pedido na analise, tentando associar a ficha pelo NIF ou pelo nº de documento
+  const abrirAnalise = (cert: any) => {
+    setSelectedAnalysisCertificate(cert);
+    setAssociatedPerson(null);
+    setSuggestedFicha(null);
+    setCertAnalysisHasSearched(false);
+    const match = fichas.find(f =>
+      (cert.biographic?.nif && f.nif === cert.biographic.nif) ||
+      (cert.biographic?.docNumber && (f.docNumber === cert.biographic.docNumber || f.number === cert.biographic.docNumber))
+    );
+    if (match) setSuggestedFicha(match);
+    setCurrentView('certificate_analysis_detail');
+  };
+
   const [certificateExtravioStep, setCertificateExtravioStep] = useState(1);
+
   const [certificateExtravioSearchFilters, setCertificateExtravioSearchFilters] = useState({
     orderNumber: '',
     name: '',
@@ -1283,13 +1536,14 @@ export default function App() {
   const [newFichaContacts, setNewFichaContacts] = useState<any[]>([]);
   const [newFichaNewContact, setNewFichaNewContact] = useState({ type: 'Telemovel', info: '' });
   const [newFichaNicknames, setNewFichaNicknames] = useState<string[]>([]);
+  const [newFichaGroups, setNewFichaGroups] = useState<any[]>([]);
+  const [newFichaNewGroup, setNewFichaNewGroup] = useState({ sigla: '', nome: '', funcao: '' });
   const [newFichaNewNickname, setNewFichaNewNickname] = useState('');
   // Outras Informações (Nova Ficha) — modal único "Adicionar Informação", como em Detalhe da Ficha
   const [showNfAddInfoModal, setShowNfAddInfoModal] = useState(false);
-  const [nfAddInfoType, setNfAddInfoType] = useState<'address' | 'contact' | 'nickname'>('address');
+  const [nfAddInfoType, setNfAddInfoType] = useState<'group' | 'address' | 'contact' | 'nickname'>('address');
   const [newFichaReasons, setNewFichaReasons] = useState<any[]>([]);
   const [newFichaObservations, setNewFichaObservations] = useState<{content:string;author:string;date:string}[]>([]);
-  const [newFichaNewObs, setNewFichaNewObs] = useState('');
   const [newFichaAttachments, setNewFichaAttachments] = useState<{name:string;type:string}[]>([]);
   const [newFichaNewAttach, setNewFichaNewAttach] = useState({ name: '', type: 'Documento' });
 
@@ -1454,7 +1708,7 @@ export default function App() {
   };
   const [mockAnalysisCertificates, setMockAnalysisCertificates] = useState<any[]>([
     {
-      id: '000004',
+      id: 'FICAD-100/N-PR/2026',
       name: 'Bruno Fonseca',
       birthDate: '29/04/1998',
       requestDate: '19/02/2025',
@@ -1497,11 +1751,11 @@ export default function App() {
       ]
     },
     {
-      id: '000005',
+      id: 'FICAD-101/N-PR/2026',
       name: 'Manuel Sousa',
       birthDate: '27/06/1997',
       requestDate: '19/02/2025',
-      status: 'Por analisar',
+      status: 'Devolvido',
       biographic: {
         fullName: 'Manuel Sousa',
         birthDate: '1997-06-27',
@@ -1840,10 +2094,36 @@ export default function App() {
     const updatedFichas = fichas.map(f => {
       if (f.id === selectedFicha.id) {
         const updatedReasons = f.registrationReasons.map((r: any) => {
-          if (r.id === selectedReasonForRehab.id) {
+          if (r.id === selectedReasonForRehab.id && editandoPedidoReab) {
+            // Editar o pedido pendente: muda so o motivo e os anexos
             return {
               ...r,
+              rehabilitationDetails: {
+                ...r.rehabilitationDetails,
+                reason: rehabilitationReason,
+                attachments: rehabilitationAttachments.map(file => ({ name: file.name, size: file.size })),
+                updatedAt: new Date().toLocaleDateString('pt-PT'),
+                updatedBy: user?.name || 'Admin'
+              }
+            };
+          }
+          if (r.id === selectedReasonForRehab.id) {
+            // Se o pedido anterior foi recusado, guarda-o no historico antes de abrir o novo
+            const recusaAnterior = recusaDe(r);
+            const historicoReabilitacao = [...(r.historicoReabilitacao || [])];
+            if (recusaAnterior) {
+              historicoReabilitacao.push({
+                ...(r.rehabilitationDetails || {}),
+                rejectedAt: recusaAnterior.rejectedAt,
+                rejectedBy: recusaAnterior.rejectedBy,
+                rejectionReason: recusaAnterior.reason,
+              });
+            }
+            const { rejectedRehabilitation, rejectionReason, rejectedAt, rejectedBy, ...resto } = r;
+            return {
+              ...resto,
               status: 'Ativo',
+              historicoReabilitacao,
               rehabilitationDetails: {
                 reason: rehabilitationReason,
                 attachments: rehabilitationAttachments.map(file => ({ name: file.name, size: file.size })),
@@ -1867,6 +2147,7 @@ export default function App() {
     setShowRehabilitationModal(false);
     setRehabilitationReason('');
     setRehabilitationAttachments([]);
+    setEditandoPedidoReab(false);
     setSelectedReasonForRehab(null);
   };
 
@@ -1878,7 +2159,11 @@ export default function App() {
       if (f.id === ficha.id) {
         const updatedReasons = f.registrationReasons.map((r: any) => {
           if (r.id === reg.id) {
-            return { ...r, status: 'Reabilitado' };
+            return {
+              ...r,
+              status: 'Reabilitado',
+              rehabilitationDetails: { ...r.rehabilitationDetails, acceptedAt: new Date().toLocaleDateString('pt-PT'), acceptedBy: user?.name || 'Admin' }
+            };
           }
           return r;
         });
@@ -1891,6 +2176,7 @@ export default function App() {
     setShowApproveConfirmModal(false);
     setShowRehabilitationDetailsModal(false);
     setRehabDetailsViewOnly(false);
+    if (currentView === 'rehabilitation_detail') setCurrentView('rehabilitation_list');
     setSuccessMessage('Reabilitação aceite com sucesso.');
     setShowSuccessModal(true);
     setPendingRehabAction(null);
@@ -1904,7 +2190,13 @@ export default function App() {
       if (f.id === ficha.id) {
         const updatedReasons = f.registrationReasons.map((r: any) => {
           if (r.id === reg.id) {
-            return { ...r, status: 'Recusado', rejectionReason: rejectReason.trim() };
+            return {
+              ...r,
+              status: 'Recusado',
+              rejectionReason: rejectReason.trim(),
+              rejectedAt: new Date().toLocaleDateString('pt-BR'),
+              rejectedBy: user?.name || 'Administrador do Sistema',
+            };
           }
           return r;
         });
@@ -1918,6 +2210,7 @@ export default function App() {
     setShowRehabilitationDetailsModal(false);
     setRehabDetailsViewOnly(false);
     setRejectReason('');
+    if (currentView === 'rehabilitation_detail') setCurrentView('rehabilitation_list');
     setSuccessMessage('Reabilitação recusada.');
     setShowSuccessModal(true);
     setPendingRehabAction(null);
@@ -3189,112 +3482,312 @@ export default function App() {
                 </div>
               </motion.div>
             ) : currentView === 'rehabilitation_list' ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="space-y-8"
+                className="space-y-6"
               >
-                <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Reabilitação</h2>
+                {/* Cabecalho */}
+                <div className="space-y-2 border-b-2 border-slate-100 pb-4">
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                    <Home size={11} /> <ChevronRight size={11} /> <span className="text-slate-900">Reabilitação</span>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Reabilitação</h2>
+                      <p className="text-xs font-medium text-slate-500">Gestão dos pedidos de reabilitação</p>
+                    </div>
+                    <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar ao Início</Button>
+                  </div>
                 </div>
 
-                <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
+                {/* Pesquisa */}
+                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b-2 border-slate-100 flex items-center justify-between">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Pesquisa</h3>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => { const v = { numero: '', nome: '', nasc: '', estado: '' }; setReabFiltro(v); setReabFiltroAplicado(v); }}>Limpar</Button>
+                      <Button variant="primary" icon={Search} onClick={() => setReabFiltroAplicado(reabFiltro)}>Pesquisar</Button>
+                    </div>
+                  </div>
+                  <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Número Ficha</label>
-                      <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                      <input type="text" placeholder="Ex: 000000" value={reabFiltro.numero} onChange={(e) => setReabFiltro({ ...reabFiltro, numero: e.target.value })} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-medium text-slate-900 outline-none focus:border-slate-900 transition-all" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</label>
-                      <input type="text" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+                      <input type="text" placeholder="Ex: Bruno Fonseca" value={reabFiltro.nome} onChange={(e) => setReabFiltro({ ...reabFiltro, nome: e.target.value })} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-medium text-slate-900 outline-none focus:border-slate-900 transition-all" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data de Nascimento</label>
-                      <div className="relative">
-                        <input type="date" className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
-                        <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      </div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Nascimento</label>
+                      <input type="date" value={reabFiltro.nasc} onChange={(e) => setReabFiltro({ ...reabFiltro, nasc: e.target.value })} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-medium text-slate-900 outline-none focus:border-slate-900 transition-all" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</label>
-                      <select className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
-                        <option value="">Selecione...</option>
-                        <option value="Aguardando">Aguardando Reabilitação</option>
+                      <select value={reabFiltro.estado} onChange={(e) => setReabFiltro({ ...reabFiltro, estado: e.target.value })} className="w-full px-4 py-2.5 bg-white border-2 border-slate-100 rounded-xl text-sm font-medium text-slate-900 outline-none focus:border-slate-900 transition-all">
+                        <option value="">Clique para selecionar...</option>
+                        <option value="Pendente">Pendente</option>
                         <option value="Reabilitado">Reabilitado</option>
+                        <option value="Recusado">Recusado</option>
                       </select>
                     </div>
-                    <Button variant="primary" onClick={() => {}}>Pesquisar</Button>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
-                  <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Solicitações de Reabilitação</h3>
-                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">
-                      Total : {fichas.reduce((acc, f) => acc + (f.registrationReasons?.filter((r: any) => r.status === 'Aguardando Reabilitação' || r.rehabilitationDetails).length || 0), 0).toString().padStart(2, '0')}
-                    </span>
+                {/* Lista: um pedido por linha; clicar abre o detalhe */}
+                {(() => {
+                  const f = reabFiltroAplicado;
+                  const linhas = fichas.flatMap((ficha: any) =>
+                    (ficha.registrationReasons || []).flatMap((reg: any) =>
+                      reabilitacoesDe(reg).map((p: any, idx: number) => ({ ficha, reg, p, idx, estado: p.estado === 'Aceite' ? 'Reabilitado' : p.estado }))
+                    )
+                  ).filter((l: any) =>
+                    (!f.numero || String(l.ficha.number).toLowerCase().includes(f.numero.toLowerCase())) &&
+                    (!f.nome || String(l.ficha.name).toLowerCase().includes(f.nome.toLowerCase())) &&
+                    (!f.nasc || l.ficha.birthDate === f.nasc) &&
+                    (!f.estado || l.estado === f.estado)
+                  );
+                  return (
+                    <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                      <div className="px-6 py-4 border-b-2 border-slate-100">
+                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Solicitações de Reabilitação</h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-100 text-[10px] uppercase font-bold text-slate-500 tracking-widest border-b border-slate-200">
+                              <th className="px-6 py-3">Nº de Ficha</th>
+                              <th className="px-6 py-3">Nome</th>
+                              <th className="px-6 py-3">Data</th>
+                              <th className="px-6 py-3">Cadastro</th>
+                              <th className="px-6 py-3">Utilizador</th>
+                              <th className="px-6 py-3">Medida</th>
+                              <th className="px-6 py-3 text-center">Estado</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {linhas.length === 0 && (
+                              <tr><td colSpan={7} className="px-6 py-10 text-center text-xs text-slate-400">Nenhuma solicitação encontrada.</td></tr>
+                            )}
+                            {linhas.map((l: any) => (
+                              <tr
+                                key={`${l.ficha.id}-${l.reg.id}-${l.idx}`}
+                                onClick={() => {
+                                  setSelectedFicha(l.ficha);
+                                  // Pendente: o proprio motivo; decidido: o motivo com os dados desse pedido
+                                  if (l.estado === 'Pendente') {
+                                    setSelectedReasonForRehab(l.reg);
+                                  } else {
+                                    const { rejectedRehabilitation, rejectionReason, rejectedAt, rejectedBy, ...base } = l.reg;
+                                    setSelectedReasonForRehab({
+                                      ...base,
+                                      status: l.estado === 'Reabilitado' ? 'Reabilitado' : 'Ativo',
+                                      rehabilitationDetails: l.p,
+                                      rejectedRehabilitation: l.estado === 'Recusado' ? { reason: l.p.rejectionReason, rejectedAt: l.p.decidedAt, rejectedBy: l.p.decidedBy } : undefined,
+                                    });
+                                  }
+                                  setRehabSec({ bio: true, outras: false, obs: false });
+                                  setCurrentView('rehabilitation_detail');
+                                }}
+                                className="hover:bg-slate-50 transition-colors cursor-pointer"
+                              >
+                                <td className="px-6 py-4 text-xs font-medium text-slate-700">N.º {l.ficha.number}</td>
+                                <td className="px-6 py-4 text-xs font-black text-slate-900">{l.ficha.name}</td>
+                                <td className="px-6 py-4 text-xs font-medium text-slate-700">{l.p.requestedAt || '---'}</td>
+                                <td className="px-6 py-4 text-xs font-medium text-slate-700">{l.reg.natureza || '---'}</td>
+                                <td className="px-6 py-4 text-xs font-medium text-slate-700">{l.p.requestedBy || '---'}</td>
+                                <td className="px-6 py-4 text-xs font-medium text-slate-700">{l.reg.measures || '---'}</td>
+                                <td className="px-6 py-4 text-xs font-medium text-slate-700 text-center">{l.estado}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </motion.div>
+            ) : currentView === 'rehabilitation_detail' && selectedFicha && selectedReasonForRehab ? (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-6 pb-12"
+              >
+                {/* Cabecalho */}
+                <div className="space-y-2 border-b-2 border-slate-100 pb-4">
+                  <button onClick={() => setCurrentView('rehabilitation_list')} className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-900 transition-colors">
+                    <Home size={11} /> <ChevronRight size={11} /> Reabilitação
+                  </button>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Solicitação de Reabilitação</h2>
+                      <p className="text-xs font-medium text-slate-500">
+                        Ficha N.º {selectedFicha.number} — solicitado por {selectedReasonForRehab.rehabilitationDetails?.requestedBy || '---'} em <span className="font-black text-slate-900">{selectedReasonForRehab.rehabilitationDetails?.requestedAt || '---'}</span>
+                      </p>
+                    </div>
+                    <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar ao Início</Button>
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-slate-100 text-[10px] uppercase font-black text-slate-600 tracking-widest border-b border-slate-200">
-                          <th className="px-4 py-3 border-r border-slate-200">Número Ficha</th>
-                          <th className="px-4 py-3 border-r border-slate-200">Nome</th>
-                          <th className="px-4 py-3 border-r border-slate-200">Data</th>
-                          <th className="px-4 py-3 border-r border-slate-200">Cadastro</th>
-                          <th className="px-4 py-3 border-r border-slate-200">Motivo Reabilitação</th>
-                          <th className="px-4 py-3">Ação</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {fichas.flatMap(ficha => 
-                          (ficha.registrationReasons || [])
-                            .filter((reg: any) => reg.status === 'Aguardando Reabilitação' || reg.rehabilitationDetails)
-                            .map((reg: any) => (
-                              <tr key={`${ficha.id}-${reg.id}`} className="hover:bg-blue-50/50 transition-colors">
-                                <td className="px-4 py-3 text-sm font-bold text-blue-600 border-r border-slate-100">{ficha.number}</td>
-                                <td className="px-4 py-3 text-sm font-bold text-slate-900 border-r border-slate-100">{ficha.name}</td>
-                                <td className="px-4 py-3 text-sm font-medium text-slate-600 border-r border-slate-100">{reg.date}</td>
-                                <td className="px-4 py-3 text-sm font-medium text-slate-600 border-r border-slate-100">{reg.reason}</td>
-                                <td className="px-4 py-3 text-sm font-medium text-slate-600 border-r border-slate-100">{reg.rehabilitationDetails?.reason || '---'}</td>
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <button 
-                                      title="Ver Detalhes"
-                                      onClick={() => {
-                                        setSelectedFicha(ficha);
-                                        setSelectedReasonForRehab(reg);
-                                        setShowRehabilitationDetailsModal(true);
-                                      }}
-                                      className="p-1.5 text-blue-500 hover:bg-blue-100 rounded-lg transition-all"
-                                    >
-                                      <Info size={18} />
-                                    </button>
-                                    <button 
-                                      title="Aprovar Reabilitação"
-                                      onClick={() => {
-                                        setPendingRehabAction({ ficha, reg });
-                                        setShowApproveConfirmModal(true);
-                                      }}
-                                      className="p-1.5 text-emerald-500 hover:bg-emerald-100 rounded-lg transition-all"
-                                    >
-                                      <ShieldCheck size={18} />
-                                    </button>
-                                    <button className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition-all">
-                                      <X size={18} />
-                                    </button>
-                                  </div>
+                </div>
+
+                {/* Motivo de solicitacao + anexos */}
+                <div className="bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b-2 border-slate-100">
+                    <h3 className="text-xs font-black text-slate-900">Motivo de solicitação</h3>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div className="bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm text-slate-700 leading-relaxed font-medium">
+                      {selectedReasonForRehab.rehabilitationDetails?.reason || '---'}
+                    </div>
+                    {/* Decisao (pedido ja aceite ou recusado) */}
+                    {recusaDe(selectedReasonForRehab) ? (
+                      <div className="bg-slate-50 border-2 border-slate-100 border-l-4 border-l-red-400 rounded-xl p-4 space-y-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          Recusado em {recusaDe(selectedReasonForRehab)?.rejectedAt || '---'} por {recusaDe(selectedReasonForRehab)?.rejectedBy || '---'}
+                        </p>
+                        <p className="text-sm text-slate-700 font-medium">{recusaDe(selectedReasonForRehab)?.reason || '---'}</p>
+                      </div>
+                    ) : selectedReasonForRehab.status === 'Reabilitado' && (
+                      <div className="bg-emerald-50 border-2 border-emerald-100 rounded-xl p-4">
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">
+                          Reabilitado em {selectedReasonForRehab.rehabilitationDetails?.acceptedAt || '---'} por {selectedReasonForRehab.rehabilitationDetails?.acceptedBy || '---'}
+                        </p>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Anexos</p>
+                      <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
+                              <th className="px-4 py-3">Ficheiros adicionados</th>
+                              <th className="px-4 py-3">Data de upload</th>
+                              <th className="px-4 py-3">Utilizador</th>
+                              <th className="px-4 py-3 text-right">Ação</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(selectedReasonForRehab.rehabilitationDetails?.attachments || []).length === 0 && (
+                              <tr><td colSpan={4} className="px-4 py-6 text-center text-xs text-slate-400">Nenhum anexo.</td></tr>
+                            )}
+                            {(selectedReasonForRehab.rehabilitationDetails?.attachments || []).map((file: any, idx: number) => (
+                              <tr key={idx} className="border-b border-slate-100 last:border-0">
+                                <td className="px-4 py-3 text-xs font-bold text-slate-700">
+                                  <span className="flex items-center gap-2"><FileText size={14} className="text-slate-400" />{file.name}</span>
+                                </td>
+                                <td className="px-4 py-3 text-xs">{selectedReasonForRehab.rehabilitationDetails?.requestedAt || '---'}</td>
+                                <td className="px-4 py-3 text-xs font-medium">{selectedReasonForRehab.rehabilitationDetails?.requestedBy || '---'}</td>
+                                <td className="px-4 py-3 text-right">
+                                  <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar">
+                                    <Eye size={14} />
+                                  </button>
                                 </td>
                               </tr>
-                            ))
-                        )}
-                      </tbody>
-                    </table>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex justify-start">
-                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('dashboard')}>Voltar ao Início</Button>
+                {/* Dados biograficos */}
+                <div className="bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+                  <button onClick={() => setRehabSec({ ...rehabSec, bio: !rehabSec.bio })} className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-all">
+                    <span className="text-xs font-black text-slate-900">Dados biográficos</span>
+                    {rehabSec.bio ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                  {rehabSec.bio && (
+                    <div className="px-6 pb-6 space-y-6 border-t-2 border-slate-100 pt-4">
+                      <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5">
+                        <Lock size={12} className="text-emerald-500 flex-shrink-0" />
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Dados da ficha de cadastro — não editáveis</p>
+                      </div>
+                      <div className="flex flex-col md:flex-row gap-8">
+                        <div className="w-40 aspect-[3/4] bg-slate-100 rounded-xl overflow-hidden flex-shrink-0">
+                          <img src={selectedFicha.photo || getPortraitUrl(selectedFicha.number)} alt={selectedFicha.name} className="w-full h-full object-cover grayscale" referrerPolicy="no-referrer" />
+                        </div>
+                        <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-6">
+                          <DetailField label="Nome Completo" value={selectedFicha.name || ''} />
+                          <DetailField label="Data de Nascimento" value={dataPt(selectedFicha.birthDate) || ''} />
+                          <DetailField label="Sexo" value={selectedFicha.gender || ''} />
+                          <DetailField label="Estado Civil" value={selectedFicha.civilStatus || ''} />
+                          <DetailField label="Naturalidade" value={selectedFicha.birthPlace || ''} />
+                          <DetailField label="NIF" value={selectedFicha.nif || ''} />
+                          <DetailField label="Nacionalidade" value={selectedFicha.nationality || ''} />
+                          <DetailField label="Nome do Pai" value={selectedFicha.fatherName || ''} />
+                          <DetailField label="Nome da Mãe" value={selectedFicha.motherName || ''} />
+                          <DetailField label="Profissão" value={selectedFicha.profession || ''} />
+                          <DetailField label="Alcunha" value={(selectedFicha.nicknames || []).filter((n: any) => !n.validTo).map((n: any) => n.value).join(', ')} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Outras informacoes */}
+                <div className="bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+                  <button onClick={() => setRehabSec({ ...rehabSec, outras: !rehabSec.outras })} className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-all">
+                    <span className="text-xs font-black text-slate-900">Outras informações</span>
+                    {rehabSec.outras ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                  {rehabSec.outras && (
+                    <div className="px-6 pb-6 pt-4 border-t-2 border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Moradas</p>
+                        {(selectedFicha.addresses || []).filter((a: any) => !a.validTo).length === 0 && <p className="text-xs text-slate-400">---</p>}
+                        {(selectedFicha.addresses || []).filter((a: any) => !a.validTo).map((a: any) => (
+                          <p key={a.id} className="text-xs font-medium text-slate-700">
+                            <span className="font-black">{a.type}:</span> {[a.locality, a.parish, a.council, a.island].filter(Boolean).join(', ')}
+                          </p>
+                        ))}
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contactos</p>
+                        {(selectedFicha.contacts || []).filter((c: any) => !c.validTo).length === 0 && <p className="text-xs text-slate-400">---</p>}
+                        {(selectedFicha.contacts || []).filter((c: any) => !c.validTo).map((c: any) => (
+                          <p key={c.id} className="text-xs font-medium text-slate-700"><span className="font-black">{c.type}:</span> {c.info}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Observacoes */}
+                <div className="bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+                  <button onClick={() => setRehabSec({ ...rehabSec, obs: !rehabSec.obs })} className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-all">
+                    <span className="text-xs font-black text-slate-900">Observações</span>
+                    {rehabSec.obs ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                  {rehabSec.obs && (
+                    <div className="px-6 pb-6 pt-4 border-t-2 border-slate-100 space-y-3">
+                      {(selectedFicha.observations || []).length === 0 && <p className="text-xs text-slate-400">Nenhuma observação registada.</p>}
+                      {(selectedFicha.observations || []).map((o: any, idx: number) => (
+                        <div key={o.id || idx} className="bg-slate-50 border-2 border-slate-100 rounded-xl p-4 space-y-1">
+                          <p className="text-[10px] font-black text-slate-400">{o.author} · {dataPt(String(o.date).slice(0, 10))}</p>
+                          <p className="text-xs text-slate-700">{o.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Acoes: so um pedido pendente se aceita ou recusa */}
+                <div className="flex items-center justify-between">
+                  <Button variant="outline" onClick={() => setCurrentView('rehabilitation_list')}>{aguardaReabilitacao(selectedReasonForRehab) ? 'Cancelar' : 'Voltar'}</Button>
+                  {aguardaReabilitacao(selectedReasonForRehab) && (
+                  <div className="flex gap-3">
+                    <Button variant="danger" icon={X} onClick={() => {
+                      setPendingRehabAction({ ficha: selectedFicha, reg: selectedReasonForRehab });
+                      setRejectReason('');
+                      setShowRejectConfirmModal(true);
+                    }}>Recusar</Button>
+                    <Button variant="primary" icon={ShieldCheck} onClick={() => {
+                      setPendingRehabAction({ ficha: selectedFicha, reg: selectedReasonForRehab });
+                      setShowApproveConfirmModal(true);
+                    }}>Reabilitar</Button>
+                  </div>
+                  )}
                 </div>
               </motion.div>
             ) : currentView === 'document_registration' ? (
@@ -4411,6 +4904,7 @@ export default function App() {
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Solicitação de Certificado de Cadastro</h2>
                   <Button icon={Plus} onClick={() => {
                     setCertificateStep(1);
+                    setCertificateEditingId(null);
                     setPaymentData(emptyPaymentData());
                     setCurrentView('certificate_registration');
                   }}>Nova Solicitação</Button>
@@ -4669,7 +5163,9 @@ export default function App() {
                         ) : (certificateSearchResults !== null ? certificateSearchResults : mockCertificates).map((cert) => (
                           <tr 
                             key={cert.id}
-                            onClick={() => { setSelectedCertificateRequest(cert); setCurrentView('certificate_detail'); }}
+                            onClick={() => cert.status === 'Por Concluir'
+                              ? retomarSolicitacao(cert)
+                              : (setSelectedCertificateRequest(cert), setCurrentView('certificate_detail'))}
                             className="hover:bg-blue-50 cursor-pointer transition-colors group"
                           >
                             <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.id}</td>
@@ -4680,7 +5176,7 @@ export default function App() {
                             <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.island || <span className="text-slate-300">—</span>}</td>
                             <td className="px-6 py-4">
                               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                cert.status === 'Por Pagar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                                cert.status === 'Por Concluir' ? 'bg-slate-100 text-slate-500' : cert.status === 'Por Pagar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
                               }`}>
                                 {cert.status}
                               </span>
@@ -4716,7 +5212,7 @@ export default function App() {
                     <p className="text-xs font-bold text-slate-400 mt-1">Nº Processo {selectedCertificateRequest.id}</p>
                   </div>
                   <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                    selectedCertificateRequest.status === 'Por Pagar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                    selectedCertificateRequest.status === 'Por Pagar' ? 'bg-amber-100 text-amber-700' : selectedCertificateRequest.status === 'Por Concluir' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-700'
                   }`}>
                     {selectedCertificateRequest.status}
                   </span>
@@ -4758,9 +5254,9 @@ export default function App() {
 
                   return (
                     <>
-                      {/* Dados de Identificação */}
+                      {/* Dados de Identificação e Motivo */}
                       <div className="space-y-4">
-                        {cabecalho('identificacao', 'Dados de Identificação', User, 'identificacao')}
+                        {cabecalho('identificacao', 'Dados de Identificação e Motivo', User, 'identificacao')}
                         <AnimatePresence>
                           {certDetailExpanded.identificacao && (
                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -4922,7 +5418,8 @@ export default function App() {
                                           </div>
                                           <DetailField label="Valor Total" value={duc.valor ? `${duc.valor} ${duc.moeda || ''}`.trim() : '---'} />
                                           <DetailField label="Moeda" value={duc.moeda || '---'} />
-                                          <DetailField label="Código Transação" value={duc.codigoTransacao || '---'} />
+                                          <DetailField label="Entidade" value={duc.entidade || '---'} />
+                                          <DetailField label="Referência" value={duc.referencia || '---'} />
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                                           <DetailField label="Recebedoria" value={duc.recebedoria || '---'} />
@@ -4959,8 +5456,18 @@ export default function App() {
                   );
                 })()}
 
-                <div className="flex justify-start">
+                <div className="flex justify-between items-center gap-4">
                   <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_list')}>Voltar</Button>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="primary"
+                      icon={ArrowRight}
+                      disabled={selectedCertificateRequest.status !== 'Pago'}
+                      onClick={enviarParaAnalise}
+                    >
+                      Enviar para Análise
+                    </Button>
+                  </div>
                 </div>
               </motion.div>
             ) : currentView === 'certificate_registration' ? (
@@ -4979,12 +5486,13 @@ export default function App() {
                   <div className="absolute top-6 left-12 right-12 h-1 bg-slate-100 rounded-full"></div>
                   <div
                     className="absolute top-6 left-12 h-1 bg-blue-600 rounded-full transition-all duration-500"
-                    style={{ width: certificateStep === 1 ? '0%' : certificateStep === 2 ? '50%' : '100%' }}
+                    style={{ width: certificateStep === 1 ? '0%' : certificateStep === 2 ? '33%' : certificateStep === 3 ? '66%' : '100%' }}
                   ></div>
                   {[
                     { id: 1, label: 'Identificação', icon: User },
-                    { id: 2, label: 'Gerar DUC', icon: CreditCard },
-                    { id: 3, label: 'Pagamento', icon: FileText }
+                    { id: 2, label: 'Anexo', icon: Paperclip },
+                    { id: 3, label: 'Gerar DUC', icon: FileText },
+                    { id: 4, label: 'Pagamento', icon: CreditCard }
                   ].map((step) => (
                     <div key={step.id} className="relative z-10 flex flex-col items-center gap-3">
                       <div className={`w-12 h-12 rounded-2xl border-2 flex items-center justify-center transition-all duration-300 ${
@@ -5009,10 +5517,10 @@ export default function App() {
                   {/* Card header */}
                   <div className="p-6 bg-slate-50 border-b-2 border-slate-100 flex items-center gap-3">
                     <div className="p-2 bg-slate-900 text-white rounded-lg">
-                      {certificateStep === 1 ? <User size={18} /> : certificateStep === 2 ? <CreditCard size={18} /> : <FileText size={18} />}
+                      {certificateStep === 1 ? <User size={18} /> : certificateStep === 2 ? <Paperclip size={18} /> : certificateStep === 3 ? <FileText size={18} /> : <CreditCard size={18} />}
                     </div>
                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
-                      {certificateStep === 1 ? 'Dados de Identificação' : certificateStep === 2 ? 'Informações de Pagamento' : 'Pagamento'}
+                      {certificateStep === 1 ? 'Dados de Identificação e Motivo' : certificateStep === 2 ? 'Anexos' : certificateStep === 3 ? 'Informações de Pagamento' : 'Pagamento'}
                     </h3>
                   </div>
 
@@ -5116,9 +5624,48 @@ export default function App() {
                           </div>
                         </div>
 
-
                       </div>
                     ) : certificateStep === 2 ? (
+                      <div className="space-y-6">
+                        {/* Anexos — igual ao cadastro de documentos */}
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">
+                              Anexos {savedAttachments.length > 0 && <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{savedAttachments.length}</span>}
+                            </p>
+                            <button onClick={() => setShowAttachmentModal(true)}
+                              className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2">
+                              <Plus size={14} /> Adicionar Anexo
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {savedAttachments.length > 0 ? (
+                              savedAttachments.map((att, idx) => (
+                                <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-lg group relative">
+                                  <div className="w-12 h-12 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-400">
+                                    {att.type === 'Imagem' ? <ImageIcon size={24} /> : <FileText size={24} />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-slate-800 truncate">{att.title}</p>
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold">{att.type} • {att.date}</p>
+                                  </div>
+                                  <button onClick={() => setSavedAttachments(savedAttachments.filter((_, i) => i !== idx))}
+                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="col-span-full py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                                <Paperclip size={28} className="mx-auto text-slate-200 mb-2" />
+                                <p className="text-slate-400 text-sm italic">Nenhum anexo associado</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                      </div>
+                    ) : certificateStep === 3 ? (
                       <div className="space-y-8">
                         {/* Dados de Pagamento */}
                         <div className="space-y-4">
@@ -5171,12 +5718,9 @@ export default function App() {
                         <div className="space-y-4">
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dados Contribuinte</p>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <DetailField label="NIF" value={paymentData.nif} readOnly={false}
-                              onChange={(v: string) => setPaymentData({...paymentData, nif: v})} />
-                            <DetailField label="Nome" value={paymentData.nome} readOnly={false}
-                              onChange={(v: string) => setPaymentData({...paymentData, nome: v})} />
-                            <DetailField label="Email" value={paymentData.email} readOnly={false}
-                              onChange={(v: string) => setPaymentData({...paymentData, email: v})} />
+                            <DetailField label="NIF" value={contribuinteAtual().nif} />
+                            <DetailField label="Nome" value={contribuinteAtual().nome} />
+                            <DetailField label="Email" value={contribuinteAtual().email} />
                           </div>
                         </div>
 
@@ -5200,78 +5744,96 @@ export default function App() {
                           <div className="px-6 py-4 bg-slate-50 border-b-2 border-slate-100 flex items-center justify-between gap-3">
                             <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Documento Único de Cobrança</span>
                             <div className="flex items-center gap-2">
-                              <button className="px-3 py-1.5 bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-900 hover:text-slate-900 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all">
+                              <button
+                                onClick={verDuc}
+                                className="px-4 py-1.5 bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-900 hover:text-slate-900 rounded-lg text-[11px] font-bold transition-all flex items-center gap-2"
+                              >
+                                <Eye size={13} /> Ver
+                              </button>
+                              <button
+                                onClick={imprimirDuc}
+                                className="px-4 py-1.5 bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-900 hover:text-slate-900 rounded-lg text-[11px] font-bold transition-all flex items-center gap-2"
+                              >
                                 <Printer size={13} /> Imprimir
                               </button>
-                              <button className="px-3 py-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all">
+                              <button
+                                onClick={descarregarDuc}
+                                className="px-4 py-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-[11px] font-bold transition-all flex items-center gap-2"
+                              >
                                 <Download size={13} /> Download
                               </button>
                             </div>
                           </div>
-                          <div className="p-6 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                              <DetailField label="Código Transação" value={paymentData.codigoTransacao || '---'} />
-                              <DetailField label="Valor Total" value={`${totalRubricas(paymentData.rubricas)} ${paymentData.moeda}`} />
-                              <DetailField label="Data Emissão" value={new Date().toLocaleDateString('pt-BR')} />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                              <DetailField label="Recebedoria" value={paymentData.recebedoria || '---'} />
-                              <div className="md:col-span-3"><DetailField label="Descrição do Movimento" value={paymentData.descricao || '---'} /></div>
-                            </div>
-                            {paymentData.rubricas.length > 0 && (
-                              <div className="space-y-3">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rubricas Económicas</p>
-                                <div className="space-y-2">
+                          <div className="bg-slate-100 p-6">
+                            <style>{`@media print { body * { visibility: hidden; } #duc-doc, #duc-doc * { visibility: visible; } #duc-doc { position: absolute; left: 0; top: 0; width: 100%; } }`}</style>
+                            <div id="duc-doc" className="bg-white mx-auto p-6 font-mono text-[11px] text-slate-900 shadow-sm" style={{ maxWidth: '640px' }}>
+                              <div className="text-center space-y-1 mb-3">
+                                <p className="text-[13px] font-bold tracking-wide">NIF: 352339403 AF: 223 - PRAIA</p>
+                                <p className="text-[12px]">DOCUMENTO ÚNICO DE COBRANÇA</p>
+                              </div>
+                              <table className="w-full border-collapse">
+                                <tbody>
+                                  <tr>
+                                    <td className="border border-slate-900 px-2 py-1 text-center font-bold">Nº DUC</td>
+                                    <td className="border border-slate-900 px-2 py-1 text-center font-bold">Dt. Emissão</td>
+                                    <td className="border border-slate-900 px-2 py-1 text-center font-bold">Dt. Pagamento</td>
+                                    <td className="border border-slate-900 px-2 py-1 text-center" colSpan={2}>{(contribuinteAtual().nome || '').toUpperCase()}</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="border border-slate-900 px-2 py-1">{paymentData.referencia || '---'}</td>
+                                    <td className="border border-slate-900 px-2 py-1 text-center">{new Date().toLocaleDateString('pt-BR')}</td>
+                                    <td className="border border-slate-900 px-2 py-1"></td>
+                                    <td className="border border-slate-900 px-2 py-1 font-bold">NIF:</td>
+                                    <td className="border border-slate-900 px-2 py-1 text-center">{contribuinteAtual().nif || '---'}</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="border border-slate-900 px-2 py-1 font-bold">Entidade:</td>
+                                    <td className="border border-slate-900 px-2 py-1" colSpan={4}>{paymentData.entidade || '---'}</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="border border-slate-900 px-2 py-1 font-bold align-top">Descrição:</td>
+                                    <td className="border border-slate-900 px-2 py-1 align-top h-14" colSpan={4}>{paymentData.descricao || '---'}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                              <table className="w-full border-collapse mt-4">
+                                <thead>
+                                  <tr>
+                                    <th className="border border-slate-900 px-2 py-1 w-28">C.E.</th>
+                                    <th className="border border-slate-900 px-2 py-1">RECEITAS</th>
+                                    <th className="border border-slate-900 px-2 py-1 w-28">VALORES</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
                                   {paymentData.rubricas.map((r: any, i: number) => (
-                                    <div key={i} className="flex items-center gap-4 py-2 border-b border-slate-50 last:border-0">
-                                      <span className="text-xs font-medium text-slate-400 w-24 flex-shrink-0">{r.codigo}</span>
-                                      <p className="flex-1 min-w-0 text-sm font-medium text-slate-600 truncate">{r.descricao}</p>
-                                      <span className="text-sm font-bold text-slate-900 whitespace-nowrap">{r.valor}</span>
-                                    </div>
+                                    <tr key={i}>
+                                      <td className="border border-slate-900 px-2 py-1 text-center">{r.codigo}</td>
+                                      <td className="border border-slate-900 px-2 py-1 text-center">{r.descricao}</td>
+                                      <td className="border border-slate-900 px-2 py-1 text-right">{r.valor}</td>
+                                    </tr>
                                   ))}
-                                </div>
+                                  <tr>
+                                    <td className="px-2 py-1 text-center font-bold">TOTAL</td>
+                                    <td className="px-2 py-1"></td>
+                                    <td className="px-2 py-1 text-right font-bold">{totalRubricas(paymentData.rubricas)}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                              <table className="w-full border-collapse mt-4">
+                                <tbody>
+                                  <tr>
+                                    <td className="border border-slate-900 px-2 py-2 font-bold w-52">Vai pagar a Quantia de:</td>
+                                    <td className="border border-slate-900 px-2 py-2 text-center">{totalRubricas(paymentData.rubricas)} {paymentData.moeda}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                              <div className="grid grid-cols-2 gap-10 mt-10 mb-4 text-center">
+                                <div><p>O Funcionário</p><div className="border-t border-slate-900 mt-8 mx-4"></div></div>
+                                <div><p>O Caixa</p><div className="border-t border-slate-900 mt-8 mx-4"></div></div>
                               </div>
-                            )}
+                            </div>
                           </div>
                         </div>
-
-                        {/* Anexos — igual ao cadastro de documentos */}
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">
-                              Anexos {savedAttachments.length > 0 && <span className="ml-2 bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full">{savedAttachments.length}</span>}
-                            </p>
-                            <button onClick={() => setShowAttachmentModal(true)}
-                              className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2">
-                              <Plus size={14} /> Adicionar Anexo
-                            </button>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {savedAttachments.length > 0 ? (
-                              savedAttachments.map((att, idx) => (
-                                <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-lg group relative">
-                                  <div className="w-12 h-12 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-400">
-                                    {att.type === 'Imagem' ? <ImageIcon size={24} /> : <FileText size={24} />}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-bold text-slate-800 truncate">{att.title}</p>
-                                    <p className="text-[10px] text-slate-500 uppercase font-bold">{att.type} • {att.date}</p>
-                                  </div>
-                                  <button onClick={() => setSavedAttachments(savedAttachments.filter((_, i) => i !== idx))}
-                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="col-span-full py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
-                                <Paperclip size={28} className="mx-auto text-slate-200 mb-2" />
-                                <p className="text-slate-400 text-sm italic">Nenhum anexo associado</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
                         {/* Meio de Pagamento */}
                         <div className="space-y-4">
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meio de Pagamento</p>
@@ -5308,13 +5870,15 @@ export default function App() {
                       else setCertificateStep(certificateStep - 1);
                     }}>Voltar</Button>
                     <div className="flex gap-3">
-                      {certificateStep === 3 && (
-                        <Button variant="outline" icon={X} onClick={() => setCurrentView('certificate_list')}>Fechar</Button>
+                      {certificateStep > 1 && (
+                        <Button variant="outline" onClick={() => gravarSolicitacao('Por Concluir')}>Fechar</Button>
                       )}
                       <Button variant="outline" onClick={() => setCurrentView('certificate_list')}>Cancelar</Button>
                       {certificateStep === 1 ? (
-                        <Button variant="primary" icon={ArrowRight} onClick={entrarNoPagamento}>Próximo</Button>
+                        <Button variant="primary" icon={ArrowRight} onClick={() => setCertificateStep(2)}>Próximo</Button>
                       ) : certificateStep === 2 ? (
+                        <Button variant="primary" icon={ArrowRight} onClick={entrarNoPagamento}>Próximo</Button>
+                      ) : certificateStep === 3 ? (
                         <Button
                           variant="primary"
                           icon={FileText}
@@ -5324,65 +5888,14 @@ export default function App() {
                           {ducAPedir ? 'A gerar DUC...' : 'Gerar DUC'}
                         </Button>
                       ) : (
-                        (
-                          <Button
-                            variant="primary"
-                            icon={Check}
-                            disabled={!paymentData.codigoTransacao || !paymentData.metodo || paymentData.rubricas.length === 0}
-                            onClick={() => {
-                            // Nº Processo no formato FICAD-nnn/N-PR/aaaa, a seguir ao maior ja existente
-                            const seqAtual = Math.max(100, ...mockCertificates.map((c: any) => {
-                              const m = /FICAD-(\d+)/.exec(c.id || '');
-                              return m ? parseInt(m[1], 10) : 0;
-                            }));
-                            const codigoConcelho = (certificateData.county || 'Praia').slice(0, 2).toUpperCase();
-                            const novoNumero = `FICAD-${seqAtual + 1}/N-${codigoConcelho}/${new Date().getFullYear()}`;
-                            setMockCertificates([...mockCertificates, {
-                              id: novoNumero,
-                              docType: certificateData.docType,
-                              docNumber: certificateData.docNumber,
-                              name: certificateData.fullName || 'Novo Pedido',
-                              birthDate: certificateData.birthDate || '---',
-                              nationality: certificateData.nationality,
-                              gender: certificateData.gender,
-                              civilStatus: certificateData.civilStatus,
-                              birthPlace: certificateData.birthPlace,
-                              fatherName: certificateData.fatherName,
-                              motherName: certificateData.motherName,
-                              nif: certificateData.nif,
-                              profession: certificateData.profession,
-                              island: certificateData.island,
-                              county: certificateData.county,
-                              parish: certificateData.parish,
-                              locality: certificateData.locality,
-                              zone: certificateData.zone,
-                              reference: certificateData.reference,
-                              contactType: certificateData.contactType,
-                              contact: certificateData.contact,
-                              reason: certificateData.reason,
-                              photo: certificateData.photo,
-                              attachments: [...savedAttachments],
-                              ducs: [{
-                                estado: 'Por Pagar',
-                                valor: String(totalRubricas(paymentData.rubricas)),
-                                moeda: paymentData.moeda,
-                                codigoTransacao: paymentData.codigoTransacao,
-                                recebedoria: paymentData.recebedoria,
-                                rubricas: [...paymentData.rubricas],
-                                observacao: paymentData.observacao,
-                                descricao: paymentData.descricao,
-                                metodo: paymentData.metodo,
-                                emailSigov: paymentData.emailSigov,
-                                dataEmissao: new Date().toLocaleDateString('pt-BR'),
-                              }],
-                              requestDate: new Date().toLocaleDateString('pt-BR'),
-                              status: 'Por Pagar'
-                            }]);
-                            setSuccessMessage('Solicitação de Certificado Registada com Sucesso.');
-                            setShowSuccessModal(true);
-                            setCurrentView('certificate_list');
-                          }}>Concluir</Button>
-                        )
+                        <Button
+                          variant="primary"
+                          icon={Check}
+                          disabled={!paymentData.entidade || !paymentData.metodo || paymentData.rubricas.length === 0}
+                          onClick={() => gravarSolicitacao('Por Pagar')}
+                        >
+                          Concluir
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -5812,61 +6325,152 @@ export default function App() {
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Análise de Certificado de Cadastro</h2>
                 </div>
 
-                <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                    <DetailField label="N.º Pedido" value={certificateSearchFilters.orderNumber} readOnly={false} onChange={(val) => setCertificateSearchFilters({...certificateSearchFilters, orderNumber: val})} />
-                    <DetailField label="Nome" value={certificateSearchFilters.name} readOnly={false} onChange={(val) => setCertificateSearchFilters({...certificateSearchFilters, name: val})} />
-                    <DetailField label="Data de Nascimento" value={certificateSearchFilters.birthDate} type="date" readOnly={false} icon={Calendar} onChange={(val) => setCertificateSearchFilters({...certificateSearchFilters, birthDate: val})} />
-                    <DetailField label="Data Pedido" value={certificateSearchFilters.requestDate} type="date" readOnly={false} icon={Calendar} onChange={(val) => setCertificateSearchFilters({...certificateSearchFilters, requestDate: val})} />
+                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                  <div className="flex flex-wrap items-center gap-3 px-8 pt-8 pb-6 border-b border-slate-100">
+                    <div className="p-2 bg-slate-900 text-white rounded-lg"><Search size={16} /></div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex-1">Identificação do Processo</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowAnalysisAdvancedFilters(v => !v)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all border-2 ${
+                        showAnalysisAdvancedFilters
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900'
+                      }`}
+                    >
+                      <SlidersHorizontal size={13} />
+                      Filtros Avançados
+                    </button>
+                    <Button variant="outline" onClick={() => { setAnalysisSearchFilters(emptyAnalysisFilters()); setAnalysisSearchResults(null); }}>Limpar</Button>
+                    <Button variant="primary" icon={Search} onClick={() => {
+                      const f = analysisSearchFilters;
+                      const mesmaData = (valor: string, filtro: string) => {
+                        if (!filtro) return true;
+                        if (!valor) return false;
+                        const iso = valor.includes('/') ? valor.split('/').reverse().join('-') : valor;
+                        return iso === filtro;
+                      };
+                      const results = mockAnalysisCertificates.filter((cert: any) => {
+                        const b = cert.biographic || {};
+                        const a = cert.address || {};
+                        if (f.orderNumber && !(cert.id || '').toLowerCase().includes(f.orderNumber.toLowerCase())) return false;
+                        if (f.name && !(cert.name || '').toLowerCase().includes(f.name.toLowerCase())) return false;
+                        if (!mesmaData(cert.birthDate, f.birthDate)) return false;
+                        if (!mesmaData(cert.requestDate, f.requestDate)) return false;
+                        if (f.docType && b.docType !== f.docType) return false;
+                        if (f.docNumber && !(b.docNumber || '').toLowerCase().includes(f.docNumber.toLowerCase())) return false;
+                        if (f.nationality && b.nationality !== f.nationality) return false;
+                        if (f.island && a.island !== f.island) return false;
+                        if (f.county && a.council !== f.county) return false;
+                        if (f.parish && a.parish !== f.parish) return false;
+                        if (f.locality && a.locality !== f.locality) return false;
+                        if (f.zone && a.zone !== f.zone) return false;
+                        return true;
+                      });
+                      setAnalysisSearchResults(results);
+                    }}>Pesquisar</Button>
                   </div>
-                  <div className="flex justify-end mt-6">
-                    <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
+
+                  <div className="px-8 py-6 space-y-6">
+                    <p className="text-sm font-bold text-slate-500">Insira os dados do Processo</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                      <DetailField label="Nº Processo" value={analysisSearchFilters.orderNumber} readOnly={false} placeholder="Ex: FICAD-102/N-PR/2026"
+                        onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, orderNumber: v})} />
+                      <DetailField label="Nome Requerente" value={analysisSearchFilters.name} readOnly={false} placeholder="Nome completo"
+                        onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, name: v})} />
+                      <DetailField label="Data Nascimento" value={analysisSearchFilters.birthDate} type="date" readOnly={false}
+                        onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, birthDate: v})} />
+                      <DetailField label="Data Pedido" value={analysisSearchFilters.requestDate} type="date" readOnly={false}
+                        onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, requestDate: v})} />
+                      <DetailField label="Tipo Documento" value={analysisSearchFilters.docType} type="select" readOnly={false}
+                        options={['BI', 'CNI', 'Passaporte', 'TRE']}
+                        onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, docType: v})} />
+                      <DetailField label="Nº Documento" value={analysisSearchFilters.docNumber} readOnly={false} placeholder="Ex: PRE-1000/N/2026"
+                        onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, docNumber: v})} />
+                    </div>
+
+                    {showAnalysisAdvancedFilters && (
+                      <div className="space-y-6 pt-6 border-t border-slate-100">
+                        <p className="text-sm font-bold text-slate-500">Dados de Origem e Localização</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                          <DetailField label="Nacionalidade" value={analysisSearchFilters.nationality} type="select" readOnly={false}
+                            options={['Cabo-verdiana', 'Portuguesa', 'Angolana', 'Outra']}
+                            onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, nationality: v})} />
+                          <DetailField label="Ilha" value={analysisSearchFilters.island} type="select" readOnly={false}
+                            options={['Santiago', 'São Vicente', 'Sal', 'Boa Vista', 'Fogo', 'Maio', 'Brava', 'Santo Antão', 'São Nicolau']}
+                            onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, island: v})} />
+                          <DetailField label="Concelho" value={analysisSearchFilters.county} type="select" readOnly={false}
+                            options={['Praia', 'Santa Catarina', 'São Vicente']}
+                            onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, county: v})} />
+                          <DetailField label="Freguesia" value={analysisSearchFilters.parish} type="select" readOnly={false}
+                            options={['N.S Da Graça', 'São Nicolau Tolentino', 'Santíssimo Nome de Jesus']}
+                            onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, parish: v})} />
+                          <DetailField label="Localidade" value={analysisSearchFilters.locality} type="select" readOnly={false}
+                            options={['Palmarejo', 'Achada Santo António', 'Platô', 'Fazenda']}
+                            onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, locality: v})} />
+                          <DetailField label="Zona" value={analysisSearchFilters.zone} type="select" readOnly={false}
+                            options={['Zona 1', 'Zona 2']}
+                            onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, zone: v})} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Listagem de Pedidos</h3>
-                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {mockAnalysisCertificates.length.toString().padStart(2, '0')}</span>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">{analysisSearchResults !== null ? 'Resultados da Pesquisa' : 'Listagem de Pedidos'}</h3>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {(analysisSearchResults !== null ? analysisSearchResults : mockAnalysisCertificates).length.toString().padStart(2, '0')}</span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Número Pedido</th>
-                          <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Nº Processo</th>
+                          <th className="px-6 py-4">Nº Documento</th>
+                          <th className="px-6 py-4">Nome Requerente</th>
                           <th className="px-6 py-4">Data Nascimento</th>
-                          <th className="px-6 py-4">Data Pedido</th>
+                          <th className="px-6 py-4">Nacionalidade</th>
+                          <th className="px-6 py-4">Ilha</th>
+                          <th className="px-6 py-4">Estado</th>
+                          <th className="px-6 py-4">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {mockAnalysisCertificates.map((cert) => (
-                          <tr 
+                        {(analysisSearchResults !== null ? analysisSearchResults : mockAnalysisCertificates).length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="px-6 py-12 text-center text-sm font-bold text-slate-400">
+                              Nenhum pedido encontrado para os filtros aplicados.
+                            </td>
+                          </tr>
+                        ) : (analysisSearchResults !== null ? analysisSearchResults : mockAnalysisCertificates).map((cert: any) => (
+                          <tr
                             key={cert.id}
-                            onClick={() => {
-                              setSelectedAnalysisCertificate(cert);
-                              setAssociatedPerson(null);
-                              setSuggestedFicha(null);
-                              setCertAnalysisHasSearched(false);
-
-                              // Auto-match ficha
-                              const match = fichas.find(f =>
-                                (cert.biographic.nif && f.nif === cert.biographic.nif) ||
-                                (cert.biographic.docNumber && (f.docNumber === cert.biographic.docNumber || f.number === cert.biographic.docNumber))
-                              );
-
-                              if (match) {
-                                setSuggestedFicha(match);
-                              }
-
-                              setCurrentView('certificate_analysis_detail');
-                            }}
+                            onClick={() => abrirAnalise(cert)}
                             className="hover:bg-blue-50 cursor-pointer transition-colors group"
                           >
                             <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{cert.id}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.biographic?.docNumber || <span className="text-slate-300">—</span>}</td>
                             <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
                             <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.biographic?.nationality || <span className="text-slate-300">—</span>}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.address?.island || <span className="text-slate-300">—</span>}</td>
+                            <td className="px-6 py-4">
+                              <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                cert.status === 'Devolvido' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {cert.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); abrirAnalise(cert); }}
+                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                title="Analisar"
+                              >
+                                <Eye size={16} />
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -5951,7 +6555,7 @@ export default function App() {
                                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                     <DetailField label="Nome Completo" value={`${associatedPerson.name}${associatedPerson.surname ? ' ' + associatedPerson.surname : ''}`} />
                                     <DetailField label="Data Nascimento" value={new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
-                                    <DetailField label="Sexo" value={associatedPerson.gender} />
+                                    <DetailField label="Género" value={associatedPerson.gender} />
                                     <DetailField label="Estado Civil" value={associatedPerson.maritalStatus || associatedPerson.civilStatus} />
                                   </div>
                                 </div>
@@ -6055,7 +6659,7 @@ export default function App() {
                           className="px-5 py-2.5 bg-white text-slate-700 border-2 border-slate-200 font-bold rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all text-xs flex items-center gap-2"
                         >
                           <Search size={14} />
-                          Associar Cadastro
+                          Vincular Cadastro
                         </button>
                       </div>
 
@@ -6084,6 +6688,13 @@ export default function App() {
                               >
                                 <div className="bg-white border-2 border-blue-100 shadow-blue-50 rounded-2xl p-8 space-y-8 shadow-sm mt-2 relative">
                                   <div className="absolute top-4 right-8 flex items-center gap-3">
+                                    <button
+                                      onClick={() => setSuggestedFicha(null)}
+                                      className="px-4 py-1.5 bg-red-50 text-red-600 border border-red-200 font-bold rounded-xl hover:bg-red-100 transition-colors text-[11px] uppercase tracking-wider flex items-center gap-2"
+                                    >
+                                      <X size={13} />
+                                      Rejeitar Match
+                                    </button>
                                     <button
                                       onClick={() => {
                                         setAssociatedPerson(suggestedFicha);
@@ -6119,7 +6730,7 @@ export default function App() {
                                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                         <DetailField label="Nome Completo" value={`${suggestedFicha.name}${suggestedFicha.surname ? ' ' + suggestedFicha.surname : ''}`} />
                                         <DetailField label="Data Nascimento" value={new Date(suggestedFicha.birthDate).toLocaleDateString('pt-BR')} icon={Calendar} />
-                                        <DetailField label="Sexo" value={suggestedFicha.gender} />
+                                        <DetailField label="Género" value={suggestedFicha.gender} />
                                         <DetailField label="Estado Civil" value={suggestedFicha.maritalStatus || suggestedFicha.civilStatus} />
                                       </div>
                                     </div>
@@ -6185,7 +6796,7 @@ export default function App() {
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                             <DetailField label="Nome Completo" value={selectedAnalysisCertificate.biographic.fullName} />
                             <DetailField label="Data Nascimento" value={selectedAnalysisCertificate.biographic.birthDate} icon={Calendar} />
-                            <DetailField label="Sexo" value={selectedAnalysisCertificate.biographic.gender} />
+                            <DetailField label="Género" value={selectedAnalysisCertificate.biographic.gender} />
                             <DetailField label="Estado Civil" value={selectedAnalysisCertificate.biographic.civilStatus} />
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -6271,7 +6882,7 @@ export default function App() {
                       <span className="uppercase tracking-widest text-xs">Observações</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <button onClick={(e) => { e.stopPropagation(); }} className="text-blue-600 text-[10px] font-black uppercase tracking-widest hover:underline">Novo +</button>
+                      <button onClick={(e) => { e.stopPropagation(); setObsTarget('analise'); setObsTexto(''); setShowDocObsModal(true); }} className="text-blue-600 text-[10px] font-black uppercase tracking-widest hover:underline">Novo +</button>
                       {expandedSections.analysisObservations ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                     </div>
                   </button>
@@ -6279,7 +6890,13 @@ export default function App() {
                     {expandedSections.analysisObservations && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 shadow-sm space-y-4 mt-1">
-                          {selectedAnalysisCertificate.observations.map((obs: any, idx: number) => (
+                          {(selectedAnalysisCertificate.observations || []).length === 0 && (
+                            <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                              <MessageSquare size={28} className="mx-auto text-slate-200 mb-2" />
+                              <p className="text-slate-400 text-sm italic">Nenhuma observação registada</p>
+                            </div>
+                          )}
+                          {(selectedAnalysisCertificate.observations || []).map((obs: any, idx: number) => (
                             <div key={idx} className="p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl space-y-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
@@ -6322,7 +6939,7 @@ export default function App() {
                                   <th className="px-6 py-4">Data</th>
                                   <th className="px-6 py-4">Fase</th>
                                   <th className="px-6 py-4">Estado</th>
-                                  <th className="px-6 py-4">Utente</th>
+                                  <th className="px-6 py-4">Utilizador</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-50">
@@ -6706,7 +7323,7 @@ export default function App() {
                       className="px-5 py-2.5 bg-white text-slate-700 border-2 border-slate-200 font-bold rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all text-xs flex items-center gap-2"
                     >
                       <Search size={14} />
-                      Associar Cadastro
+                      Vincular Cadastro
                     </button>
                   </div>
                 )}
@@ -6941,7 +7558,7 @@ export default function App() {
                                   <th className="px-6 py-4">Data</th>
                                   <th className="px-6 py-4">Fase</th>
                                   <th className="px-6 py-4">Estado</th>
-                                  <th className="px-6 py-4">Utente</th>
+                                  <th className="px-6 py-4">Utilizador</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-50">
@@ -7450,7 +8067,7 @@ export default function App() {
                                   <th className="px-6 py-4">Data</th>
                                   <th className="px-6 py-4">Fase</th>
                                   <th className="px-6 py-4">Estado</th>
-                                  <th className="px-6 py-4">Utente</th>
+                                  <th className="px-6 py-4">Utilizador</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-50">
@@ -7783,7 +8400,7 @@ export default function App() {
                                   <th className="px-6 py-4">Data</th>
                                   <th className="px-6 py-4">Fase</th>
                                   <th className="px-6 py-4">Estado</th>
-                                  <th className="px-6 py-4">Utente</th>
+                                  <th className="px-6 py-4">Utilizador</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-50">
@@ -8152,7 +8769,7 @@ export default function App() {
                                   <th className="px-6 py-4">Data</th>
                                   <th className="px-6 py-4">Fase</th>
                                   <th className="px-6 py-4">Estado</th>
-                                  <th className="px-6 py-4">Utente</th>
+                                  <th className="px-6 py-4">Utilizador</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-50">
@@ -8538,7 +9155,7 @@ export default function App() {
                                   <th className="px-6 py-4">Data</th>
                                   <th className="px-6 py-4">Fase</th>
                                   <th className="px-6 py-4">Estado</th>
-                                  <th className="px-6 py-4">Utente</th>
+                                  <th className="px-6 py-4">Utilizador</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-50">
@@ -9052,9 +9669,9 @@ export default function App() {
                     setNewFichaChars([]); setNewFichaNewChar({ name: '', value: '', observation: '' });
                     setNewFichaAddresses([]); setNewFichaNewAddress({ type: 'Residência', island: '', county: '', parish: '', locality: '', zone: '', reference: '' });
                     setNewFichaContacts([]); setNewFichaNewContact({ type: 'Telemovel', info: '' });
-                    setNewFichaNicknames([]); setNewFichaNewNickname('');
+                    setNewFichaNicknames([]); setNewFichaNewNickname(''); setNewFichaGroups([]); setNewFichaNewGroup({ sigla: '', nome: '', funcao: '' });
                     setNewFichaReasons([]);
-                    setNewFichaObservations([]); setNewFichaNewObs('');
+                    setNewFichaObservations([]);
                     setNewFichaAttachments([]); setNewFichaNewAttach({ name: '', type: 'Documento' });
                     setNewFichaExpanded({ biographic: true, complementary: false, outras: false, motivo: false, biometric: false, observations: false, attachments: false });
                     setCurrentView('ficha_new');
@@ -9344,6 +9961,7 @@ export default function App() {
                     docIssueLocation: newFichaData.docIssueLocation, photo: newFichaData.photo,
                     addresses: newFichaAddresses,
                     contacts: newFichaContacts,
+                    groups: newFichaGroups,
                     nicknames: newFichaNicknames.map((v, i) => ({ id: i+1, createdAt: today, validFrom: today, validTo: null, user: user?.name || 'Admin', value: v })),
                     complementaryGroups: newFichaChars.length > 0 ? [{ id: 1, createdAt: today, validFrom: today, validTo: null, user: user?.name || 'Admin', otherNotes: '', characteristics: newFichaChars }] : [],
                     registrationReasons: newFichaReasons,
@@ -9497,8 +10115,8 @@ export default function App() {
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-slate-900 text-white rounded-lg"><Info size={18} /></div>
                           <span className="uppercase tracking-widest text-xs">Outras Informações</span>
-                          {(newFichaAddresses.length + newFichaContacts.length + newFichaNicknames.length) > 0 && (
-                            <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">{newFichaAddresses.length + newFichaContacts.length + newFichaNicknames.length}</span>
+                          {(newFichaGroups.length + newFichaAddresses.length + newFichaContacts.length + newFichaNicknames.length) > 0 && (
+                            <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">{newFichaGroups.length + newFichaAddresses.length + newFichaContacts.length + newFichaNicknames.length}</span>
                           )}
                         </div>
                         <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
@@ -9515,6 +10133,25 @@ export default function App() {
                         {newFichaExpanded.outras && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                             <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-10">
+
+                              {/* Grupos */}
+                              <div className="space-y-4">
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Grupos</h4>
+                                {newFichaGroups.length === 0 ? (
+                                  <p className="text-xs font-bold text-slate-400">Nenhum grupo adicionado.</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {newFichaGroups.map((g, i) => (
+                                      <div key={i} className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase w-28">{g.sigla}</span>
+                                        <span className="text-sm font-bold text-slate-900 flex-1">{g.nome}</span>
+                                        <span className="text-xs font-bold text-slate-500 w-40">{g.funcao || '---'}</span>
+                                        <button onClick={() => setNewFichaGroups(newFichaGroups.filter((_,j)=>j!==i))} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
 
                               {/* Moradas */}
                               <div className="space-y-4">
@@ -9588,7 +10225,7 @@ export default function App() {
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivos Registados</h4>
                                 <button
                                   onClick={() => {
-                                    setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+                                    setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', date_end: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '', comando: '', detentionDate: '' });
                                     setShowAddMotivoInFicha(true);
                                   }}
                                   className="px-4 py-2 bg-white text-slate-900 font-bold rounded hover:bg-slate-50 transition-colors text-xs border-2 border-slate-900 shadow-sm flex items-center gap-2"
@@ -9608,8 +10245,16 @@ export default function App() {
                                           <p className="text-xs font-bold text-slate-800">{r.refNo || '---'}</p>
                                         </div>
                                         <div className="space-y-0.5">
-                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data</p>
-                                          <p className="text-xs font-bold text-slate-800">{r.date || '---'}</p>
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data e Hora — Início</p>
+                                          <p className="text-xs font-bold text-slate-800">{dataHoraPt(r.date) || '---'}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data e Hora — Fim</p>
+                                          <p className="text-xs font-bold text-slate-800">{dataHoraPt(r.date_end) || '---'}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data de Detenção</p>
+                                          <p className="text-xs font-bold text-slate-800">{dataPt(r.detentionDate) || '---'}</p>
                                         </div>
                                         <div className="space-y-0.5">
                                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</p>
@@ -9630,6 +10275,10 @@ export default function App() {
                                         <div className="space-y-0.5">
                                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipologia</p>
                                           <p className="text-xs font-bold text-slate-800">{r.tipologia || '---'}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Comando</p>
+                                          <p className="text-xs font-bold text-slate-800">{r.comando || '---'}</p>
                                         </div>
                                         <div className="space-y-0.5">
                                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unidade</p>
@@ -9662,9 +10311,9 @@ export default function App() {
                       </AnimatePresence>
                     </div>
 
-                    {/* ── Accordion: Dados Biométricos ── */}
+                    {/* ── Accordion: Fotografias ── */}
                     <div className="space-y-3">
-                      {nfAccordion('biometric', 'Dados Biométricos', Camera)}
+                      {nfAccordion('biometric', 'Fotografias', Camera)}
                       <AnimatePresence>
                         {newFichaExpanded.biometric && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -9715,17 +10364,12 @@ export default function App() {
                         {newFichaExpanded.observations && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                             <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
-                              <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nova Observação</label>
-                                <textarea value={newFichaNewObs} onChange={(e) => setNewFichaNewObs(e.target.value)} rows={3} placeholder="Escreva uma observação..." className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-medium text-slate-900 outline-none focus:border-slate-900 resize-none transition-all" />
-                                <div className="flex justify-end">
-                                  <Button variant="primary" icon={Plus} onClick={() => {
-                                    if (!newFichaNewObs.trim()) return;
-                                    setNewFichaObservations([...newFichaObservations, { content: newFichaNewObs.trim(), author: user?.name || 'Admin', date: today }]);
-                                    setNewFichaNewObs('');
-                                  }}>Adicionar Observação</Button>
-                                </div>
+                              <div className="flex justify-end">
+                                <Button variant="outline" icon={Plus} onClick={() => { setEditingObs(null); setObsContent(''); setShowObsModal(true); }}>Nova Observação</Button>
                               </div>
+                              {newFichaObservations.length === 0 && (
+                                <p className="text-center text-xs font-bold text-slate-400 py-6">Nenhuma observação registada.</p>
+                              )}
                               {newFichaObservations.length > 0 && (
                                 <div className="space-y-4">
                                   {newFichaObservations.map((o, i) => (
@@ -9736,7 +10380,7 @@ export default function App() {
                                       <div className="flex-1 space-y-1">
                                         <div className="flex items-center gap-3">
                                           <p className="font-black text-slate-900 text-xs uppercase tracking-widest">{o.author}</p>
-                                          <span className="text-[10px] font-bold text-slate-400">{o.date}</span>
+                                          <span className="text-[10px] font-bold text-slate-400">{dataPt(o.date)}</span>
                                         </div>
                                         <p className="text-sm text-slate-600 leading-relaxed font-medium italic">"{o.content}"</p>
                                       </div>
@@ -10583,25 +11227,35 @@ export default function App() {
                             )}
                             {[...(selectedFicha?.registrationReasons || [])].sort((a: any, b: any) => (b.id || 0) - (a.id || 0)).map((reg: any) => (
                               <div key={reg.id} className="relative border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                                {/* Botão editar — canto superior direito */}
-                                <button
-                                  onClick={() => {
-                                    setEditingMotivoId(reg.id);
-                                    setEditingMotivoData({ type: reg.type, sijNo: reg.sijNo || '', unit: reg.unit || '', measures: reg.measures || '' });
-                                  }}
-                                  className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all z-10"
-                                  title="Editar"
-                                >
-                                  <Edit size={14} />
-                                </button>
+                                {/* Canto superior direito: editar */}
+                                <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
+                                  <button
+                                    onClick={() => {
+                                      setEditingMotivoId(reg.id);
+                                      setEditingMotivoData({ type: reg.type, sijNo: reg.sijNo || '', unit: reg.unit || '', measures: reg.measures || '' });
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+                                    title="Editar"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                </div>
                                 <div className="px-6 py-5 grid grid-cols-2 md:grid-cols-4 gap-5 bg-white">
                                   <div className="space-y-1">
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nº Ocorrência</p>
                                     <p className="text-xs font-bold text-slate-800">{reg.refNo || '---'}</p>
                                   </div>
                                   <div className="space-y-1">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data</p>
-                                    <p className="text-xs font-bold text-slate-800">{reg.date || '---'}</p>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data e Hora — Início</p>
+                                    <p className="text-xs font-bold text-slate-800">{dataHoraPt(reg.date) || '---'}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data e Hora — Fim</p>
+                                    <p className="text-xs font-bold text-slate-800">{dataHoraPt(reg.date_end) || '---'}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data de Detenção</p>
+                                    <p className="text-xs font-bold text-slate-800">{dataPt(reg.detentionDate) || '---'}</p>
                                   </div>
                                   <div className="space-y-1">
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo de Auto</p>
@@ -10622,6 +11276,10 @@ export default function App() {
                                   <div className="space-y-1">
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipologia</p>
                                     <p className="text-xs font-bold text-slate-800">{reg.tipologia || '---'}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Comando</p>
+                                    <p className="text-xs font-bold text-slate-800">{reg.comando || '---'}</p>
                                   </div>
                                   <div className="space-y-1">
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unidade</p>
@@ -10650,7 +11308,7 @@ export default function App() {
                                 }`}>
                                   <div className="flex items-center gap-2">
                                     {/* Ativo com pedido pendente */}
-                                    {reg.status === 'Ativo' && reg.rehabilitationDetails && (
+                                    {reg.status === 'Ativo' && reg.rehabilitationDetails && !recusaDe(reg) && (
                                       <>
                                         <ShieldCheck size={14} className="text-blue-500" />
                                         <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Pedido de reabilitação pendente</span>
@@ -10665,8 +11323,8 @@ export default function App() {
                                     )}
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    {/* Ativo sem pedido → botão solicitar (sem label) */}
-                                    {reg.status === 'Ativo' && !reg.rehabilitationDetails && (
+                                    {/* Ativo sem pedido, ou pedido recusado → botão solicitar (sem label) */}
+                                    {(recusaDe(reg) || (reg.status === 'Ativo' && !reg.rehabilitationDetails)) && (
                                       <button
                                         onClick={() => { setSelectedReasonForRehab(reg); setShowRehabilitationModal(true); }}
                                         className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-emerald-700 transition-all"
@@ -10675,28 +11333,77 @@ export default function App() {
                                         Solicitar Reabilitação
                                       </button>
                                     )}
-                                    {/* Ativo com pedido pendente → ver pedido (só leitura na ficha) */}
-                                    {reg.status === 'Ativo' && reg.rehabilitationDetails && (
-                                      <button
-                                        onClick={() => { setSelectedReasonForRehab(reg); setRehabDetailsViewOnly(true); setShowRehabilitationDetailsModal(true); }}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-blue-700 transition-all"
-                                      >
-                                        <Search size={12} />
-                                        Ver Pedido
-                                      </button>
-                                    )}
-                                    {/* Reabilitado → ver detalhes */}
-                                    {reg.status === 'Reabilitado' && reg.rehabilitationDetails && (
-                                      <button
-                                        onClick={() => { setSelectedReasonForRehab(reg); setRehabDetailsViewOnly(true); setShowRehabilitationDetailsModal(true); }}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-emerald-200 transition-all"
-                                      >
-                                        <Search size={12} />
-                                        Ver Detalhes
-                                      </button>
-                                    )}
                                   </div>
                                 </div>
+                                {/* Tabela com todos os pedidos de reabilitacao deste motivo */}
+                                {reabilitacoesDe(reg).length > 0 && (
+                                  <div className="px-6 py-4 border-t-2 border-slate-100 space-y-2">
+                                    <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reabilitações</h5>
+                                    <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white">
+                                      <table className="w-full text-left border-collapse">
+                                        <thead>
+                                          <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
+                                            <th className="px-4 py-3">Solicitado em</th>
+                                            <th className="px-4 py-3">Solicitado por</th>
+                                            <th className="px-4 py-3">Estado</th>
+                                            <th className="px-4 py-3">Decidido em</th>
+                                            <th className="px-4 py-3">Decidido por</th>
+                                            <th className="px-4 py-3">Motivo da Recusa</th>
+                                            <th className="px-4 py-3 text-right">Ação</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {reabilitacoesDe(reg).map((p: any, idx: number) => (
+                                            <tr key={idx} className="border-b border-slate-100 last:border-0">
+                                              <td className="px-4 py-3 text-xs">{p.requestedAt || '---'}</td>
+                                              <td className="px-4 py-3 text-xs font-medium">{p.requestedBy || '---'}</td>
+                                              <td className="px-4 py-3 text-xs font-medium">{p.estado}</td>
+                                              <td className="px-4 py-3 text-xs">{p.decidedAt || '---'}</td>
+                                              <td className="px-4 py-3 text-xs font-medium">{p.decidedBy || '---'}</td>
+                                              <td className="px-4 py-3 text-xs">{p.rejectionReason || '---'}</td>
+                                              <td className="px-4 py-3 text-right whitespace-nowrap">
+                                                {/* Visualizar o pedido desta linha (so leitura) */}
+                                                <button
+                                                  onClick={() => {
+                                                    const { rejectedRehabilitation, rejectionReason, rejectedAt, rejectedBy, ...base } = reg;
+                                                    setSelectedReasonForRehab({
+                                                      ...base,
+                                                      status: p.estado === 'Aceite' ? 'Reabilitado' : 'Ativo',
+                                                      rehabilitationDetails: p,
+                                                      rejectedRehabilitation: p.estado === 'Recusado' ? { reason: p.rejectionReason, rejectedAt: p.decidedAt, rejectedBy: p.decidedBy } : undefined,
+                                                      historicoReabilitacao: [],
+                                                    });
+                                                    setRehabDetailsViewOnly(true);
+                                                    setShowRehabilitationDetailsModal(true);
+                                                  }}
+                                                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                  title="Visualizar"
+                                                >
+                                                  <Eye size={14} />
+                                                </button>
+                                                {/* So o pedido pendente se edita; aceites e recusados ja foram decididos */}
+                                                <button
+                                                  disabled={p.estado !== 'Pendente'}
+                                                  onClick={() => {
+                                                    setSelectedReasonForRehab(reg);
+                                                    setRehabilitationReason(p.reason || '');
+                                                    setRehabilitationAttachments((p.attachments || []) as any);
+                                                    setEditandoPedidoReab(true);
+                                                    setShowRehabilitationModal(true);
+                                                  }}
+                                                  className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed"
+                                                  title={p.estado === 'Pendente' ? 'Editar solicitação' : 'Pedido já decidido'}
+                                                >
+                                                  <Edit size={14} />
+                                                </button>
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -10706,7 +11413,7 @@ export default function App() {
                   </AnimatePresence>
                 </div>
 
-                {/* Accordion: Dados Biométricos */}
+                {/* Accordion: Fotografias */}
                 <div className="space-y-4">
                   <button 
                     onClick={() => toggleSection('biometric')}
@@ -10714,7 +11421,7 @@ export default function App() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-900 text-white rounded-lg"><Fingerprint size={18} /></div>
-                      <span className="uppercase tracking-widest text-xs">Dados Biométricos</span>
+                      <span className="uppercase tracking-widest text-xs">Fotografias</span>
                     </div>
                     {expandedSections.biometric ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </button>
@@ -10839,24 +11546,27 @@ export default function App() {
                       >
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
                           <div className="flex justify-end">
-                            <Button variant="outline" icon={Plus}>Nova Observação</Button>
+                            <Button variant="outline" icon={Plus} onClick={() => { setEditingObs(null); setObsContent(''); setShowObsModal(true); }}>Nova Observação</Button>
                           </div>
-                          <div className="p-6 bg-slate-50 rounded-2xl border-2 border-slate-50 space-y-4">
-                            <div className="flex items-start gap-4">
-                              <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black text-lg shadow-lg">
-                                M
-                              </div>
-                              <div className="flex-1 space-y-2">
-                                <div className="flex items-center gap-3">
-                                  <p className="font-black text-slate-900 text-xs uppercase tracking-widest">Mascarenha</p>
-                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">20/03/2023</span>
+                          {(selectedFicha.observations || []).length === 0 && (
+                            <p className="text-center text-xs font-bold text-slate-400 py-6">Nenhuma observação registada.</p>
+                          )}
+                          {(selectedFicha.observations || []).map((o: any, i: number) => (
+                            <div key={o.id || i} className="p-6 bg-slate-50 rounded-2xl border-2 border-slate-50 space-y-4">
+                              <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black text-lg shadow-lg">
+                                  {(o.author || '?').charAt(0).toUpperCase()}
                                 </div>
-                                <p className="text-sm text-slate-600 leading-relaxed font-medium italic">
-                                  "vjhvuj hyasd ubasiud asdabjsd asjdba sdjbsd asaia asi ia a ikabsidubasd ubiasd kbiuasbd kjbasd basidb ibasidb iuasa"
-                                </p>
+                                <div className="flex-1 space-y-2">
+                                  <div className="flex items-center gap-3">
+                                    <p className="font-black text-slate-900 text-xs uppercase tracking-widest">{o.author}</p>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{dataPt(String(o.date || '').slice(0, 10))}</span>
+                                  </div>
+                                  <p className="text-sm text-slate-600 leading-relaxed font-medium italic">"{o.content}"</p>
+                                </div>
                               </div>
                             </div>
-                          </div>
+                          ))}
                         </div>
                       </motion.div>
                     )}
@@ -12405,10 +13115,11 @@ export default function App() {
                 <div className="p-6 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase">Numero Cadastro</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Nº Cadastro</label>
                       <input 
                         type="text" 
                         className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
+                        placeholder="Ex: FICAD-102/N-PR/2026"
                         value={associateSearchFilters.number}
                         onChange={(e) => setAssociateSearchFilters({...associateSearchFilters, number: e.target.value})}
                       />
@@ -12418,12 +13129,13 @@ export default function App() {
                       <input
                         type="text"
                         className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
+                        placeholder="Ex: José Maria Rodrigues"
                         value={associateSearchFilters.name}
                         onChange={(e) => setAssociateSearchFilters({...associateSearchFilters, name: e.target.value})}
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase">Data Nascimento</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Data de Nascimento</label>
                       <div className="relative">
                         <input 
                           type="date" 
@@ -12434,10 +13146,11 @@ export default function App() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase">Número Documento</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Nº Documento</label>
                       <input 
                         type="text" 
                         className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 transition-colors"
+                        placeholder="Ex: 98765432"
                         value={associateSearchFilters.docNumber}
                         onChange={(e) => setAssociateSearchFilters({...associateSearchFilters, docNumber: e.target.value})}
                       />
@@ -13185,8 +13898,8 @@ export default function App() {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700">Data</label>
-                    <input type="date" value={newMotivoInFicha.date} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, date: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                    <label className="text-xs font-bold text-slate-700">Data e Hora — Início</label>
+                    <input type="datetime-local" value={newMotivoInFicha.date} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, date: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
                   </div>
                 </div>
 
@@ -13271,11 +13984,32 @@ export default function App() {
                     </select>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Comando</label>
+                    <select value={newMotivoInFicha.comando} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, comando: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none">
+                      <option value="">Selecione...</option>
+                      <option>Comando Regional Santiago Sul</option>
+                      <option>Comando Regional Santiago Norte</option>
+                      <option>Comando Regional Barlavento</option>
+                      <option>Comando Regional Sotavento</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Data de Detenção</label>
+                    <input type="date" value={newMotivoInFicha.detentionDate} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, detentionDate: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Data e Hora — Fim</label>
+                    <input type="datetime-local" value={newMotivoInFicha.date_end} onChange={(e) => setNewMotivoInFicha({...newMotivoInFicha, date_end: e.target.value})} className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                  </div>
+                </div>
               </div>
 
               <div className="p-6 border-t border-slate-200 flex justify-end gap-4">
                 <button
-                  onClick={() => { setShowAddMotivoInFicha(false); setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' }); }}
+                  onClick={() => { setShowAddMotivoInFicha(false); setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', date_end: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '', comando: '', detentionDate: '' }); }}
                   className="px-8 py-2 bg-slate-600 text-white font-bold rounded hover:bg-slate-700 transition-colors text-sm shadow-md"
                 >
                   Cancelar
@@ -13288,11 +14022,10 @@ export default function App() {
                       setNewFichaReasons([...newFichaReasons, { ...newMotivoInFicha, id: Date.now(), status: 'Ativo' }]);
                     } else {
                       // Ficha existente: grava diretamente no registo
-                      if (!newMotivoInFicha.refNo) return;
                       const newReg = { ...newMotivoInFicha, id: Date.now(), status: 'Ativo' };
                       setSelectedFicha((prev: any) => ({ ...prev, registrationReasons: [...(prev.registrationReasons || []), newReg] }));
                     }
-                    setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '' });
+                    setNewMotivoInFicha({ reason: '', type: 'Criminal', date: '', date_end: '', refNo: '', unit: '', measures: '', auto_type: '', natureza: '', enquadramento: '', tipologia: '', comando: '', detentionDate: '' });
                     setShowAddMotivoInFicha(false);
                   }}
                   className="px-8 py-2 bg-emerald-600 text-white font-bold rounded hover:bg-emerald-700 transition-colors text-sm shadow-md"
@@ -13327,11 +14060,41 @@ export default function App() {
                     onChange={(e) => setNfAddInfoType(e.target.value as any)}
                     className="w-full px-3 py-2 bg-blue-50 border-2 border-blue-400 rounded text-sm font-bold text-slate-900 outline-none"
                   >
+                    <option value="group">Grupo</option>
                     <option value="address">Endereço</option>
                     <option value="contact">Contacto</option>
                     <option value="nickname">Alcunha</option>
                   </select>
                 </div>
+
+                {nfAddInfoType === 'group' && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Sigla *</label>
+                      <select
+                        value={newFichaNewGroup.sigla}
+                        onChange={(e) => {
+                          const selected = paramGroups.find((g: any) => g.sigla === e.target.value);
+                          setNewFichaNewGroup({ ...newFichaNewGroup, sigla: e.target.value, nome: selected?.nome || '' });
+                        }}
+                        className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none"
+                      >
+                        <option value="">Selecione...</option>
+                        {paramGroups.filter((g: any) => g.estado === 'Ativo').map((g: any) => (
+                          <option key={g.id} value={g.sigla}>{g.sigla}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Nome</label>
+                      <input type="text" value={newFichaNewGroup.nome} readOnly placeholder="Preenchido automaticamente" className="w-full px-3 py-2 border-2 border-slate-200 rounded bg-slate-100 text-sm text-slate-500 outline-none cursor-not-allowed" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Função</label>
+                      <input type="text" value={newFichaNewGroup.funcao} onChange={(e) => setNewFichaNewGroup({ ...newFichaNewGroup, funcao: e.target.value })} placeholder="Ex: Membro, Líder, Associado" className="w-full px-3 py-2 border-2 border-slate-900 rounded bg-white text-sm outline-none" />
+                    </div>
+                  </div>
+                )}
 
                 {nfAddInfoType === 'address' && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -13406,7 +14169,11 @@ export default function App() {
                 <button
                   onClick={() => {
                     const today = new Date().toISOString().slice(0,10);
-                    if (nfAddInfoType === 'address') {
+                    if (nfAddInfoType === 'group') {
+                      if (!newFichaNewGroup.sigla) return;
+                      setNewFichaGroups([...newFichaGroups, { ...newFichaNewGroup, id: Date.now(), createdAt: today, validFrom: today, validTo: null, user: user?.name || 'Admin' }]);
+                      setNewFichaNewGroup({ sigla: '', nome: '', funcao: '' });
+                    } else if (nfAddInfoType === 'address') {
                       if (!newFichaNewAddress.island) return;
                       setNewFichaAddresses([...newFichaAddresses, { ...newFichaNewAddress, id: Date.now(), createdAt: today, validFrom: today, validTo: null, user: user?.name || 'Admin' }]);
                       setNewFichaNewAddress({ type: 'Residência', island: '', county: '', parish: '', locality: '', zone: '', reference: '' });
@@ -13434,6 +14201,7 @@ export default function App() {
       {/* Edição por secção nos Detalhes do Registo */}
       <AnimatePresence>
         {/* Modal: Nova Observação (Gestão de Documentos) */}
+
         {showDocObsModal && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden">
@@ -13956,11 +14724,11 @@ export default function App() {
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/10 rounded-lg"><ShieldCheck size={18} className="text-white" /></div>
                   <div>
-                    <h2 className="text-sm font-black text-white uppercase tracking-widest">Solicitar Reabilitação</h2>
+                    <h2 className="text-sm font-black text-white uppercase tracking-widest">{editandoPedidoReab ? 'Editar Solicitação de Reabilitação' : 'Solicitar Reabilitação'}</h2>
                     <p className="text-[10px] text-slate-400 font-medium mt-0.5">Ficha N.º {selectedFicha?.number} — {selectedFicha?.name}</p>
                   </div>
                 </div>
-                <button onClick={() => setShowRehabilitationModal(false)} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                <button onClick={() => { setShowRehabilitationModal(false); setRehabilitationReason(''); setRehabilitationAttachments([]); setEditandoPedidoReab(false); }} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
                   <X size={18} />
                 </button>
               </div>
@@ -14031,12 +14799,12 @@ export default function App() {
 
               {/* Footer */}
               <div className="px-6 py-4 border-t-2 border-slate-100 flex items-center justify-end gap-3">
-                <button onClick={() => { setShowRehabilitationModal(false); setRehabilitationReason(''); setRehabilitationAttachments([]); }} className="px-4 py-2 bg-white text-slate-700 border-2 border-slate-200 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all">
+                <button onClick={() => { setShowRehabilitationModal(false); setRehabilitationReason(''); setRehabilitationAttachments([]); setEditandoPedidoReab(false); }} className="px-4 py-2 bg-white text-slate-700 border-2 border-slate-200 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all">
                   Cancelar
                 </button>
                 <button onClick={handleConfirmRehabilitation} className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-emerald-700 transition-all">
                   <ShieldCheck size={14} />
-                  Confirmar Solicitação
+                  {editandoPedidoReab ? 'Guardar Alterações' : 'Confirmar Solicitação'}
                 </button>
               </div>
             </motion.div>
@@ -14046,13 +14814,13 @@ export default function App() {
 
         {/* Detalhes da Solicitação de Reabilitação Modal */}
       <AnimatePresence>
-        {showRehabilitationDetailsModal && selectedReasonForRehab?.rehabilitationDetails && (
+        {showRehabilitationDetailsModal && (selectedReasonForRehab?.rehabilitationDetails || recusaDe(selectedReasonForRehab)) && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-2xl w-full max-w-lg shadow-2xl border-2 border-slate-100 overflow-hidden"
+              className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl border-2 border-slate-100 overflow-hidden"
             >
               {/* Header */}
               <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
@@ -14077,21 +14845,21 @@ export default function App() {
               </div>
 
               {/* Body */}
-              <div className="p-6 space-y-5">
+              <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
                 {/* Meta */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitado em</p>
-                    <p className="text-sm font-black text-slate-900">{selectedReasonForRehab.rehabilitationDetails.requestedAt}</p>
+                    <p className="text-sm font-black text-slate-900">{selectedReasonForRehab.rehabilitationDetails?.requestedAt || '---'}</p>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitado por</p>
-                    <p className="text-sm font-black text-slate-900">{selectedReasonForRehab.rehabilitationDetails.requestedBy}</p>
+                    <p className="text-sm font-black text-slate-900">{selectedReasonForRehab.rehabilitationDetails?.requestedBy || '---'}</p>
                   </div>
                 </div>
 
                 {/* Accepted info (if Reabilitado) */}
-                {selectedReasonForRehab.rehabilitationDetails.acceptedAt && (
+                {selectedReasonForRehab.rehabilitationDetails?.acceptedAt && (
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-emerald-50 rounded-xl p-4 border-2 border-emerald-100 space-y-1">
                       <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Aceite em</p>
@@ -14104,16 +14872,38 @@ export default function App() {
                   </div>
                 )}
 
+                {/* Recusa (se Recusado) */}
+                {recusaDe(selectedReasonForRehab) && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recusado em</p>
+                        <p className="text-sm font-black text-slate-900">{recusaDe(selectedReasonForRehab)?.rejectedAt || '---'}</p>
+                      </div>
+                      <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recusado por</p>
+                        <p className="text-sm font-black text-slate-900">{recusaDe(selectedReasonForRehab)?.rejectedBy || '---'}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo da Recusa</p>
+                      <div className="bg-slate-50 border-2 border-slate-100 border-l-4 border-l-red-400 rounded-xl p-4 text-sm text-slate-700 leading-relaxed font-medium">
+                        {recusaDe(selectedReasonForRehab)?.reason || '---'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Motivo */}
                 <div className="space-y-2">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo da Solicitação</p>
                   <div className="bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm text-slate-700 leading-relaxed font-medium">
-                    {selectedReasonForRehab.rehabilitationDetails.reason}
+                    {selectedReasonForRehab.rehabilitationDetails?.reason || '---'}
                   </div>
                 </div>
 
                 {/* Anexos */}
-                {selectedReasonForRehab.rehabilitationDetails.attachments?.length > 0 && (
+                {selectedReasonForRehab.rehabilitationDetails?.attachments?.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                       Anexos ({selectedReasonForRehab.rehabilitationDetails.attachments.length})
@@ -14133,11 +14923,94 @@ export default function App() {
                     </div>
                   </div>
                 )}
+
+                {/* Historico de pedidos anteriores (recusados) — mesmo padrao dos historicos da ficha */}
+                {(selectedReasonForRehab.historicoReabilitacao || []).length > 0 && (
+                  <div className="space-y-4 pt-4 border-t-2 border-slate-100">
+                    <button
+                      onClick={() => { setVerHistReab(!verHistReab); setHistReabAberto(null); }}
+                      className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
+                    >
+                      {verHistReab ? 'Ocultar Histórico' : `Ver Histórico de Pedidos (${selectedReasonForRehab.historicoReabilitacao.length})`}
+                      {verHistReab ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+
+                    <AnimatePresence>
+                      {verHistReab && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden space-y-2"
+                        >
+                          <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
+                          <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
+                                  <th className="px-4 py-3">Solicitado em</th>
+                                  <th className="px-4 py-3">Solicitado por</th>
+                                  <th className="px-4 py-3">Recusado em</th>
+                                  <th className="px-4 py-3">Recusado por</th>
+                                  <th className="px-4 py-3">Motivo da Recusa</th>
+                                  <th className="px-4 py-3"></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedReasonForRehab.historicoReabilitacao.map((h: any, idx: number) => (
+                                  <React.Fragment key={idx}>
+                                    <tr className="border-b border-slate-100">
+                                      <td className="px-4 py-3 text-xs">{h.requestedAt || '---'}</td>
+                                      <td className="px-4 py-3 text-xs font-medium">{h.requestedBy || '---'}</td>
+                                      <td className="px-4 py-3 text-xs text-red-600 font-medium">{h.rejectedAt || '---'}</td>
+                                      <td className="px-4 py-3 text-xs font-medium text-red-600">{h.rejectedBy || '---'}</td>
+                                      <td className="px-4 py-3 text-xs">{h.rejectionReason || '---'}</td>
+                                      <td className="px-4 py-3 text-right">
+                                        <button
+                                          onClick={() => setHistReabAberto(histReabAberto === idx ? null : idx)}
+                                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                          title="Ver pedido"
+                                        >
+                                          <Eye size={14} />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                    {histReabAberto === idx && (
+                                      <tr className="border-b border-slate-100 bg-white">
+                                        <td colSpan={6} className="px-4 py-3 space-y-3">
+                                          <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Motivo da Solicitação</p>
+                                            <p className="text-xs text-slate-700">{h.reason || '---'}</p>
+                                          </div>
+                                          {(h.attachments || []).length > 0 && (
+                                            <div className="space-y-1">
+                                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Anexos ({h.attachments.length})</p>
+                                              {h.attachments.map((file: any, j: number) => (
+                                                <div key={j} className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                                                  <Paperclip size={12} className="text-slate-400" />
+                                                  {file.name}
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </React.Fragment>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
               </div>
 
               {/* Footer */}
               <div className="px-6 py-4 border-t-2 border-slate-100 flex items-center justify-between gap-3">
-                <Button variant="outline" onClick={() => { setShowRehabilitationDetailsModal(false); setRehabDetailsViewOnly(false); }}>Fechar</Button>
+                <Button variant="outline" onClick={() => { setShowRehabilitationDetailsModal(false); setRehabDetailsViewOnly(false); setHistReabAberto(null); setVerHistReab(false); }}>Fechar</Button>
                 {!rehabDetailsViewOnly && (
                   <div className="flex gap-3">
                     <Button variant="danger" icon={X} onClick={() => {
@@ -15420,6 +16293,23 @@ export default function App() {
                   <button 
                     onClick={() => {
                       if (!obsContent.trim()) return;
+
+                      // Nova ficha: a observacao fica na lista da ficha em criacao
+                      if (currentView === 'ficha_new') {
+                        setNewFichaObservations([{ content: obsContent.trim(), author: user?.name || 'Admin', date: new Date().toISOString().slice(0, 10) }, ...newFichaObservations]);
+                        setShowObsModal(false);
+                        return;
+                      }
+
+                      // Detalhes da ficha: a observacao fica na ficha
+                      if (currentView === 'ficha_detail' && selectedFicha) {
+                        const nova = { id: Date.now(), author: user?.name || 'Admin', date: new Date().toISOString(), content: obsContent.trim() };
+                        const fichaAtualizada = { ...selectedFicha, observations: [nova, ...(selectedFicha.observations || [])] };
+                        setSelectedFicha(fichaAtualizada);
+                        setFichas(fichas.map((f: any) => f.id === selectedFicha.id ? fichaAtualizada : f));
+                        setShowObsModal(false);
+                        return;
+                      }
                       
                       if (editingObs) {
                         const newObs = selectedPerson.observations.map((o: any) => 

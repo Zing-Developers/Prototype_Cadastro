@@ -57,7 +57,7 @@ Módulo de visualização e edição completa da ficha de identificação indivi
 - **Documentos de Identificação** — CNI, Passaporte, BI, TRE;
 - **Grupos / Associações** — vínculos a grupos ou organizações;
 - **Sinais Complementares** — características físicas como altura, constituição, tipo e cor de cabelo, cor de pele, barba, bigode, olhos, rosto, tatuagens, cicatrizes, marcas de nascença;
-- **Motivo de Cadastro** — histórico de ocorrências com tipo (Criminal/Policial), auto, natureza, enquadramento legal, unidade, medidas aplicadas e estado (Ativo / Reabilitado / Aguardando Reabilitação);
+- **Motivo de Cadastro** — histórico de ocorrências com Nº de ocorrência, data e hora de início e de fim, data de detenção, tipo (Criminal/Policial), auto, natureza, enquadramento legal, comando, unidade, medidas aplicadas e estado (Ativo / Reabilitado / Aguardando Reabilitação). Ao adicionar um motivo (na nova ficha ou numa ficha existente), o Nº de Ocorrência, a Data de Detenção e a Data e Hora de Fim são opcionais, e o Comando escolhe-se de uma lista;
 - **Observações** — notas internas com autor e data;
 - **Anexos** — ficheiros associados à ficha.
 
@@ -89,15 +89,13 @@ Os resultados são apresentados como lista de fichas correspondentes, permitindo
 
 **Descrição:**
 
-Módulo de gestão de solicitações de reabilitação de registos criminais/policiais. Lista de forma agregada todos os registos com estado `Aguardando Reabilitação` de todas as fichas, pesquisáveis por Número de Ficha, Nome, Data de Nascimento e Estado.
+Módulo de gestão de solicitações de reabilitação de registos criminais/policiais. Lista de forma agregada os pedidos de reabilitação de todas as fichas (Nº de ficha, nome, data, cadastro, utilizador, medida e estado `Pendente` / `Reabilitado` / `Recusado`), pesquisáveis por Número de Ficha, Nome, Data de Nascimento e Estado.
+Ao clicar num pedido da lista abre-se a página "Solicitação de Reabilitação", com o número da ficha, quem pediu e quando, o motivo da solicitação e os anexos (ficheiro, data de upload e utilizador), e ainda os dados biográficos, outras informações (moradas e contactos) e observações da ficha. Num pedido já decidido, mostra quem decidiu, quando e o motivo da recusa. Num pedido pendente, é nesta página que o operador decide:
 
-Para cada solicitação, o operador pode:
+- **Reabilitar** — altera o estado do registo de cadastro para `Reabilitado`;
+- **Recusar** — regista a recusa com motivo, data e utilizador. Depois de uma recusa pode ser feito um novo pedido de imediato.
 
-- **Ver Detalhes** — consultar a ficha completa, o motivo do cadastro e o motivo da reabilitação submetido pelo operador de origem, com possibilidade de anexos;
-- **Aceitar** — altera o estado do registo de cadastro para `Reabilitado`;
-- **Recusar** — regista a recusa com motivo, podendo incluir indicação de data de elegibilidade futura.
-
-O sistema exibe o motivo de recusa quando aplicável e mantém o histórico de decisões sobre cada registo.
+Na ficha, o cartão de cada motivo de cadastro mostra a tabela "Reabilitações" com todos os pedidos de reabilitação desse motivo (pendentes, aceites e recusados): data e utilizador do pedido, estado, data e utilizador da decisão e motivo da recusa. Cada pedido pode ser visualizado a partir da tabela. O pedido pendente pode ser editado (motivo da solicitação e anexos); os pedidos aceites ou recusados já não se editam.
 
 **Âmbito da documentação:** estados do processo (Aguardando / Reabilitado / Recusado), regras de elegibilidade, fluxo de submissão e aprovação/rejeição, modais de confirmação, notificações e permissões por perfil.
 
