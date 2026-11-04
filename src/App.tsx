@@ -2717,6 +2717,549 @@ export default function App() {
     );
   }
 
+  // Seccoes "Outras Informações" e "Observações" da ficha (selectedFicha); usadas no detalhe da ficha e, so leitura, no detalhe da reabilitacao
+  const renderOutrasInformacoesFicha = (soLeitura = false) => (
+                <div className="space-y-4">
+                  <div
+                    onClick={() => toggleSection('other_info')}
+                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><Info size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Outras Informações</span>
+                    </div>
+                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                      {!soLeitura && (<>
+                      <button
+                        onClick={() => { openAddInfoModal(); if (!expandedSections.other_info) toggleSection('other_info'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
+                      >
+                        <Plus size={13} /> Adicionar
+                      </button>
+                      </>)}
+                      {expandedSections.other_info ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </div>
+                  </div>
+                  
+                  <AnimatePresence>
+                    {expandedSections.other_info && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-12">
+                          {/* Documento de Identificação */}
+                          <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento de Identificação</h4>
+                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                    <th className="px-6 py-4">Nº</th>
+                                    <th className="px-6 py-4">Tipo</th>
+                                    <th className="px-6 py-4">Número</th>
+                                    <th className="px-6 py-4">Emissão</th>
+                                    <th className="px-6 py-4">Validade</th>
+                                    <th className="px-6 py-4">Local Emissão</th>
+                                    <th className="px-6 py-4">Criado em</th>
+                                    <th className="px-6 py-4 text-right">Ação</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {selectedFicha.documents?.filter((d: any) => d.validTo === null).map((doc: any, idx: number) => (
+                                    <tr key={doc.id} className="hover:bg-slate-50 transition-colors">
+                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.type}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-900">{doc.number}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.issueDate}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.expiryDate}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.issueLocation || '---'}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.validFrom}</td>
+                                      <td className="px-6 py-4 text-right">
+                                        {!soLeitura && !doc.validTo && (
+                                          <button onClick={() => handleDeactivateOtherInfo('document', doc.id)} className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors">Desativar</button>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            {selectedFicha.documents?.some((d: any) => d.validTo !== null) && (
+                              <div className="space-y-4">
+                                <button onClick={() => setShowOtherInfoHistory({...showOtherInfoHistory, document: !showOtherInfoHistory.document})} className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1">
+                                  {showOtherInfoHistory.document ? 'Ocultar Histórico' : 'Ver Histórico de Documentos'}
+                                  {showOtherInfoHistory.document ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                </button>
+                                <AnimatePresence>
+                                  {showOtherInfoHistory.document && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-2">
+                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
+                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
+                                        <table className="w-full text-left border-collapse">
+                                          <thead>
+                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
+                                              <th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Número</th><th className="px-4 py-3">Emissão</th><th className="px-4 py-3">Validade</th><th className="px-4 py-3">Criado por</th><th className="px-4 py-3">Desativado por</th><th className="px-4 py-3">Desativado em</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {selectedFicha.documents?.filter((d: any) => d.validTo !== null).map((doc: any) => (
+                                              <tr key={doc.id} className="border-b border-slate-100 opacity-60">
+                                                <td className="px-4 py-3 text-xs">{doc.type}</td><td className="px-4 py-3 text-xs">{doc.number}</td><td className="px-4 py-3 text-xs">{doc.issueDate}</td><td className="px-4 py-3 text-xs">{doc.expiryDate}</td><td className="px-4 py-3 text-xs font-medium">{doc.user}</td><td className="px-4 py-3 text-xs font-medium text-red-600">{doc.deactivatedBy || '---'}</td><td className="px-4 py-3 text-xs text-red-600 font-medium">{doc.validTo}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+                          </div>
+
+                          {!soLeitura && (<>
+                          {/* Grupo */}
+                          <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Grupo</h4>
+
+                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                    <th className="px-6 py-4">Nº</th>
+                                    <th className="px-6 py-4">Sigla</th>
+                                    <th className="px-6 py-4">Nome</th>
+                                    <th className="px-6 py-4">Função</th>
+                                    <th className="px-6 py-4">Criado em</th>
+                                    <th className="px-6 py-4 text-right">Ação</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {(selectedFicha.groups || []).filter((g: any) => !g.validTo).map((grp: any, idx: number) => (
+                                    <tr key={grp.id} className="hover:bg-slate-50 transition-colors">
+                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
+                                      <td className="px-6 py-4">
+                                        <span className="px-2 py-0.5 bg-slate-900 text-white text-[10px] font-black rounded-md">{grp.sigla}</span>
+                                      </td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-900">{grp.nome}</td>
+                                      <td className="px-6 py-4 text-xs font-medium text-slate-600">{grp.funcao || '---'}</td>
+                                      <td className="px-6 py-4 text-xs font-medium text-slate-500">{grp.validFrom}</td>
+                                      <td className="px-6 py-4 text-right">
+                                        {!soLeitura && <button onClick={() => handleDeactivateOtherInfo('group', grp.id)} className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors">Desativar</button>}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {(selectedFicha.groups || []).some((g: any) => g.validTo) && (
+                              <div className="space-y-4">
+                                <button onClick={() => setShowOtherInfoHistory({ ...showOtherInfoHistory, group: !showOtherInfoHistory.group })} className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1">
+                                  {showOtherInfoHistory.group ? 'Ocultar Histórico' : 'Ver Histórico de Grupos'}
+                                  {showOtherInfoHistory.group ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                </button>
+                                <AnimatePresence>
+                                  {showOtherInfoHistory.group && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-2">
+                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
+                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
+                                        <table className="w-full text-left border-collapse">
+                                          <thead>
+                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
+                                              <th className="px-4 py-3">Sigla</th>
+                                              <th className="px-4 py-3">Nome</th>
+                                              <th className="px-4 py-3">Função</th>
+                                              <th className="px-4 py-3">Criado por</th>
+                                              <th className="px-4 py-3">Desativado por</th>
+                                              <th className="px-4 py-3">Desativado em</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {(selectedFicha.groups || []).filter((g: any) => g.validTo).map((grp: any) => (
+                                              <tr key={grp.id} className="border-b border-slate-100 opacity-60">
+                                                <td className="px-4 py-3 text-xs font-black">{grp.sigla}</td>
+                                                <td className="px-4 py-3 text-xs">{grp.nome}</td>
+                                                <td className="px-4 py-3 text-xs">{grp.funcao || '---'}</td>
+                                                <td className="px-4 py-3 text-xs font-medium">{grp.user}</td>
+                                                <td className="px-4 py-3 text-xs font-medium text-red-600">{grp.deactivatedBy || '---'}</td>
+                                                <td className="px-4 py-3 text-xs text-red-600 font-medium">{grp.validTo}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+                          </div>
+                          </>)}
+
+                          {/* Endereço */}
+                          <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Endereço</h4>
+
+                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                    <th className="px-6 py-4">N º</th>
+                                    <th className="px-6 py-4">Tipo</th>
+                                    <th className="px-6 py-4">Ilha</th>
+                                    <th className="px-6 py-4">Localidade</th>
+                                    <th className="px-6 py-4">Criado em</th>
+                                    <th className="px-6 py-4 text-right">Ação</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {selectedFicha.addresses?.filter((a: any) => a.validTo === null).map((addr: any, idx: number) => (
+                                    <tr key={addr.id} className="hover:bg-slate-50 transition-colors group">
+                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.type}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.island}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.locality}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.validFrom}</td>
+                                      <td className="px-6 py-4 text-right flex justify-end gap-3">
+                                        <button 
+                                          onClick={() => {
+                                            setSelectedAddressDetails(addr);
+                                            setShowAddressDetailsModal(true);
+                                          }}
+                                          className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all"
+                                        >
+                                          <Search size={16} />
+                                        </button>
+                                        {!soLeitura && !addr.validTo && (
+                                          <button 
+                                            onClick={() => handleDeactivateOtherInfo('address', addr.id)}
+                                            className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors"
+                                          >
+                                            Desativar
+                                          </button>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Address History */}
+                            {selectedFicha.addresses?.some((a: any) => a.validTo !== null) && (
+                              <div className="space-y-4">
+                                <button 
+                                  onClick={() => setShowOtherInfoHistory({...showOtherInfoHistory, address: !showOtherInfoHistory.address})}
+                                  className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
+                                >
+                                  {showOtherInfoHistory.address ? 'Ocultar Histórico' : 'Ver Histórico de Endereços'}
+                                  {showOtherInfoHistory.address ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                </button>
+
+                                <AnimatePresence>
+                                  {showOtherInfoHistory.address && (
+                                    <motion.div 
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      className="overflow-hidden space-y-2"
+                                    >
+                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
+                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
+                                        <table className="w-full text-left border-collapse">
+                                          <thead>
+                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
+                                              <th className="px-4 py-3">Tipo</th>
+                                              <th className="px-4 py-3">Ilha</th>
+                                              <th className="px-4 py-3">Localidade</th>
+                                              <th className="px-4 py-3">Criado por</th>
+                                              <th className="px-4 py-3">Desativado por</th>
+                                              <th className="px-4 py-3">Criado em</th>
+                                              <th className="px-4 py-3">Desativado em</th>
+                                              <th className="px-4 py-3 text-right">Ação</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {selectedFicha.addresses?.filter((a: any) => a.validTo !== null).map((addr: any) => (
+                                              <tr key={addr.id} className="border-b border-slate-100 opacity-60 hover:opacity-100 transition-opacity">
+                                                <td className="px-4 py-3 text-xs">{addr.type}</td>
+                                                <td className="px-4 py-3 text-xs">{addr.island}</td>
+                                                <td className="px-4 py-3 text-xs">{addr.locality}</td>
+                                                <td className="px-4 py-3 text-xs font-medium">{addr.user}</td>
+                                                <td className="px-4 py-3 text-xs font-medium text-red-600">{addr.deactivatedBy || '---'}</td>
+                                                <td className="px-4 py-3 text-xs">{addr.validFrom}</td>
+                                                <td className="px-4 py-3 text-xs text-red-600 font-medium">{addr.validTo}</td>
+                                                <td className="px-4 py-3 text-right">
+                                                  <button 
+                                                    onClick={() => {
+                                                      setSelectedAddressDetails(addr);
+                                                      setShowAddressDetailsModal(true);
+                                                    }}
+                                                    className="text-blue-600 hover:bg-blue-50 p-1 rounded border border-blue-200"
+                                                  >
+                                                    <Search size={14} />
+                                                  </button>
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Contactos */}
+                          <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</h4>
+
+                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                    <th className="px-6 py-4">N º</th>
+                                    <th className="px-6 py-4">Utilizador</th>
+                                    <th className="px-6 py-4">Tipo</th>
+                                    <th className="px-6 py-4">Informação</th>
+                                    <th className="px-6 py-4">Criado em</th>
+                                    <th className="px-6 py-4 text-right">Ação</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {selectedFicha.contacts?.filter((c: any) => c.validTo === null).map((contact: any, idx: number) => (
+                                    <tr key={contact.id} className="hover:bg-slate-50 transition-colors group">
+                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{contact.user}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{contact.type}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{contact.info}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{contact.validFrom}</td>
+                                      <td className="px-6 py-4 text-right">
+                                        {!soLeitura && !contact.validTo && (
+                                          <button 
+                                            onClick={() => handleDeactivateOtherInfo('contact', contact.id)}
+                                            className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors"
+                                          >
+                                            Desativar
+                                          </button>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Contact History */}
+                            {selectedFicha.contacts?.some((c: any) => c.validTo !== null) && (
+                              <div className="space-y-4">
+                                <button 
+                                  onClick={() => setShowOtherInfoHistory({...showOtherInfoHistory, contact: !showOtherInfoHistory.contact})}
+                                  className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
+                                >
+                                  {showOtherInfoHistory.contact ? 'Ocultar Histórico' : 'Ver Histórico de Contactos'}
+                                  {showOtherInfoHistory.contact ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                </button>
+
+                                <AnimatePresence>
+                                  {showOtherInfoHistory.contact && (
+                                    <motion.div 
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      className="overflow-hidden space-y-2"
+                                    >
+                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
+                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
+                                        <table className="w-full text-left border-collapse">
+                                          <thead>
+                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
+                                              <th className="px-4 py-3">Tipo</th>
+                                              <th className="px-4 py-3">Informação</th>
+                                              <th className="px-4 py-3">Criado por</th>
+                                              <th className="px-4 py-3">Desativado por</th>
+                                              <th className="px-4 py-3">Criado em</th>
+                                              <th className="px-4 py-3">Desativado em</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {selectedFicha.contacts?.filter((c: any) => c.validTo !== null).map((contact: any) => (
+                                              <tr key={contact.id} className="border-b border-slate-100 opacity-60">
+                                                <td className="px-4 py-3 text-xs">{contact.type}</td>
+                                                <td className="px-4 py-3 text-xs">{contact.info}</td>
+                                                <td className="px-4 py-3 text-xs font-medium">{contact.user}</td>
+                                                <td className="px-4 py-3 text-xs font-medium text-red-600">{contact.deactivatedBy || '---'}</td>
+                                                <td className="px-4 py-3 text-xs">{contact.validFrom}</td>
+                                                <td className="px-4 py-3 text-xs text-red-600 font-medium">{contact.validTo}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* No detalhe da reabilitacao so aparecem documento, endereco e contactos */}
+                          {!soLeitura && (<>
+                          {/* Alcunhas */}
+                          <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Alcunhas</h4>
+
+                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                    <th className="px-6 py-4">N º</th>
+                                    <th className="px-6 py-4">Utilizador</th>
+                                    <th className="px-6 py-4">Alcunha</th>
+                                    <th className="px-6 py-4">Criado em</th>
+                                    <th className="px-6 py-4 text-right">Ação</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {selectedFicha.nicknames?.filter((n: any) => n.validTo === null).map((nick: any, idx: number) => (
+                                    <tr key={nick.id} className="hover:bg-slate-50 transition-colors group">
+                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{nick.user}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{nick.value}</td>
+                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{nick.validFrom}</td>
+                                      <td className="px-6 py-4 text-right">
+                                        {!soLeitura && !nick.validTo && (
+                                          <button 
+                                            onClick={() => handleDeactivateOtherInfo('nickname', nick.id)}
+                                            className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors"
+                                          >
+                                            Desativar
+                                          </button>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Nickname History */}
+                            {selectedFicha.nicknames?.some((n: any) => n.validTo !== null) && (
+                              <div className="space-y-4">
+                                <button 
+                                  onClick={() => setShowOtherInfoHistory({...showOtherInfoHistory, nickname: !showOtherInfoHistory.nickname})}
+                                  className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
+                                >
+                                  {showOtherInfoHistory.nickname ? 'Ocultar Histórico' : 'Ver Histórico de Alcunhas'}
+                                  {showOtherInfoHistory.nickname ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                </button>
+
+                                <AnimatePresence>
+                                  {showOtherInfoHistory.nickname && (
+                                    <motion.div 
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      className="overflow-hidden space-y-2"
+                                    >
+                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
+                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
+                                        <table className="w-full text-left border-collapse">
+                                          <thead>
+                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
+                                              <th className="px-4 py-3">Alcunha</th>
+                                              <th className="px-4 py-3">Criado por</th>
+                                              <th className="px-4 py-3">Desativado por</th>
+                                              <th className="px-4 py-3">Criado em</th>
+                                              <th className="px-4 py-3">Desativado em</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {selectedFicha.nicknames?.filter((n: any) => n.validTo !== null).map((nick: any) => (
+                                              <tr key={nick.id} className="border-b border-slate-100 opacity-60">
+                                                <td className="px-4 py-3 text-xs">{nick.value}</td>
+                                                <td className="px-4 py-3 text-xs font-medium">{nick.user}</td>
+                                                <td className="px-4 py-3 text-xs font-medium text-red-600">{nick.deactivatedBy || '---'}</td>
+                                                <td className="px-4 py-3 text-xs">{nick.validFrom}</td>
+                                                <td className="px-4 py-3 text-xs text-red-600 font-medium">{nick.validTo}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+                          </div>
+                          </>)}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+  );
+
+  const renderObservacoesFicha = (soLeitura = false) => (
+                <div className="space-y-4">
+                  <button 
+                    onClick={() => toggleSection('observations')}
+                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><MessageSquare size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Observações</span>
+                    </div>
+                    {expandedSections.observations ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  
+                  <AnimatePresence>
+                    {expandedSections.observations && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
+                          {!soLeitura && (
+                          <div className="flex justify-end">
+                            <Button variant="outline" icon={Plus} onClick={() => { setEditingObs(null); setObsContent(''); setShowObsModal(true); }}>Nova Observação</Button>
+                          </div>
+                          )}
+                          {(selectedFicha.observations || []).length === 0 && (
+                            <p className="text-center text-xs font-bold text-slate-400 py-6">Nenhuma observação registada.</p>
+                          )}
+                          {(selectedFicha.observations || []).map((o: any, i: number) => (
+                            <div key={o.id || i} className="p-6 bg-slate-50 rounded-2xl border-2 border-slate-50 space-y-4">
+                              <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black text-lg shadow-lg">
+                                  {(o.author || '?').charAt(0).toUpperCase()}
+                                </div>
+                                <div className="flex-1 space-y-2">
+                                  <div className="flex items-center gap-3">
+                                    <p className="font-black text-slate-900 text-xs uppercase tracking-widest">{o.author}</p>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{dataPt(String(o.date || '').slice(0, 10))}</span>
+                                  </div>
+                                  <p className="text-sm text-slate-600 leading-relaxed font-medium italic">"{o.content}"</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Main Content */}
@@ -3590,9 +4133,9 @@ export default function App() {
                                   setRehabSec({ bio: true, outras: false, obs: false });
                                   setCurrentView('rehabilitation_detail');
                                 }}
-                                className="hover:bg-slate-50 transition-colors cursor-pointer"
+                                className="hover:bg-slate-50 transition-colors cursor-pointer group"
                               >
-                                <td className="px-6 py-4 text-xs font-medium text-slate-700">N.º {l.ficha.number}</td>
+                                <td className="px-6 py-4 text-xs font-bold text-blue-600 group-hover:underline">N.º {l.ficha.number}</td>
                                 <td className="px-6 py-4 text-xs font-black text-slate-900">{l.ficha.name}</td>
                                 <td className="px-6 py-4 text-xs font-medium text-slate-700">{l.p.requestedAt || '---'}</td>
                                 <td className="px-6 py-4 text-xs font-medium text-slate-700">{l.reg.natureza || '---'}</td>
@@ -3725,52 +4268,9 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Outras informacoes */}
-                <div className="bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-                  <button onClick={() => setRehabSec({ ...rehabSec, outras: !rehabSec.outras })} className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-all">
-                    <span className="text-xs font-black text-slate-900">Outras informações</span>
-                    {rehabSec.outras ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                  </button>
-                  {rehabSec.outras && (
-                    <div className="px-6 pb-6 pt-4 border-t-2 border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Moradas</p>
-                        {(selectedFicha.addresses || []).filter((a: any) => !a.validTo).length === 0 && <p className="text-xs text-slate-400">---</p>}
-                        {(selectedFicha.addresses || []).filter((a: any) => !a.validTo).map((a: any) => (
-                          <p key={a.id} className="text-xs font-medium text-slate-700">
-                            <span className="font-black">{a.type}:</span> {[a.locality, a.parish, a.council, a.island].filter(Boolean).join(', ')}
-                          </p>
-                        ))}
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contactos</p>
-                        {(selectedFicha.contacts || []).filter((c: any) => !c.validTo).length === 0 && <p className="text-xs text-slate-400">---</p>}
-                        {(selectedFicha.contacts || []).filter((c: any) => !c.validTo).map((c: any) => (
-                          <p key={c.id} className="text-xs font-medium text-slate-700"><span className="font-black">{c.type}:</span> {c.info}</p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Observacoes */}
-                <div className="bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-                  <button onClick={() => setRehabSec({ ...rehabSec, obs: !rehabSec.obs })} className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-all">
-                    <span className="text-xs font-black text-slate-900">Observações</span>
-                    {rehabSec.obs ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                  </button>
-                  {rehabSec.obs && (
-                    <div className="px-6 pb-6 pt-4 border-t-2 border-slate-100 space-y-3">
-                      {(selectedFicha.observations || []).length === 0 && <p className="text-xs text-slate-400">Nenhuma observação registada.</p>}
-                      {(selectedFicha.observations || []).map((o: any, idx: number) => (
-                        <div key={o.id || idx} className="bg-slate-50 border-2 border-slate-100 rounded-xl p-4 space-y-1">
-                          <p className="text-[10px] font-black text-slate-400">{o.author} · {dataPt(String(o.date).slice(0, 10))}</p>
-                          <p className="text-xs text-slate-700">{o.content}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {/* Outras informacoes e Observacoes: as mesmas da ficha, so leitura */}
+                {renderOutrasInformacoesFicha(true)}
+                {renderObservacoesFicha(true)}
 
                 {/* Acoes: so um pedido pendente se aceita ou recusa */}
                 <div className="flex items-center justify-between">
@@ -10708,486 +11208,7 @@ export default function App() {
                   </AnimatePresence>
                 </div>
 
-                {/* Accordion: Outras Informações */}
-                <div className="space-y-4">
-                  <div
-                    onClick={() => toggleSection('other_info')}
-                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-900 text-white rounded-lg"><Info size={18} /></div>
-                      <span className="uppercase tracking-widest text-xs">Outras Informações</span>
-                    </div>
-                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => { openAddInfoModal(); if (!expandedSections.other_info) toggleSection('other_info'); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-700 transition-all"
-                      >
-                        <Plus size={13} /> Adicionar
-                      </button>
-                      {expandedSections.other_info ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </div>
-                  </div>
-                  
-                  <AnimatePresence>
-                    {expandedSections.other_info && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-12">
-                          {/* Documento de Identificação */}
-                          <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento de Identificação</h4>
-                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
-                              <table className="w-full text-left border-collapse">
-                                <thead>
-                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                    <th className="px-6 py-4">Nº</th>
-                                    <th className="px-6 py-4">Tipo</th>
-                                    <th className="px-6 py-4">Número</th>
-                                    <th className="px-6 py-4">Emissão</th>
-                                    <th className="px-6 py-4">Validade</th>
-                                    <th className="px-6 py-4">Local Emissão</th>
-                                    <th className="px-6 py-4">Criado em</th>
-                                    <th className="px-6 py-4 text-right">Ação</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                  {selectedFicha.documents?.filter((d: any) => d.validTo === null).map((doc: any, idx: number) => (
-                                    <tr key={doc.id} className="hover:bg-slate-50 transition-colors">
-                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.type}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-900">{doc.number}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.issueDate}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.expiryDate}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.issueLocation || '---'}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{doc.validFrom}</td>
-                                      <td className="px-6 py-4 text-right">
-                                        {!doc.validTo && (
-                                          <button onClick={() => handleDeactivateOtherInfo('document', doc.id)} className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors">Desativar</button>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                            {selectedFicha.documents?.some((d: any) => d.validTo !== null) && (
-                              <div className="space-y-4">
-                                <button onClick={() => setShowOtherInfoHistory({...showOtherInfoHistory, document: !showOtherInfoHistory.document})} className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1">
-                                  {showOtherInfoHistory.document ? 'Ocultar Histórico' : 'Ver Histórico de Documentos'}
-                                  {showOtherInfoHistory.document ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                </button>
-                                <AnimatePresence>
-                                  {showOtherInfoHistory.document && (
-                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-2">
-                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
-                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
-                                        <table className="w-full text-left border-collapse">
-                                          <thead>
-                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
-                                              <th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Número</th><th className="px-4 py-3">Emissão</th><th className="px-4 py-3">Validade</th><th className="px-4 py-3">Criado por</th><th className="px-4 py-3">Desativado por</th><th className="px-4 py-3">Desativado em</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {selectedFicha.documents?.filter((d: any) => d.validTo !== null).map((doc: any) => (
-                                              <tr key={doc.id} className="border-b border-slate-100 opacity-60">
-                                                <td className="px-4 py-3 text-xs">{doc.type}</td><td className="px-4 py-3 text-xs">{doc.number}</td><td className="px-4 py-3 text-xs">{doc.issueDate}</td><td className="px-4 py-3 text-xs">{doc.expiryDate}</td><td className="px-4 py-3 text-xs font-medium">{doc.user}</td><td className="px-4 py-3 text-xs font-medium text-red-600">{doc.deactivatedBy || '---'}</td><td className="px-4 py-3 text-xs text-red-600 font-medium">{doc.validTo}</td>
-                                              </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Grupo */}
-                          <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Grupo</h4>
-
-                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
-                              <table className="w-full text-left border-collapse">
-                                <thead>
-                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                    <th className="px-6 py-4">Nº</th>
-                                    <th className="px-6 py-4">Sigla</th>
-                                    <th className="px-6 py-4">Nome</th>
-                                    <th className="px-6 py-4">Função</th>
-                                    <th className="px-6 py-4">Criado em</th>
-                                    <th className="px-6 py-4 text-right">Ação</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                  {(selectedFicha.groups || []).filter((g: any) => !g.validTo).map((grp: any, idx: number) => (
-                                    <tr key={grp.id} className="hover:bg-slate-50 transition-colors">
-                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
-                                      <td className="px-6 py-4">
-                                        <span className="px-2 py-0.5 bg-slate-900 text-white text-[10px] font-black rounded-md">{grp.sigla}</span>
-                                      </td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-900">{grp.nome}</td>
-                                      <td className="px-6 py-4 text-xs font-medium text-slate-600">{grp.funcao || '---'}</td>
-                                      <td className="px-6 py-4 text-xs font-medium text-slate-500">{grp.validFrom}</td>
-                                      <td className="px-6 py-4 text-right">
-                                        <button onClick={() => handleDeactivateOtherInfo('group', grp.id)} className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors">Desativar</button>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-
-                            {(selectedFicha.groups || []).some((g: any) => g.validTo) && (
-                              <div className="space-y-4">
-                                <button onClick={() => setShowOtherInfoHistory({ ...showOtherInfoHistory, group: !showOtherInfoHistory.group })} className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1">
-                                  {showOtherInfoHistory.group ? 'Ocultar Histórico' : 'Ver Histórico de Grupos'}
-                                  {showOtherInfoHistory.group ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                </button>
-                                <AnimatePresence>
-                                  {showOtherInfoHistory.group && (
-                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-2">
-                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
-                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
-                                        <table className="w-full text-left border-collapse">
-                                          <thead>
-                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
-                                              <th className="px-4 py-3">Sigla</th>
-                                              <th className="px-4 py-3">Nome</th>
-                                              <th className="px-4 py-3">Função</th>
-                                              <th className="px-4 py-3">Criado por</th>
-                                              <th className="px-4 py-3">Desativado por</th>
-                                              <th className="px-4 py-3">Desativado em</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {(selectedFicha.groups || []).filter((g: any) => g.validTo).map((grp: any) => (
-                                              <tr key={grp.id} className="border-b border-slate-100 opacity-60">
-                                                <td className="px-4 py-3 text-xs font-black">{grp.sigla}</td>
-                                                <td className="px-4 py-3 text-xs">{grp.nome}</td>
-                                                <td className="px-4 py-3 text-xs">{grp.funcao || '---'}</td>
-                                                <td className="px-4 py-3 text-xs font-medium">{grp.user}</td>
-                                                <td className="px-4 py-3 text-xs font-medium text-red-600">{grp.deactivatedBy || '---'}</td>
-                                                <td className="px-4 py-3 text-xs text-red-600 font-medium">{grp.validTo}</td>
-                                              </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Endereço */}
-                          <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Endereço</h4>
-
-                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
-                              <table className="w-full text-left border-collapse">
-                                <thead>
-                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                    <th className="px-6 py-4">N º</th>
-                                    <th className="px-6 py-4">Tipo</th>
-                                    <th className="px-6 py-4">Ilha</th>
-                                    <th className="px-6 py-4">Localidade</th>
-                                    <th className="px-6 py-4">Criado em</th>
-                                    <th className="px-6 py-4 text-right">Ação</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                  {selectedFicha.addresses?.filter((a: any) => a.validTo === null).map((addr: any, idx: number) => (
-                                    <tr key={addr.id} className="hover:bg-slate-50 transition-colors group">
-                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.type}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.island}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.locality}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.validFrom}</td>
-                                      <td className="px-6 py-4 text-right flex justify-end gap-3">
-                                        <button 
-                                          onClick={() => {
-                                            setSelectedAddressDetails(addr);
-                                            setShowAddressDetailsModal(true);
-                                          }}
-                                          className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all"
-                                        >
-                                          <Search size={16} />
-                                        </button>
-                                        {!addr.validTo && (
-                                          <button 
-                                            onClick={() => handleDeactivateOtherInfo('address', addr.id)}
-                                            className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors"
-                                          >
-                                            Desativar
-                                          </button>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-
-                            {/* Address History */}
-                            {selectedFicha.addresses?.some((a: any) => a.validTo !== null) && (
-                              <div className="space-y-4">
-                                <button 
-                                  onClick={() => setShowOtherInfoHistory({...showOtherInfoHistory, address: !showOtherInfoHistory.address})}
-                                  className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
-                                >
-                                  {showOtherInfoHistory.address ? 'Ocultar Histórico' : 'Ver Histórico de Endereços'}
-                                  {showOtherInfoHistory.address ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                </button>
-
-                                <AnimatePresence>
-                                  {showOtherInfoHistory.address && (
-                                    <motion.div 
-                                      initial={{ height: 0, opacity: 0 }}
-                                      animate={{ height: 'auto', opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
-                                      className="overflow-hidden space-y-2"
-                                    >
-                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
-                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
-                                        <table className="w-full text-left border-collapse">
-                                          <thead>
-                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
-                                              <th className="px-4 py-3">Tipo</th>
-                                              <th className="px-4 py-3">Ilha</th>
-                                              <th className="px-4 py-3">Localidade</th>
-                                              <th className="px-4 py-3">Criado por</th>
-                                              <th className="px-4 py-3">Desativado por</th>
-                                              <th className="px-4 py-3">Criado em</th>
-                                              <th className="px-4 py-3">Desativado em</th>
-                                              <th className="px-4 py-3 text-right">Ação</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {selectedFicha.addresses?.filter((a: any) => a.validTo !== null).map((addr: any) => (
-                                              <tr key={addr.id} className="border-b border-slate-100 opacity-60 hover:opacity-100 transition-opacity">
-                                                <td className="px-4 py-3 text-xs">{addr.type}</td>
-                                                <td className="px-4 py-3 text-xs">{addr.island}</td>
-                                                <td className="px-4 py-3 text-xs">{addr.locality}</td>
-                                                <td className="px-4 py-3 text-xs font-medium">{addr.user}</td>
-                                                <td className="px-4 py-3 text-xs font-medium text-red-600">{addr.deactivatedBy || '---'}</td>
-                                                <td className="px-4 py-3 text-xs">{addr.validFrom}</td>
-                                                <td className="px-4 py-3 text-xs text-red-600 font-medium">{addr.validTo}</td>
-                                                <td className="px-4 py-3 text-right">
-                                                  <button 
-                                                    onClick={() => {
-                                                      setSelectedAddressDetails(addr);
-                                                      setShowAddressDetailsModal(true);
-                                                    }}
-                                                    className="text-blue-600 hover:bg-blue-50 p-1 rounded border border-blue-200"
-                                                  >
-                                                    <Search size={14} />
-                                                  </button>
-                                                </td>
-                                              </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Contactos */}
-                          <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Contactos</h4>
-
-                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
-                              <table className="w-full text-left border-collapse">
-                                <thead>
-                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                    <th className="px-6 py-4">N º</th>
-                                    <th className="px-6 py-4">Utilizador</th>
-                                    <th className="px-6 py-4">Tipo</th>
-                                    <th className="px-6 py-4">Informação</th>
-                                    <th className="px-6 py-4">Criado em</th>
-                                    <th className="px-6 py-4 text-right">Ação</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                  {selectedFicha.contacts?.filter((c: any) => c.validTo === null).map((contact: any, idx: number) => (
-                                    <tr key={contact.id} className="hover:bg-slate-50 transition-colors group">
-                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{contact.user}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{contact.type}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{contact.info}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{contact.validFrom}</td>
-                                      <td className="px-6 py-4 text-right">
-                                        {!contact.validTo && (
-                                          <button 
-                                            onClick={() => handleDeactivateOtherInfo('contact', contact.id)}
-                                            className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors"
-                                          >
-                                            Desativar
-                                          </button>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-
-                            {/* Contact History */}
-                            {selectedFicha.contacts?.some((c: any) => c.validTo !== null) && (
-                              <div className="space-y-4">
-                                <button 
-                                  onClick={() => setShowOtherInfoHistory({...showOtherInfoHistory, contact: !showOtherInfoHistory.contact})}
-                                  className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
-                                >
-                                  {showOtherInfoHistory.contact ? 'Ocultar Histórico' : 'Ver Histórico de Contactos'}
-                                  {showOtherInfoHistory.contact ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                </button>
-
-                                <AnimatePresence>
-                                  {showOtherInfoHistory.contact && (
-                                    <motion.div 
-                                      initial={{ height: 0, opacity: 0 }}
-                                      animate={{ height: 'auto', opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
-                                      className="overflow-hidden space-y-2"
-                                    >
-                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
-                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
-                                        <table className="w-full text-left border-collapse">
-                                          <thead>
-                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
-                                              <th className="px-4 py-3">Tipo</th>
-                                              <th className="px-4 py-3">Informação</th>
-                                              <th className="px-4 py-3">Criado por</th>
-                                              <th className="px-4 py-3">Desativado por</th>
-                                              <th className="px-4 py-3">Criado em</th>
-                                              <th className="px-4 py-3">Desativado em</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {selectedFicha.contacts?.filter((c: any) => c.validTo !== null).map((contact: any) => (
-                                              <tr key={contact.id} className="border-b border-slate-100 opacity-60">
-                                                <td className="px-4 py-3 text-xs">{contact.type}</td>
-                                                <td className="px-4 py-3 text-xs">{contact.info}</td>
-                                                <td className="px-4 py-3 text-xs font-medium">{contact.user}</td>
-                                                <td className="px-4 py-3 text-xs font-medium text-red-600">{contact.deactivatedBy || '---'}</td>
-                                                <td className="px-4 py-3 text-xs">{contact.validFrom}</td>
-                                                <td className="px-4 py-3 text-xs text-red-600 font-medium">{contact.validTo}</td>
-                                              </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Alcunhas */}
-                          <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Alcunhas</h4>
-
-                            <div className="overflow-x-auto border-2 border-slate-50 rounded-2xl">
-                              <table className="w-full text-left border-collapse">
-                                <thead>
-                                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                    <th className="px-6 py-4">N º</th>
-                                    <th className="px-6 py-4">Utilizador</th>
-                                    <th className="px-6 py-4">Alcunha</th>
-                                    <th className="px-6 py-4">Criado em</th>
-                                    <th className="px-6 py-4 text-right">Ação</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                  {selectedFicha.nicknames?.filter((n: any) => n.validTo === null).map((nick: any, idx: number) => (
-                                    <tr key={nick.id} className="hover:bg-slate-50 transition-colors group">
-                                      <td className="px-6 py-4 text-xs font-black text-slate-900">{(idx + 1).toString().padStart(2, '0')}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{nick.user}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{nick.value}</td>
-                                      <td className="px-6 py-4 text-xs font-bold text-slate-600">{nick.validFrom}</td>
-                                      <td className="px-6 py-4 text-right">
-                                        {!nick.validTo && (
-                                          <button 
-                                            onClick={() => handleDeactivateOtherInfo('nickname', nick.id)}
-                                            className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors"
-                                          >
-                                            Desativar
-                                          </button>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-
-                            {/* Nickname History */}
-                            {selectedFicha.nicknames?.some((n: any) => n.validTo !== null) && (
-                              <div className="space-y-4">
-                                <button 
-                                  onClick={() => setShowOtherInfoHistory({...showOtherInfoHistory, nickname: !showOtherInfoHistory.nickname})}
-                                  className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
-                                >
-                                  {showOtherInfoHistory.nickname ? 'Ocultar Histórico' : 'Ver Histórico de Alcunhas'}
-                                  {showOtherInfoHistory.nickname ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                </button>
-
-                                <AnimatePresence>
-                                  {showOtherInfoHistory.nickname && (
-                                    <motion.div 
-                                      initial={{ height: 0, opacity: 0 }}
-                                      animate={{ height: 'auto', opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
-                                      className="overflow-hidden space-y-2"
-                                    >
-                                      <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registos Históricos</h5>
-                                      <div className="overflow-x-auto border border-slate-200 rounded-lg bg-slate-50/50">
-                                        <table className="w-full text-left border-collapse">
-                                          <thead>
-                                            <tr className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
-                                              <th className="px-4 py-3">Alcunha</th>
-                                              <th className="px-4 py-3">Criado por</th>
-                                              <th className="px-4 py-3">Desativado por</th>
-                                              <th className="px-4 py-3">Criado em</th>
-                                              <th className="px-4 py-3">Desativado em</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {selectedFicha.nicknames?.filter((n: any) => n.validTo !== null).map((nick: any) => (
-                                              <tr key={nick.id} className="border-b border-slate-100 opacity-60">
-                                                <td className="px-4 py-3 text-xs">{nick.value}</td>
-                                                <td className="px-4 py-3 text-xs font-medium">{nick.user}</td>
-                                                <td className="px-4 py-3 text-xs font-medium text-red-600">{nick.deactivatedBy || '---'}</td>
-                                                <td className="px-4 py-3 text-xs">{nick.validFrom}</td>
-                                                <td className="px-4 py-3 text-xs text-red-600 font-medium">{nick.validTo}</td>
-                                              </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                {renderOutrasInformacoesFicha()}
 
                 {/* Accordion: Motivo de Cadastro */}
                 <div className="space-y-4">
@@ -11381,21 +11402,6 @@ export default function App() {
                                                 >
                                                   <Eye size={14} />
                                                 </button>
-                                                {/* So o pedido pendente se edita; aceites e recusados ja foram decididos */}
-                                                <button
-                                                  disabled={p.estado !== 'Pendente'}
-                                                  onClick={() => {
-                                                    setSelectedReasonForRehab(reg);
-                                                    setRehabilitationReason(p.reason || '');
-                                                    setRehabilitationAttachments((p.attachments || []) as any);
-                                                    setEditandoPedidoReab(true);
-                                                    setShowRehabilitationModal(true);
-                                                  }}
-                                                  className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed"
-                                                  title={p.estado === 'Pendente' ? 'Editar solicitação' : 'Pedido já decidido'}
-                                                >
-                                                  <Edit size={14} />
-                                                </button>
                                               </td>
                                             </tr>
                                           ))}
@@ -11523,55 +11529,7 @@ export default function App() {
                   </AnimatePresence>
                 </div>
 
-                {/* Accordion: Observações */}
-                <div className="space-y-4">
-                  <button 
-                    onClick={() => toggleSection('observations')}
-                    className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-900 text-white rounded-lg"><MessageSquare size={18} /></div>
-                      <span className="uppercase tracking-widest text-xs">Observações</span>
-                    </div>
-                    {expandedSections.observations ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                  </button>
-                  
-                  <AnimatePresence>
-                    {expandedSections.observations && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6">
-                          <div className="flex justify-end">
-                            <Button variant="outline" icon={Plus} onClick={() => { setEditingObs(null); setObsContent(''); setShowObsModal(true); }}>Nova Observação</Button>
-                          </div>
-                          {(selectedFicha.observations || []).length === 0 && (
-                            <p className="text-center text-xs font-bold text-slate-400 py-6">Nenhuma observação registada.</p>
-                          )}
-                          {(selectedFicha.observations || []).map((o: any, i: number) => (
-                            <div key={o.id || i} className="p-6 bg-slate-50 rounded-2xl border-2 border-slate-50 space-y-4">
-                              <div className="flex items-start gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black text-lg shadow-lg">
-                                  {(o.author || '?').charAt(0).toUpperCase()}
-                                </div>
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex items-center gap-3">
-                                    <p className="font-black text-slate-900 text-xs uppercase tracking-widest">{o.author}</p>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{dataPt(String(o.date || '').slice(0, 10))}</span>
-                                  </div>
-                                  <p className="text-sm text-slate-600 leading-relaxed font-medium italic">"{o.content}"</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                {renderObservacoesFicha()}
 
                 {/* Accordion: Anexos */}
                 <div className="space-y-4">
@@ -14846,83 +14804,107 @@ export default function App() {
 
               {/* Body */}
               <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
-                {/* Meta */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitado em</p>
-                    <p className="text-sm font-black text-slate-900">{selectedReasonForRehab.rehabilitationDetails?.requestedAt || '---'}</p>
-                  </div>
-                  <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitado por</p>
-                    <p className="text-sm font-black text-slate-900">{selectedReasonForRehab.rehabilitationDetails?.requestedBy || '---'}</p>
-                  </div>
-                </div>
-
-                {/* Accepted info (if Reabilitado) */}
-                {selectedReasonForRehab.rehabilitationDetails?.acceptedAt && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-emerald-50 rounded-xl p-4 border-2 border-emerald-100 space-y-1">
-                      <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Aceite em</p>
-                      <p className="text-sm font-black text-emerald-700">{selectedReasonForRehab.rehabilitationDetails.acceptedAt}</p>
-                    </div>
-                    <div className="bg-emerald-50 rounded-xl p-4 border-2 border-emerald-100 space-y-1">
-                      <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Aceite por</p>
-                      <p className="text-sm font-black text-emerald-700">{selectedReasonForRehab.rehabilitationDetails.acceptedBy}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Recusa (se Recusado) */}
-                {recusaDe(selectedReasonForRehab) && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recusado em</p>
-                        <p className="text-sm font-black text-slate-900">{recusaDe(selectedReasonForRehab)?.rejectedAt || '---'}</p>
-                      </div>
-                      <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recusado por</p>
-                        <p className="text-sm font-black text-slate-900">{recusaDe(selectedReasonForRehab)?.rejectedBy || '---'}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo da Recusa</p>
-                      <div className="bg-slate-50 border-2 border-slate-100 border-l-4 border-l-red-400 rounded-xl p-4 text-sm text-slate-700 leading-relaxed font-medium">
-                        {recusaDe(selectedReasonForRehab)?.reason || '---'}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Motivo */}
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo da Solicitação</p>
-                  <div className="bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm text-slate-700 leading-relaxed font-medium">
-                    {selectedReasonForRehab.rehabilitationDetails?.reason || '---'}
-                  </div>
-                </div>
-
-                {/* Anexos */}
-                {selectedReasonForRehab.rehabilitationDetails?.attachments?.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Anexos ({selectedReasonForRehab.rehabilitationDetails.attachments.length})
-                    </p>
-                    <div className="space-y-2">
-                      {selectedReasonForRehab.rehabilitationDetails.attachments.map((file: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl group hover:border-slate-200 transition-all">
-                          <div className="flex items-center gap-3">
-                            <Paperclip size={14} className="text-slate-400" />
-                            <span className="text-xs font-bold text-slate-700">{file.name}</span>
-                          </div>
-                          <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar">
-                            <Eye size={15} />
-                          </button>
+                {(() => {
+                  const d = selectedReasonForRehab.rehabilitationDetails || {};
+                  const rec = recusaDe(selectedReasonForRehab);
+                  const estado = rec ? 'Recusado' : d.acceptedAt || selectedReasonForRehab.status === 'Reabilitado' ? 'Reabilitado' : 'Pendente';
+                  const corEstado = estado === 'Recusado' ? 'bg-red-50 text-red-600 border-red-200' : estado === 'Reabilitado' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200';
+                  const decididoEm = rec ? rec.rejectedAt : d.acceptedAt;
+                  const decididoPor = rec ? rec.rejectedBy : d.acceptedBy;
+                  const anexos = d.attachments || [];
+                  return (
+                    <>
+                      {/* Estado e pedido */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-2">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</p>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${corEstado}`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                            {estado}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                        <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitado em</p>
+                          <p className="text-sm font-black text-slate-900">{d.requestedAt || '---'}</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitado por</p>
+                          <p className="text-sm font-black text-slate-900">{d.requestedBy || '---'}</p>
+                        </div>
+                      </div>
+
+                      {/* Decisao (so num pedido ja decidido) */}
+                      {estado !== 'Pendente' && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Decidido em</p>
+                            <p className="text-sm font-black text-slate-900">{decididoEm || '---'}</p>
+                          </div>
+                          <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-100 space-y-1">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Decidido por</p>
+                            <p className="text-sm font-black text-slate-900">{decididoPor || '---'}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Motivo da solicitacao */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b-2 border-slate-100 pb-2">Motivo da Solicitação</p>
+                        <div className="bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm text-slate-700 leading-relaxed font-medium">
+                          {d.reason || '---'}
+                        </div>
+                      </div>
+
+                      {/* Motivo da recusa */}
+                      {rec && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b-2 border-slate-100 pb-2">Motivo da Recusa</p>
+                          <div className="bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm text-slate-700 leading-relaxed font-medium">
+                            {rec.reason || '---'}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Anexos */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b-2 border-slate-100 pb-2">Anexos</p>
+                        {anexos.length === 0 ? (
+                          <p className="text-xs text-slate-400">Nenhum anexo.</p>
+                        ) : (
+                          <div className="bg-slate-50 border-2 border-slate-100 rounded-xl divide-y-2 divide-slate-100">
+                            {anexos.map((file: any, idx: number) => (
+                              <div key={idx} className="flex items-center justify-between px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                  <FileText size={16} className="text-slate-400" />
+                                  <span className="text-xs font-bold text-slate-900">{file.name}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Visualizar">
+                                    <Eye size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      // Os anexos carregados nesta sessao sao File; descarrega o proprio ficheiro
+                                      if (!(file instanceof Blob)) return;
+                                      const url = URL.createObjectURL(file);
+                                      const a = document.createElement('a');
+                                      a.href = url; a.download = file.name; a.click();
+                                      URL.revokeObjectURL(url);
+                                    }}
+                                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                    title="Download"
+                                  >
+                                    <Download size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
 
                 {/* Historico de pedidos anteriores (recusados) — mesmo padrao dos historicos da ficha */}
                 {(selectedReasonForRehab.historicoReabilitacao || []).length > 0 && (
