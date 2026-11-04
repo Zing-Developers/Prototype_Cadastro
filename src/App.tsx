@@ -2925,7 +2925,7 @@ export default function App() {
                                       <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.locality}</td>
                                       <td className="px-6 py-4 text-xs font-bold text-slate-600">{addr.validFrom}</td>
                                       <td className="px-6 py-4 text-right flex justify-end gap-3">
-                                        <button 
+                                        {!soLeitura && (<button 
                                           onClick={() => {
                                             setSelectedAddressDetails(addr);
                                             setShowAddressDetailsModal(true);
@@ -2933,7 +2933,7 @@ export default function App() {
                                           className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all"
                                         >
                                           <Search size={16} />
-                                        </button>
+                                        </button>)}
                                         {!soLeitura && !addr.validTo && (
                                           <button 
                                             onClick={() => handleDeactivateOtherInfo('address', addr.id)}
@@ -2994,7 +2994,7 @@ export default function App() {
                                                 <td className="px-4 py-3 text-xs">{addr.validFrom}</td>
                                                 <td className="px-4 py-3 text-xs text-red-600 font-medium">{addr.validTo}</td>
                                                 <td className="px-4 py-3 text-right">
-                                                  <button 
+                                                  {!soLeitura && (<button 
                                                     onClick={() => {
                                                       setSelectedAddressDetails(addr);
                                                       setShowAddressDetailsModal(true);
@@ -3002,7 +3002,7 @@ export default function App() {
                                                     className="text-blue-600 hover:bg-blue-50 p-1 rounded border border-blue-200"
                                                   >
                                                     <Search size={14} />
-                                                  </button>
+                                                  </button>)}
                                                 </td>
                                               </tr>
                                             ))}
