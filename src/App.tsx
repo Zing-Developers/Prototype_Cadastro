@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   User, 
   FileText, 
+  XCircle,
   Search, 
   ShieldCheck, 
   ClipboardList, 
@@ -1756,6 +1757,9 @@ export default function App() {
       birthDate: '27/06/1997',
       requestDate: '19/02/2025',
       status: 'Devolvido',
+      returnedAt: '21/02/2025',
+      returnedBy: 'Carlos Mascarenha',
+      returnReason: 'A identidade do requerente não corresponde ao cadastro associado. Rever o vínculo.',
       biographic: {
         fullName: 'Manuel Sousa',
         birthDate: '1997-06-27',
@@ -6988,6 +6992,22 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-8 pb-12"
               >
+                {/* Pedido devolvido pela decisao: aviso no topo */}
+                {(selectedAnalysisCertificate.status === 'Devolvido' || selectedAnalysisCertificate.returnReason) && (
+                  <div className="flex items-start gap-3 bg-red-50 border-2 border-red-200 rounded-2xl px-5 py-4">
+                    <XCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-black text-red-700">Pedido devolvido para nova análise</p>
+                      <p className="text-xs font-medium text-red-600">
+                        O processo foi devolvido para a etapa de análise{selectedAnalysisCertificate.returnedAt ? ` em ${selectedAnalysisCertificate.returnedAt}` : ''}{selectedAnalysisCertificate.returnedBy ? ` por ${selectedAnalysisCertificate.returnedBy}` : ''}. Foram identificadas informações que necessitam de revisão antes de o processo seguir para decisão.
+                      </p>
+                      {selectedAnalysisCertificate.returnReason && (
+                        <p className="text-xs text-red-700"><span className="font-black">Motivo:</span> {selectedAnalysisCertificate.returnReason}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Sugestão de Vínculo ou Cadastro Associado */}
                 <AnimatePresence mode="wait">
                   {associatedPerson ? (
@@ -7106,7 +7126,6 @@ export default function App() {
                                           <th className="px-6 py-4">Data</th>
                                           <th className="px-6 py-4">Motivo</th>
                                           <th className="px-6 py-4">Nº SIG</th>
-                                          <th className="px-6 py-4">Destino</th>
                                           <th className="px-6 py-4">Medidas</th>
                                           <th className="px-6 py-4">Tipo</th>
                                         </tr>
@@ -7117,7 +7136,6 @@ export default function App() {
                                             <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.date}</td>
                                             <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.reason}</td>
                                             <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.refNo}</td>
-                                            <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.destination}</td>
                                             <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.measures}</td>
                                             <td className="px-6 py-4 text-xs">
                                               <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${reg.type === 'Criminal' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
@@ -7128,7 +7146,7 @@ export default function App() {
                                         ))}
                                         {(associatedPerson.registrationReasons || []).filter((reg: any) => reg.status === 'Ativo' || reg.status === 'Aguardando Reabilitação').length === 0 && (
                                           <tr>
-                                            <td colSpan={6} className="px-6 py-8 text-center text-slate-400 italic text-xs">Nenhum motivo ativo ou aguardando reabilitação.</td>
+                                            <td colSpan={5} className="px-6 py-8 text-center text-slate-400 italic text-xs">Nenhum motivo ativo ou aguardando reabilitação.</td>
                                           </tr>
                                         )}
                                       </tbody>
@@ -7255,27 +7273,6 @@ export default function App() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-
-                {/* Devolução Warning Banner */}
-                {selectedAnalysisCertificate.returnReason && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-start gap-4 bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 shadow-sm"
-                  >
-                    <div className="p-2 bg-amber-100 rounded-xl flex-shrink-0">
-                      <AlertTriangle size={20} className="text-amber-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-amber-900 leading-relaxed">
-                        <span className="font-black">Motivo Devolução:</span> {selectedAnalysisCertificate.returnReason}
-                      </p>
-                      <p className="text-[10px] text-amber-500 font-black uppercase tracking-wider mt-2">
-                        {selectedAnalysisCertificate.returnedAt} · {selectedAnalysisCertificate.returnedBy}
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
 
                 {/* Dados Biográficos Accordion */}
                 <div className="space-y-2">
@@ -7781,7 +7778,6 @@ export default function App() {
                                         <th className="px-6 py-4">Data</th>
                                         <th className="px-6 py-4">Motivo</th>
                                         <th className="px-6 py-4">Nº SIG</th>
-                                        <th className="px-6 py-4">Destino</th>
                                         <th className="px-6 py-4">Medidas</th>
                                         <th className="px-6 py-4">Tipo</th>
                                         <th className="px-6 py-4">Estado</th>
@@ -7793,7 +7789,6 @@ export default function App() {
                                           <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.date}</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.reason}</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.refNo}</td>
-                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.destination}</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.measures}</td>
                                           <td className="px-6 py-4 text-xs">
                                             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${reg.type === 'Criminal' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>{reg.type}</span>
@@ -8300,7 +8295,6 @@ export default function App() {
                                         <th className="px-6 py-4">Data</th>
                                         <th className="px-6 py-4">Motivo</th>
                                         <th className="px-6 py-4">Nº SIG</th>
-                                        <th className="px-6 py-4">Destino</th>
                                         <th className="px-6 py-4">Medidas</th>
                                         <th className="px-6 py-4">Tipo</th>
                                         <th className="px-6 py-4">Estado</th>
@@ -8312,7 +8306,6 @@ export default function App() {
                                           <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.date}</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.reason}</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.refNo}</td>
-                                          <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.destination}</td>
                                           <td className="px-6 py-4 text-xs font-bold text-slate-600">{reg.measures}</td>
                                           <td className="px-6 py-4 text-xs">
                                             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${reg.type === 'Criminal' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>{reg.type}</span>
@@ -15827,9 +15820,6 @@ export default function App() {
                                 {r.refNo && r.refNo !== '---' && <span>Ref: <span className="font-bold text-slate-700">{r.refNo}</span></span>}
                                 <span>Estado: <span className="font-bold text-slate-700">{r.status}</span></span>
                               </div>
-                              {r.destination && r.destination !== '---' && (
-                                <p className="text-[10px] text-slate-500">Destino: <span className="font-bold text-slate-700">{r.destination}</span></p>
-                              )}
                             </div>
                           ))}
                       </div>
