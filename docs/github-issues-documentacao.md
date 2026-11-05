@@ -95,7 +95,7 @@ Ao clicar num pedido da lista abre-se a página "Solicitação de Reabilitação
 - **Reabilitar** — altera o estado do registo de cadastro para `Reabilitado`;
 - **Recusar** — regista a recusa com motivo, data e utilizador. Depois de uma recusa pode ser feito um novo pedido de imediato.
 
-Na ficha, o cartão de cada motivo de cadastro mostra a tabela "Reabilitações" com todos os pedidos de reabilitação desse motivo (pendentes, aceites e recusados): data e utilizador do pedido, estado, data e utilizador da decisão e motivo da recusa. Cada pedido pode ser visualizado a partir da tabela. O pedido pendente pode ser editado (motivo da solicitação e anexos); os pedidos aceites ou recusados já não se editam.
+Na ficha, o cartão de cada motivo de cadastro mostra a tabela "Reabilitações" com todos os pedidos de reabilitação desse motivo (pendentes, aceites e recusados): data e utilizador do pedido, estado, data e utilizador da decisão e motivo da recusa. Cada pedido pode ser visualizado a partir da tabela; os pedidos de reabilitação não se editam.
 
 **Âmbito da documentação:** estados do processo (Aguardando / Reabilitado / Recusado), regras de elegibilidade, fluxo de submissão e aprovação/rejeição, modais de confirmação, notificações e permissões por perfil.
 
