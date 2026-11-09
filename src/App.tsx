@@ -310,7 +310,7 @@ export default function App() {
   const [fichas, setFichas] = useState<any[]>([
     {
       id: 1,
-      number: 'FICAD-102/N-PR/2026',
+      number: 'FICAD-0102/N/2026',
       name: 'Bruno Fonseca',
       birthDate: '1998-04-29',
       gender: 'Masculino',
@@ -1216,12 +1216,10 @@ export default function App() {
     const temDuc = Boolean(paymentData.entidade);
     const registo: any = {
       id: certificateEditingId || (() => {
-        const seqAtual = Math.max(100, ...mockCertificates.map((c: any) => {
-          const m = /FICAD-(\d+)/.exec(c.id || '');
-          return m ? parseInt(m[1], 10) : 0;
-        }));
-        const codigoConcelho = (certificateData.county || 'Praia').slice(0, 2).toUpperCase();
-        return `FICAD-${seqAtual + 1}/N-${codigoConcelho}/${new Date().getFullYear()}`;
+        // Numero do pedido: sequencial de 6 digitos, unico em todas as fases
+        const todos = [...mockCertificates, ...mockAnalysisCertificates, ...mockDecisionCertificates, ...mockConcludedCertificates];
+        const seqAtual = Math.max(0, ...todos.map((c: any) => (/^\d+$/.test(c.id || '') ? parseInt(c.id, 10) : 0)));
+        return String(seqAtual + 1).padStart(6, '0');
       })(),
       docType: certificateData.docType,
       docNumber: certificateData.docNumber,
@@ -1397,15 +1395,15 @@ export default function App() {
 
   const [mockCertificates, setMockCertificates] = useState<any[]>([
     {
-      id: 'FICAD-102/N-PR/2026',
+      id: '000003',
       docType: 'CNI',
-      docNumber: 'PRE-1000/N/2026',
+      docNumber: '001234567LA041',
       name: 'Bruno Fonseca',
       birthDate: '29/04/1998',
       nationality: 'Cabo-verdiana',
       gender: 'Masculino',
       civilStatus: 'Solteiro(a)',
-      birthPlace: 'Praia',
+      birthPlace: 'Cabo Verde',
       fatherName: 'António Fonseca',
       motherName: 'Maria Fonseca',
       nif: '123456789',
@@ -1447,6 +1445,125 @@ export default function App() {
   const [analysisSearchFilters, setAnalysisSearchFilters] = useState(emptyAnalysisFilters());
   const [analysisSearchResults, setAnalysisSearchResults] = useState<any[] | null>(null);
   const [showAnalysisAdvancedFilters, setShowAnalysisAdvancedFilters] = useState(false);
+  const [decisionSearchFilters, setDecisionSearchFilters] = useState(emptyAnalysisFilters());
+  const [decisionSearchResults, setDecisionSearchResults] = useState<any[] | null>(null);
+  const [showDecisionAdvancedFilters, setShowDecisionAdvancedFilters] = useState(false);
+  const [historySearchFilters, setHistorySearchFilters] = useState({ ...emptyAnalysisFilters(), estado: '' });
+  const [historySearchResults, setHistorySearchResults] = useState<any[] | null>(null);
+  const [showHistoryAdvancedFilters, setShowHistoryAdvancedFilters] = useState(false);
+  // Filtra pedidos de certificado (usado na Analise e na Decisao)
+  const filtrarPedidosCertificado = (lista: any[], f: ReturnType<typeof emptyAnalysisFilters>) => {
+    const mesmaData = (valor: string, filtro: string) => {
+      if (!filtro) return true;
+      if (!valor) return false;
+      const iso = valor.includes('/') ? valor.split('/').reverse().join('-') : valor;
+      return iso === filtro;
+    };
+    return lista.filter((cert: any) => {
+      const b = cert.biographic || {};
+      const a = cert.address || {};
+      if (f.orderNumber && !(cert.id || '').toLowerCase().includes(f.orderNumber.toLowerCase())) return false;
+      if (f.name && !(cert.name || '').toLowerCase().includes(f.name.toLowerCase())) return false;
+      if (!mesmaData(cert.birthDate, f.birthDate)) return false;
+      if (!mesmaData(cert.requestDate, f.requestDate)) return false;
+      if (f.docType && b.docType !== f.docType) return false;
+      if (f.docNumber && !(b.docNumber || '').toLowerCase().includes(f.docNumber.toLowerCase())) return false;
+      if (f.nationality && b.nationality !== f.nationality) return false;
+      if (f.island && a.island !== f.island) return false;
+      if (f.county && a.council !== f.county) return false;
+      if (f.parish && a.parish !== f.parish) return false;
+      if (f.locality && a.locality !== f.locality) return false;
+      if (f.zone && a.zone !== f.zone) return false;
+      return true;
+    });
+  };
+  const abrirHistorico = (cert: any) => {
+    setSelectedHistoryCertificate(cert);
+    setAssociatedPerson(cert.associatedPerson || null);
+    setCurrentView('certificate_history_detail');
+  };
+  // Numero do certificado: so existe depois de emitido; sequencial dentro do ano (ex.: 5387/2026)
+  const proximoNumeroCertificado = () => {
+    const ano = new Date().getFullYear();
+    const doAno = mockConcludedCertificates
+      .map((c: any) => /^(\d+)\/(\d{4})$/.exec(c.certificateNumber || ''))
+      .filter((m: any) => m && Number(m[2]) === ano)
+      .map((m: any) => Number(m[1]));
+    return `${Math.max(5386, ...doAno) + 1}/${ano}`;
+  };
+  // Certificado emitido: abre o documento numa janela nova e pede a impressao (o operador guarda em PDF)
+  const descarregarCertificado = (cert: any) => {
+    const b = cert.biographic || {};
+    const motivos = (cert.associatedPerson?.registrationReasons || []).filter((r: any) => r.status === 'Ativo' || r.status === 'Aguardando Reabilitação');
+    const esc = (v: any) => String(v ?? '---').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as any)[ch]);
+    const linha = (rot: string, val: any) => `<tr><th>${rot}</th><td>${esc(val)}</td></tr>`;
+    const conteudo = motivos.length === 0
+      ? '<p class="res">Nada consta no registo de cadastro em nome do requerente.</p>'
+      : `<p class="res">Consta(m) ${motivos.length} registo(s) de cadastro em nome do requerente:</p>
+         <table class="mot"><tr><th>Data</th><th>Tipo</th><th>Natureza</th><th>Medida</th></tr>
+         ${motivos.map((r: any) => `<tr><td>${esc(r.date)}</td><td>${esc(r.type)}</td><td>${esc(r.natureza)}</td><td>${esc(r.measures)}</td></tr>`).join('')}</table>`;
+    const html = `<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>modelo-certificado-${esc(cert.id)}</title>
+      <style>
+        body { font-family: Arial, sans-serif; color: #0f172a; margin: 48px; }
+        h1 { text-align: center; font-size: 20px; letter-spacing: 2px; margin: 0; }
+        .sub { text-align: center; font-size: 12px; color: #475569; margin: 4px 0 32px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
+        .dados th { width: 35%; color: #475569; font-weight: normal; }
+        .mot th { background: #f1f5f9; }
+        .res { font-size: 14px; font-weight: bold; margin: 28px 0 12px; }
+        .rod { margin-top: 64px; font-size: 12px; color: #475569; display: flex; justify-content: space-between; }
+        .ass { border-top: 1px solid #0f172a; padding-top: 4px; width: 240px; text-align: center; }
+      </style></head><body>
+      <h1>CERTIFICADO DE CADASTRO</h1>
+      <p class="sub">CECAP n.º ${esc(cert.certificateNumber || 'por atribuir')}</p>
+      <table class="dados">
+        ${linha('Nome', b.fullName || cert.name)}
+        ${linha('Data de Nascimento', cert.birthDate)}
+        ${linha('Filiação', [b.fatherName, b.motherName].filter(Boolean).join(' e ') || '---')}
+        ${linha('Naturalidade', b.birthPlace)}
+        ${linha('Nacionalidade', b.nationality)}
+        ${linha('Documento', [b.docType, b.docNumber].filter(Boolean).join(' N.º ') || '---')}
+        ${linha('NIF', b.nif)}
+        ${linha('Finalidade', cert.reason)}
+        ${linha('Cadastro N.º', cert.associatedPerson?.number || 'Sem cadastro associado')}
+      </table>
+      ${conteudo}
+      <div class="rod"><span>Emitido em ${esc(cert.concludedAt)}</span><span class="ass">O Responsável</span></div>
+      <script>window.onload = () => window.print();<\/script>
+      </body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) { setErrorMessage('O browser bloqueou a janela do certificado. Permita pop-ups para este site.'); setShowErrorModal(true); return; }
+    w.document.write(html);
+    w.document.close();
+  };
+  // Historico do certificado de cadastro: fase (Analise/Decisao) e estado do pedido nessa fase
+  const historicoCertificados = () => [
+    ...mockAnalysisCertificates.map(c => ({ ...c, _fase: 'Análise', _faseColor: 'bg-blue-50 text-blue-600',
+      _estado: c.status === 'Devolvido' ? 'Devolvido' : 'Por analisar',
+      _estadoColor: c.status === 'Devolvido' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600' })),
+    ...mockDecisionCertificates.filter(c => c.status !== 'Devolvido').map(c => ({ ...c, _fase: 'Decisão', _faseColor: 'bg-amber-50 text-amber-600',
+      _estado: 'Em Decisão', _estadoColor: 'bg-amber-50 text-amber-600' })),
+    ...mockConcludedCertificates.map(c => ({ ...c, _fase: 'Decisão', _faseColor: 'bg-amber-50 text-amber-600',
+      _estado: 'Concluído', _estadoColor: 'bg-emerald-50 text-emerald-600' })),
+  ];
+  // Abre um pedido na decisao; sem cadastro associado, tenta sugerir a ficha pelo NIF ou nº de documento
+  const abrirDecisao = (cert: any) => {
+    setSelectedDecisionCertificate(cert);
+    setAssociatedPerson(cert.associatedPerson);
+    setSuggestedFicha(null);
+    
+    if (!cert.associatedPerson) {
+      // Auto-match if not already associated
+      const match = fichas.find(f => 
+        (cert.biographic.nif && f.nif === cert.biographic.nif) || 
+        (cert.biographic.docNumber && (f.docNumber === cert.biographic.docNumber || f.number === cert.biographic.docNumber))
+      );
+      if (match) setSuggestedFicha(match);
+    }
+    
+    setCurrentView('certificate_decision_detail');
+  };
   // Abre um pedido na analise, tentando associar a ficha pelo NIF ou pelo nº de documento
   const abrirAnalise = (cert: any) => {
     setSelectedAnalysisCertificate(cert);
@@ -1709,7 +1826,7 @@ export default function App() {
   };
   const [mockAnalysisCertificates, setMockAnalysisCertificates] = useState<any[]>([
     {
-      id: 'FICAD-100/N-PR/2026',
+      id: '000001',
       name: 'Bruno Fonseca',
       birthDate: '29/04/1998',
       requestDate: '19/02/2025',
@@ -1719,12 +1836,12 @@ export default function App() {
         birthDate: '1998-04-29',
         gender: 'Masculino',
         civilStatus: 'Solteiro',
-        birthPlace: 'Praia',
+        birthPlace: 'Cabo Verde',
         nationality: 'Cabo-verdiana',
         fatherName: 'António Fonseca',
         motherName: 'Maria Fonseca',
         nif: '200123456',
-        docType: 'BI',
+        docType: 'CNI',
         docNumber: '001234567LA041'
       },
       address: {
@@ -1748,11 +1865,11 @@ export default function App() {
         { user: 'Mascarenhas', date: '20/03/2025', text: 'Pedido de certificado para concurso público. Documentação em ordem.' }
       ],
       history: [
-        { date: '19/02/2025', phase: 'Analise', status: 'Por analisar', user: 'Maria' }
+        { date: '19/02/2025', phase: 'Análise', status: 'Por analisar', user: 'Maria' }
       ]
     },
     {
-      id: 'FICAD-101/N-PR/2026',
+      id: '000002',
       name: 'Manuel Sousa',
       birthDate: '27/06/1997',
       requestDate: '19/02/2025',
@@ -1792,7 +1909,7 @@ export default function App() {
         { user: 'Mascarenhas', date: '20/03/2025', text: 'Pedido para fins académicos.' }
       ],
       history: [
-        { date: '19/02/2025', phase: 'Analise', status: 'Por analisar', user: 'Maria' }
+        { date: '19/02/2025', phase: 'Análise', status: 'Por analisar', user: 'Maria' }
       ]
     }
   ]);
@@ -5417,7 +5534,7 @@ export default function App() {
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
                   <div className="flex flex-wrap items-center gap-3 px-8 pt-8 pb-6 border-b border-slate-100">
                     <div className="p-2 bg-slate-900 text-white rounded-lg"><Search size={16} /></div>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex-1">Identificação do Processo</h3>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex-1">Identificação do Pedido</h3>
                     <button
                       type="button"
                       onClick={() => setShowCertAdvancedFilters(v => !v)}
@@ -5473,16 +5590,16 @@ export default function App() {
                   </div>
 
                   <div className="px-8 py-6 space-y-6">
-                    <p className="text-sm font-bold text-slate-500">Insira os dados do Processo</p>
+                    <p className="text-sm font-bold text-slate-500">Insira os dados do Pedido</p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Processo</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº Pedido</label>
                       <input 
                         type="text" 
                         value={certificateSearchFilters.orderNumber}
                         onChange={(e) => setCertificateSearchFilters({...certificateSearchFilters, orderNumber: e.target.value})}
                         className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                        placeholder="Ex: FICAD-102/N-PR/2026"
+                        placeholder="Ex: 000003"
                       />
                     </div>
                     <div className="space-y-2">
@@ -5540,7 +5657,7 @@ export default function App() {
                         value={certificateSearchFilters.docNumber}
                         onChange={(e) => setCertificateSearchFilters({...certificateSearchFilters, docNumber: e.target.value})}
                         className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                        placeholder="Ex: PRE-1000/N/2026"
+                        placeholder="Ex: 001234567LA041"
                       />
                     </div>
 
@@ -5648,7 +5765,7 @@ export default function App() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Nº Processo</th>
+                          <th className="px-6 py-4">Nº Pedido</th>
                           <th className="px-6 py-4">Nº Documento</th>
                           <th className="px-6 py-4">Nome Requerente</th>
                           <th className="px-6 py-4">Data Nascimento</th>
@@ -5713,7 +5830,7 @@ export default function App() {
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
                   <div>
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Detalhe do Pedido</h2>
-                    <p className="text-xs font-bold text-slate-400 mt-1">Nº Processo {selectedCertificateRequest.id}</p>
+                    <p className="text-xs font-bold text-slate-400 mt-1">Nº Pedido {selectedCertificateRequest.id}</p>
                   </div>
                   <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
                     selectedCertificateRequest.status === 'Por Pagar' ? 'bg-amber-100 text-amber-700' : selectedCertificateRequest.status === 'Por Concluir' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-700'
@@ -6832,7 +6949,7 @@ export default function App() {
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
                   <div className="flex flex-wrap items-center gap-3 px-8 pt-8 pb-6 border-b border-slate-100">
                     <div className="p-2 bg-slate-900 text-white rounded-lg"><Search size={16} /></div>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex-1">Identificação do Processo</h3>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex-1">Identificação do Pedido</h3>
                     <button
                       type="button"
                       onClick={() => setShowAnalysisAdvancedFilters(v => !v)}
@@ -6846,39 +6963,13 @@ export default function App() {
                       Filtros Avançados
                     </button>
                     <Button variant="outline" onClick={() => { setAnalysisSearchFilters(emptyAnalysisFilters()); setAnalysisSearchResults(null); }}>Limpar</Button>
-                    <Button variant="primary" icon={Search} onClick={() => {
-                      const f = analysisSearchFilters;
-                      const mesmaData = (valor: string, filtro: string) => {
-                        if (!filtro) return true;
-                        if (!valor) return false;
-                        const iso = valor.includes('/') ? valor.split('/').reverse().join('-') : valor;
-                        return iso === filtro;
-                      };
-                      const results = mockAnalysisCertificates.filter((cert: any) => {
-                        const b = cert.biographic || {};
-                        const a = cert.address || {};
-                        if (f.orderNumber && !(cert.id || '').toLowerCase().includes(f.orderNumber.toLowerCase())) return false;
-                        if (f.name && !(cert.name || '').toLowerCase().includes(f.name.toLowerCase())) return false;
-                        if (!mesmaData(cert.birthDate, f.birthDate)) return false;
-                        if (!mesmaData(cert.requestDate, f.requestDate)) return false;
-                        if (f.docType && b.docType !== f.docType) return false;
-                        if (f.docNumber && !(b.docNumber || '').toLowerCase().includes(f.docNumber.toLowerCase())) return false;
-                        if (f.nationality && b.nationality !== f.nationality) return false;
-                        if (f.island && a.island !== f.island) return false;
-                        if (f.county && a.council !== f.county) return false;
-                        if (f.parish && a.parish !== f.parish) return false;
-                        if (f.locality && a.locality !== f.locality) return false;
-                        if (f.zone && a.zone !== f.zone) return false;
-                        return true;
-                      });
-                      setAnalysisSearchResults(results);
-                    }}>Pesquisar</Button>
+                    <Button variant="primary" icon={Search} onClick={() => setAnalysisSearchResults(filtrarPedidosCertificado(mockAnalysisCertificates, analysisSearchFilters))}>Pesquisar</Button>
                   </div>
 
                   <div className="px-8 py-6 space-y-6">
-                    <p className="text-sm font-bold text-slate-500">Insira os dados do Processo</p>
+                    <p className="text-sm font-bold text-slate-500">Insira os dados do Pedido</p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                      <DetailField label="Nº Processo" value={analysisSearchFilters.orderNumber} readOnly={false} placeholder="Ex: FICAD-102/N-PR/2026"
+                      <DetailField label="Nº Pedido" value={analysisSearchFilters.orderNumber} readOnly={false} placeholder="Ex: 000003"
                         onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, orderNumber: v})} />
                       <DetailField label="Nome Requerente" value={analysisSearchFilters.name} readOnly={false} placeholder="Nome completo"
                         onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, name: v})} />
@@ -6889,7 +6980,7 @@ export default function App() {
                       <DetailField label="Tipo Documento" value={analysisSearchFilters.docType} type="select" readOnly={false}
                         options={['BI', 'CNI', 'Passaporte', 'TRE']}
                         onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, docType: v})} />
-                      <DetailField label="Nº Documento" value={analysisSearchFilters.docNumber} readOnly={false} placeholder="Ex: PRE-1000/N/2026"
+                      <DetailField label="Nº Documento" value={analysisSearchFilters.docNumber} readOnly={false} placeholder="Ex: 001234567LA041"
                         onChange={(v: string) => setAnalysisSearchFilters({...analysisSearchFilters, docNumber: v})} />
                     </div>
 
@@ -6930,7 +7021,7 @@ export default function App() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Nº Processo</th>
+                          <th className="px-6 py-4">Nº Pedido</th>
                           <th className="px-6 py-4">Nº Documento</th>
                           <th className="px-6 py-4">Nome Requerente</th>
                           <th className="px-6 py-4">Data Nascimento</th>
@@ -7498,7 +7589,7 @@ export default function App() {
                             <div className="text-center space-y-2">
                               <div className="inline-block border-2 border-slate-900 px-8 py-2">
                                 <p className="text-sm font-black uppercase tracking-widest">Certificado de Cadastro Policial</p>
-                                <p className="text-xs font-bold">N.º {selectedAnalysisCertificate.id}/2024</p>
+                                <p className="text-xs font-bold">CECAP n.º {selectedAnalysisCertificate.certificateNumber || 'por atribuir'}</p>
                               </div>
                             </div>
 
@@ -7585,13 +7676,15 @@ export default function App() {
                         const newDecisionCert = {
                           ...selectedAnalysisCertificate,
                           associatedPerson: associatedPerson || null,
-                          status: 'Para Decisão',
+                          status: 'Em Decisão',
+                          analyzedBy: user?.name || 'Sistema',
+                          analyzedAt: new Date().toLocaleDateString('pt-BR'),
                           history: [
                             ...selectedAnalysisCertificate.history,
-                            { date: new Date().toLocaleDateString('pt-BR'), phase: 'Decisão', status: 'Para Decisão', user: user?.name || 'Sistema' }
+                            { date: new Date().toLocaleDateString('pt-BR'), phase: 'Decisão', status: 'Em Decisão', user: user?.name || 'Sistema' }
                           ]
                         };
-                        setMockDecisionCertificates([...mockDecisionCertificates, newDecisionCert]);
+                        setMockDecisionCertificates([...mockDecisionCertificates.filter(c => c.id !== newDecisionCert.id), newDecisionCert]);
                         setMockAnalysisCertificates(mockAnalysisCertificates.filter(c => c.id !== selectedAnalysisCertificate.id));
                         setSuccessMessage('Pedido enviado para Decisão com sucesso.');
                         setShowSuccessModal(true);
@@ -7614,65 +7707,126 @@ export default function App() {
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Decisão de Certificado de Cadastro</h2>
                 </div>
 
-                <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                    <DetailField label="N.º Pedido" value={certificateSearchFilters.orderNumber} readOnly={false} onChange={(val) => setCertificateSearchFilters({...certificateSearchFilters, orderNumber: val})} />
-                    <DetailField label="Nome" value={certificateSearchFilters.name} readOnly={false} onChange={(val) => setCertificateSearchFilters({...certificateSearchFilters, name: val})} />
-                    <DetailField label="Data de Nascimento" value={certificateSearchFilters.birthDate} type="date" readOnly={false} icon={Calendar} onChange={(val) => setCertificateSearchFilters({...certificateSearchFilters, birthDate: val})} />
-                    <DetailField label="Data Pedido" value={certificateSearchFilters.requestDate} type="date" readOnly={false} icon={Calendar} onChange={(val) => setCertificateSearchFilters({...certificateSearchFilters, requestDate: val})} />
+                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                  <div className="flex flex-wrap items-center gap-3 px-8 pt-8 pb-6 border-b border-slate-100">
+                    <div className="p-2 bg-slate-900 text-white rounded-lg"><Search size={16} /></div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex-1">Identificação do Pedido</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowDecisionAdvancedFilters(v => !v)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all border-2 ${
+                        showDecisionAdvancedFilters
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900'
+                      }`}
+                    >
+                      <SlidersHorizontal size={13} />
+                      Filtros Avançados
+                    </button>
+                    <Button variant="outline" onClick={() => { setDecisionSearchFilters(emptyAnalysisFilters()); setDecisionSearchResults(null); }}>Limpar</Button>
+                    <Button variant="primary" icon={Search} onClick={() => setDecisionSearchResults(filtrarPedidosCertificado(mockDecisionCertificates, decisionSearchFilters))}>Pesquisar</Button>
                   </div>
-                  <div className="flex justify-end mt-6">
-                    <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
+
+                  <div className="px-8 py-6 space-y-6">
+                    <p className="text-sm font-bold text-slate-500">Insira os dados do Pedido</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                      <DetailField label="Nº Pedido" value={decisionSearchFilters.orderNumber} readOnly={false} placeholder="Ex: 000003"
+                        onChange={(v: string) => setDecisionSearchFilters({...decisionSearchFilters, orderNumber: v})} />
+                      <DetailField label="Nome Requerente" value={decisionSearchFilters.name} readOnly={false} placeholder="Nome completo"
+                        onChange={(v: string) => setDecisionSearchFilters({...decisionSearchFilters, name: v})} />
+                      <DetailField label="Data Nascimento" value={decisionSearchFilters.birthDate} type="date" readOnly={false}
+                        onChange={(v: string) => setDecisionSearchFilters({...decisionSearchFilters, birthDate: v})} />
+                      <DetailField label="Data Pedido" value={decisionSearchFilters.requestDate} type="date" readOnly={false}
+                        onChange={(v: string) => setDecisionSearchFilters({...decisionSearchFilters, requestDate: v})} />
+                      <DetailField label="Tipo Documento" value={decisionSearchFilters.docType} type="select" readOnly={false}
+                        options={['BI', 'CNI', 'Passaporte', 'TRE']}
+                        onChange={(v: string) => setDecisionSearchFilters({...decisionSearchFilters, docType: v})} />
+                      <DetailField label="Nº Documento" value={decisionSearchFilters.docNumber} readOnly={false} placeholder="Ex: 001234567LA041"
+                        onChange={(v: string) => setDecisionSearchFilters({...decisionSearchFilters, docNumber: v})} />
+                    </div>
+
+                    {showDecisionAdvancedFilters && (
+                      <div className="space-y-6 pt-6 border-t border-slate-100">
+                        <p className="text-sm font-bold text-slate-500">Dados de Origem e Localização</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                          <DetailField label="Nacionalidade" value={decisionSearchFilters.nationality} type="select" readOnly={false}
+                            options={['Cabo-verdiana', 'Portuguesa', 'Angolana', 'Outra']}
+                            onChange={(v: string) => setDecisionSearchFilters({...decisionSearchFilters, nationality: v})} />
+                          <DetailField label="Ilha" value={decisionSearchFilters.island} type="select" readOnly={false}
+                            options={['Santiago', 'São Vicente', 'Sal', 'Boa Vista', 'Fogo', 'Maio', 'Brava', 'Santo Antão', 'São Nicolau']}
+                            onChange={(v: string) => setDecisionSearchFilters({...decisionSearchFilters, island: v})} />
+                          <DetailField label="Concelho" value={decisionSearchFilters.county} type="select" readOnly={false}
+                            options={['Praia', 'Santa Catarina', 'São Vicente']}
+                            onChange={(v: string) => setDecisionSearchFilters({...decisionSearchFilters, county: v})} />
+                          <DetailField label="Freguesia" value={decisionSearchFilters.parish} type="select" readOnly={false}
+                            options={['N.S Da Graça', 'São Nicolau Tolentino', 'Santíssimo Nome de Jesus']}
+                            onChange={(v: string) => setDecisionSearchFilters({...decisionSearchFilters, parish: v})} />
+                          <DetailField label="Localidade" value={decisionSearchFilters.locality} type="select" readOnly={false}
+                            options={['Palmarejo', 'Achada Santo António', 'Platô', 'Fazenda']}
+                            onChange={(v: string) => setDecisionSearchFilters({...decisionSearchFilters, locality: v})} />
+                          <DetailField label="Zona" value={decisionSearchFilters.zone} type="select" readOnly={false}
+                            options={['Zona 1', 'Zona 2']}
+                            onChange={(v: string) => setDecisionSearchFilters({...decisionSearchFilters, zone: v})} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Listagem de Pedidos para Decisão</h3>
-                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {mockDecisionCertificates.length.toString().padStart(2, '0')}</span>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">{decisionSearchResults !== null ? 'Resultados da Pesquisa' : 'Listagem de Pedidos para Decisão'}</h3>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {(decisionSearchResults ?? mockDecisionCertificates).length.toString().padStart(2, '0')}</span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Número Pedido</th>
-                          <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Nº Pedido</th>
+                          <th className="px-6 py-4">Nº Documento</th>
+                          <th className="px-6 py-4">Nome Requerente</th>
                           <th className="px-6 py-4">Data Nascimento</th>
-                          <th className="px-6 py-4">Data Pedido</th>
+                          <th className="px-6 py-4">Nacionalidade</th>
+                          <th className="px-6 py-4">Analisado por</th>
+                          <th className="px-6 py-4">Estado</th>
+                          <th className="px-6 py-4">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {mockDecisionCertificates.length > 0 ? (
-                          mockDecisionCertificates.map((cert) => (
+                        {(decisionSearchResults ?? mockDecisionCertificates).length > 0 ? (
+                          (decisionSearchResults ?? mockDecisionCertificates).map((cert: any) => (
                             <tr 
                               key={cert.id}
-                              onClick={() => {
-                                setSelectedDecisionCertificate(cert);
-                                setAssociatedPerson(cert.associatedPerson);
-                                setSuggestedFicha(null);
-                                
-                                if (!cert.associatedPerson) {
-                                  // Auto-match if not already associated
-                                  const match = fichas.find(f => 
-                                    (cert.biographic.nif && f.nif === cert.biographic.nif) || 
-                                    (cert.biographic.docNumber && (f.docNumber === cert.biographic.docNumber || f.number === cert.biographic.docNumber))
-                                  );
-                                  if (match) setSuggestedFicha(match);
-                                }
-                                
-                                setCurrentView('certificate_decision_detail');
-                              }}
+                              onClick={() => abrirDecisao(cert)}
                               className="hover:bg-blue-50 cursor-pointer transition-colors group"
                             >
                               <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{cert.id}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.biographic?.docNumber || <span className="text-slate-300">—</span>}</td>
                               <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
                               <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
-                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.biographic?.nationality || <span className="text-slate-300">—</span>}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.analyzedBy || <span className="text-slate-300">—</span>}</td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                  cert.status === 'Devolvido' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {cert.status === 'Devolvido' ? 'Devolvido' : 'Em Decisão'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); abrirDecisao(cert); }}
+                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                  title="Ver pedido"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                              </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhum pedido aguardando decisão.</td>
+                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic text-sm">{decisionSearchResults !== null ? 'Nenhum pedido encontrado para os filtros aplicados.' : 'Nenhum pedido aguardando decisão.'}</td>
                           </tr>
                         )}
                       </tbody>
@@ -7812,14 +7966,27 @@ export default function App() {
                     )}
                   </div>
                 ) : (
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => { setHideNewCadastroInAssociate(true); setShowAssociateModal(true); }}
-                      className="px-5 py-2.5 bg-white text-slate-700 border-2 border-slate-200 font-bold rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all text-xs flex items-center gap-2"
-                    >
-                      <Search size={14} />
-                      Vincular Cadastro
-                    </button>
+                  // A ficha e opcional: sem cadastro os blocos aparecem vazios e o certificado sai com "nada consta"
+                  <div className="space-y-4">
+                    <div className="bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between shadow-sm">
+                      <div className="flex items-center gap-3 font-black text-slate-900">
+                        <div className="p-2 bg-slate-900 text-white rounded-lg"><Fingerprint size={18} /></div>
+                        <span className="uppercase tracking-widest text-xs">Cadastro Associado</span>
+                      </div>
+                      <button
+                        onClick={() => { setHideNewCadastroInAssociate(true); setShowAssociateModal(true); }}
+                        className="px-5 py-2.5 bg-white text-slate-700 border-2 border-slate-200 font-bold rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all text-xs flex items-center gap-2"
+                      >
+                        <Search size={14} />
+                        Vincular Cadastro
+                      </button>
+                    </div>
+                    <div className="bg-white border-2 border-slate-100 rounded-2xl px-8 py-6 shadow-sm text-center text-sm font-bold text-slate-400">Sem cadastro associado.</div>
+                    <div className="bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center gap-3 font-black text-slate-900 shadow-sm">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><HelpCircle size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Motivos do Cadastro Associado</span>
+                    </div>
+                    <div className="bg-white border-2 border-slate-100 rounded-2xl px-8 py-6 shadow-sm text-center text-xs italic text-slate-400">Nenhum motivo — sem cadastro associado.</div>
                   </div>
                 )}
 
@@ -7911,7 +8078,7 @@ export default function App() {
                             <div className="text-center space-y-2">
                               <div className="inline-block border-2 border-slate-900 px-8 py-2">
                                 <p className="text-sm font-black uppercase tracking-widest">Certificado de Cadastro Policial</p>
-                                <p className="text-xs font-bold">N.º {selectedDecisionCertificate.id}/2024</p>
+                                <p className="text-xs font-bold">CECAP n.º {selectedDecisionCertificate.certificateNumber || 'por atribuir'}</p>
                               </div>
                             </div>
                             {(() => {
@@ -7920,7 +8087,7 @@ export default function App() {
                                 <div className="space-y-6 text-justify leading-relaxed text-sm">
                                   <p className="font-bold">ROBERTO CARLOS CENTEIO LIMA, Subintendente da Polícia Nacional e Diretor da Direção Central de Investigação Criminal da Polícia Nacional---------------------------------------</p>
                                   <p>
-                                    <span className="font-bold">CERTIFICA</span>, que compulsados os ficheiros existentes no arquivo desta Direção, verifica-se que respeitante ao (à) cidadão (ã) Cabo-verdiano senhor (a) <span className="font-bold uppercase underline">{associatedPerson?.name}{associatedPerson?.surname ? ' ' + associatedPerson.surname : ''}</span>, {associatedPerson?.maritalStatus || associatedPerson?.civilStatus || 'solteiro'}, nascido (a) em <span className="font-bold">{associatedPerson ? new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR') : '---'}</span>, portador de {associatedPerson?.docType || 'CNI'} Nº <span className="font-bold">{associatedPerson?.docNumber || '---'}</span>.
+                                    <span className="font-bold">CERTIFICA</span>, que compulsados os ficheiros existentes no arquivo desta Direção, verifica-se que respeitante ao (à) cidadão (ã) Cabo-verdiano senhor (a) <span className="font-bold uppercase underline">{associatedPerson ? `${associatedPerson.name}${associatedPerson.surname ? ' ' + associatedPerson.surname : ''}` : selectedDecisionCertificate.biographic.fullName}</span>, {associatedPerson?.maritalStatus || associatedPerson?.civilStatus || selectedDecisionCertificate.biographic.civilStatus || 'solteiro'}, nascido (a) em <span className="font-bold">{associatedPerson ? new Date(associatedPerson.birthDate).toLocaleDateString('pt-BR') : selectedDecisionCertificate.birthDate}</span>, portador de {selectedDecisionCertificate.biographic.docType || '---'} Nº <span className="font-bold">{selectedDecisionCertificate.biographic.docNumber || '---'}</span>.
                                   </p>
                                   {activeMotivos.length === 0 ? (
                                     <div className="border-y-2 border-slate-900 py-2 text-center">
@@ -8076,6 +8243,7 @@ export default function App() {
 
                 <div className="flex justify-between pt-8 border-t border-slate-100">
                   <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_decision')}>Voltar</Button>
+                  {selectedDecisionCertificate.status !== 'Devolvido' && (
                   <div className="flex gap-4">
                     <Button
                       variant="outline"
@@ -8094,6 +8262,7 @@ export default function App() {
                           const concludedCert = {
                             ...selectedDecisionCertificate,
                             associatedPerson: associatedPerson || null,
+                            certificateNumber: proximoNumeroCertificado(),
                             status: 'Concluído',
                             concludedAt: new Date().toLocaleDateString('pt-BR'),
                             history: [
@@ -8113,6 +8282,7 @@ export default function App() {
                       Concluir e Emitir Certificado
                     </Button>
                   </div>
+                  )}
                 </div>
               </motion.div>
             ) : currentView === 'certificate_history' ? (
@@ -8126,53 +8296,135 @@ export default function App() {
                 </div>
 
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+                  <div className="flex flex-wrap items-center gap-3 px-8 pt-8 pb-6 border-b border-slate-100">
+                    <div className="p-2 bg-slate-900 text-white rounded-lg"><Search size={16} /></div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex-1">Identificação do Pedido</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowHistoryAdvancedFilters(v => !v)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all border-2 ${
+                        showHistoryAdvancedFilters
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900'
+                      }`}
+                    >
+                      <SlidersHorizontal size={13} />
+                      Filtros Avançados
+                    </button>
+                    <Button variant="outline" onClick={() => { setHistorySearchFilters({ ...emptyAnalysisFilters(), estado: '' }); setHistorySearchResults(null); }}>Limpar</Button>
+                    <Button variant="primary" icon={Search} onClick={() => setHistorySearchResults(filtrarPedidosCertificado(historicoCertificados(), historySearchFilters).filter((c: any) => !historySearchFilters.estado || c._estado === historySearchFilters.estado))}>Pesquisar</Button>
+                  </div>
+
+                  <div className="px-8 py-6 space-y-6">
+                    <p className="text-sm font-bold text-slate-500">Insira os dados do Pedido</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                      <DetailField label="Nº Pedido" value={historySearchFilters.orderNumber} readOnly={false} placeholder="Ex: 000003"
+                        onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, orderNumber: v})} />
+                      <DetailField label="Nome Requerente" value={historySearchFilters.name} readOnly={false} placeholder="Nome completo"
+                        onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, name: v})} />
+                      <DetailField label="Data Nascimento" value={historySearchFilters.birthDate} type="date" readOnly={false}
+                        onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, birthDate: v})} />
+                      <DetailField label="Data Pedido" value={historySearchFilters.requestDate} type="date" readOnly={false}
+                        onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, requestDate: v})} />
+                      <DetailField label="Tipo Documento" value={historySearchFilters.docType} type="select" readOnly={false}
+                        options={['BI', 'CNI', 'Passaporte', 'TRE']}
+                        onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, docType: v})} />
+                      <DetailField label="Nº Documento" value={historySearchFilters.docNumber} readOnly={false} placeholder="Ex: 001234567LA041"
+                        onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, docNumber: v})} />
+                      <DetailField label="Estado" value={historySearchFilters.estado} type="select" readOnly={false}
+                        options={['Por analisar', 'Devolvido', 'Em Decisão', 'Concluído']}
+                        onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, estado: v})} />
+                    </div>
+
+                    {showHistoryAdvancedFilters && (
+                      <div className="space-y-6 pt-6 border-t border-slate-100">
+                        <p className="text-sm font-bold text-slate-500">Dados de Origem e Localização</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                          <DetailField label="Nacionalidade" value={historySearchFilters.nationality} type="select" readOnly={false}
+                            options={['Cabo-verdiana', 'Portuguesa', 'Angolana', 'Outra']}
+                            onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, nationality: v})} />
+                          <DetailField label="Ilha" value={historySearchFilters.island} type="select" readOnly={false}
+                            options={['Santiago', 'São Vicente', 'Sal', 'Boa Vista', 'Fogo', 'Maio', 'Brava', 'Santo Antão', 'São Nicolau']}
+                            onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, island: v})} />
+                          <DetailField label="Concelho" value={historySearchFilters.county} type="select" readOnly={false}
+                            options={['Praia', 'Santa Catarina', 'São Vicente']}
+                            onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, county: v})} />
+                          <DetailField label="Freguesia" value={historySearchFilters.parish} type="select" readOnly={false}
+                            options={['N.S Da Graça', 'São Nicolau Tolentino', 'Santíssimo Nome de Jesus']}
+                            onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, parish: v})} />
+                          <DetailField label="Localidade" value={historySearchFilters.locality} type="select" readOnly={false}
+                            options={['Palmarejo', 'Achada Santo António', 'Platô', 'Fazenda']}
+                            onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, locality: v})} />
+                          <DetailField label="Zona" value={historySearchFilters.zone} type="select" readOnly={false}
+                            options={['Zona 1', 'Zona 2']}
+                            onChange={(v: string) => setHistorySearchFilters({...historySearchFilters, zone: v})} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Todos os Pedidos</h3>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">{historySearchResults !== null ? 'Resultados da Pesquisa' : 'Todos os Pedidos'}</h3>
                     <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">
-                      Total : {(mockAnalysisCertificates.length + mockDecisionCertificates.length + mockConcludedCertificates.length).toString().padStart(2, '0')}
+                      Total : {(historySearchResults ?? historicoCertificados()).length.toString().padStart(2, '0')}
                     </span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Número Pedido</th>
+                          <th className="px-6 py-4">Nº Pedido</th>
+                          <th className="px-6 py-4">Nº Certificado</th>
                           <th className="px-6 py-4">Nome</th>
                           <th className="px-6 py-4">Data Nascimento</th>
                           <th className="px-6 py-4">Data Pedido</th>
                           <th className="px-6 py-4">Fase</th>
+                          <th className="px-6 py-4">Estado</th>
+                          <th className="px-6 py-4">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {[
-                          ...mockAnalysisCertificates.map(c => ({ ...c, _fase: 'Análise', _faseColor: 'bg-blue-50 text-blue-600' })),
-                          ...mockDecisionCertificates.map(c => ({ ...c, _fase: 'Decisão', _faseColor: 'bg-amber-50 text-amber-600' })),
-                          ...mockConcludedCertificates.map(c => ({ ...c, _fase: 'Concluído', _faseColor: 'bg-emerald-50 text-emerald-600' })),
-                        ].length > 0 ? [
-                          ...mockAnalysisCertificates.map(c => ({ ...c, _fase: 'Análise', _faseColor: 'bg-blue-50 text-blue-600' })),
-                          ...mockDecisionCertificates.map(c => ({ ...c, _fase: 'Decisão', _faseColor: 'bg-amber-50 text-amber-600' })),
-                          ...mockConcludedCertificates.map(c => ({ ...c, _fase: 'Concluído', _faseColor: 'bg-emerald-50 text-emerald-600' })),
-                        ].map((cert) => (
+                        {(historySearchResults ?? historicoCertificados()).length > 0 ? (historySearchResults ?? historicoCertificados()).map((cert) => (
                           <tr
                             key={cert.id + cert._fase}
-                            onClick={() => {
-                              setSelectedHistoryCertificate(cert);
-                              setAssociatedPerson(cert.associatedPerson || null);
-                              setCurrentView('certificate_history_detail');
-                            }}
+                            onClick={() => abrirHistorico(cert)}
                             className="hover:bg-blue-50 cursor-pointer transition-colors group"
                           >
                             <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{cert.id}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-900 whitespace-nowrap">{cert.certificateNumber ? `CECAP n.º ${cert.certificateNumber}` : <span className="text-slate-300">—</span>}</td>
                             <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
                             <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
                             <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
                             <td className="px-6 py-4">
                               <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${cert._faseColor}`}>{cert._fase}</span>
                             </td>
+                            <td className="px-6 py-4">
+                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${cert._estadoColor}`}>{cert._estado}</span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); abrirHistorico(cert); }}
+                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                  title="Ver pedido"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                                {cert._estado === 'Concluído' && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); descarregarCertificado(cert); }}
+                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                    title="Descarregar certificado"
+                                  >
+                                    <Download size={16} />
+                                  </button>
+                                )}
+                            </td>
                           </tr>
                         )) : (
                           <tr>
-                            <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhum pedido encontrado.</td>
+                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhum pedido encontrado.</td>
                           </tr>
                         )}
                       </tbody>
@@ -8193,11 +8445,12 @@ export default function App() {
               >
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Detalhe do Pedido</h2>
-                  <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
-                    selectedHistoryCertificate._fase === 'Concluído' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                    selectedHistoryCertificate._fase === 'Decisão' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
-                    'bg-blue-50 text-blue-600 border border-blue-200'
-                  }`}>{selectedHistoryCertificate._fase}</span>
+                  <div className="flex items-center gap-3">
+                    {selectedHistoryCertificate._estado === 'Concluído' && (
+                      <Button variant="outline" icon={Download} onClick={() => descarregarCertificado(selectedHistoryCertificate)}>Descarregar Certificado</Button>
+                    )}
+                    <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${selectedHistoryCertificate._estadoColor} border border-current/20`}>{selectedHistoryCertificate._fase} · {selectedHistoryCertificate._estado}</span>
+                  </div>
                 </div>
 
                 {/* Devolução Warning */}
@@ -8418,7 +8671,7 @@ export default function App() {
                             <div className="text-center space-y-2">
                               <div className="inline-block border-2 border-slate-900 px-8 py-2">
                                 <p className="text-sm font-black uppercase tracking-widest">Certificado de Cadastro Policial</p>
-                                <p className="text-xs font-bold">N.º {selectedHistoryCertificate.id}/2024</p>
+                                <p className="text-xs font-bold">CECAP n.º {selectedHistoryCertificate.certificateNumber || 'por atribuir'}</p>
                               </div>
                             </div>
                             {(() => {
@@ -12943,7 +13196,7 @@ export default function App() {
                         returnedAt: new Date().toLocaleDateString('pt-BR'),
                         history: [
                           ...selectedDecisionCertificate.history,
-                          { date: new Date().toLocaleDateString('pt-BR'), phase: 'Analise', status: 'Devolvido', user: user?.name || 'Sistema' }
+                          { date: new Date().toLocaleDateString('pt-BR'), phase: 'Análise', status: 'Devolvido', user: user?.name || 'Sistema' }
                         ],
                         observations: [
                           ...selectedDecisionCertificate.observations,
@@ -12951,7 +13204,8 @@ export default function App() {
                         ]
                       };
                       setMockAnalysisCertificates([...mockAnalysisCertificates, returnedCert]);
-                      setMockDecisionCertificates(mockDecisionCertificates.filter(c => c.id !== selectedDecisionCertificate.id));
+                      // Continua na lista da decisao como Devolvido ate voltar da analise
+                      setMockDecisionCertificates(mockDecisionCertificates.map(c => c.id === selectedDecisionCertificate.id ? returnedCert : c));
                       setShowReturnModal(false);
                       setReturnReason('');
                       setSuccessMessage('Pedido devolvido para análise com sucesso.');
@@ -13320,6 +13574,37 @@ export default function App() {
                 transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                 className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border-2 border-slate-100 overflow-hidden"
               >
+                {/* Na decisao a confirmacao e a de emitir o certificado */}
+                {(currentView === 'certificate_decision_detail' || currentView === 'certificate_decision_extravio_detail') ? (
+                <div className="px-6 py-8 flex flex-col items-center text-center gap-4">
+                  <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center">
+                    <Search size={26} className="text-slate-900" />
+                  </div>
+                  <h3 className="text-base font-black text-slate-900">Emitir Certificado</h3>
+                  <p className="text-sm text-slate-500">
+                    Tem a certeza que deseja emitir este certificado?
+                    {currentView === 'certificate_decision_detail' && associatedPerson && <> O cadastro {associatedPerson.number} ficará associado.</>}
+                  </p>
+                  <div className="flex gap-3 w-full pt-2">
+                    <button
+                      onClick={() => { setShowConfirmConcluir(false); setPendingConcluirAction(null); }}
+                      className="flex-1 py-2.5 border-2 border-slate-200 text-slate-900 font-bold text-sm rounded-lg hover:bg-slate-50 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowConfirmConcluir(false);
+                        if (pendingConcluirAction) pendingConcluirAction();
+                        setPendingConcluirAction(null);
+                      }}
+                      className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-lg transition-all"
+                    >
+                      Concluir
+                    </button>
+                  </div>
+                </div>
+                ) : (<>
                 <div className="bg-amber-500 px-6 py-8 flex flex-col items-center gap-3">
                   <motion.div
                     initial={{ scale: 0 }}
@@ -13359,6 +13644,7 @@ export default function App() {
                     </button>
                   </div>
                 </div>
+                </>)}
               </motion.div>
             </div>
           )}
