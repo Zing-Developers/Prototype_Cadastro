@@ -8411,15 +8411,6 @@ export default function App() {
                                 >
                                   <Eye size={16} />
                                 </button>
-                                {cert._estado === 'Concluído' && (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); descarregarCertificado(cert); }}
-                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                    title="Descarregar certificado"
-                                  >
-                                    <Download size={16} />
-                                  </button>
-                                )}
                             </td>
                           </tr>
                         )) : (
