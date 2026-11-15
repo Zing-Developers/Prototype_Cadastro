@@ -55,7 +55,8 @@ import {
   Lock,
   SlidersHorizontal,
   Star,
-  CreditCard
+  CreditCard,
+  Wallet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -454,6 +455,8 @@ export default function App() {
   const [personToAssociate, setPersonToAssociate] = useState<any>(null);
   const [associatedPerson, setAssociatedPerson] = useState<any>(null);
   const [suggestedFicha, setSuggestedFicha] = useState<any>(null);
+  const [matchTab, setMatchTab] = useState<'accepted' | 'rejected'>('accepted');
+  const [matchHistory, setMatchHistory] = useState<{ accepted: any[]; rejected: any[] }>({ accepted: [], rejected: [] });
   const [isNewRegistration, setIsNewRegistration] = useState(false);
   const [showConfirmNew, setShowConfirmNew] = useState(false);
   const [showConfirmConcluir, setShowConfirmConcluir] = useState(false);
@@ -1115,7 +1118,7 @@ export default function App() {
   // Rascunho que esta a ser retomado (null = solicitacao nova)
   const [certificateEditingId, setCertificateEditingId] = useState<string | null>(null);
   const [showCertAdvancedFilters, setShowCertAdvancedFilters] = useState(false);
-  const [certDetailExpanded, setCertDetailExpanded] = useState<Record<string, boolean>>({ identificacao: true, anexos: false, duc: false });
+  const [certDetailExpanded, setCertDetailExpanded] = useState<Record<string, boolean>>({ identificacao: true, anexos: false, duc: false, pagamento: false });
   // Documento de cobranca que esta a ser consultado no backend
   const [ducAAtualizar, setDucAAtualizar] = useState<number | null>(null);
   // Edicao bloco a bloco no Detalhe do Pedido
@@ -1141,11 +1144,13 @@ export default function App() {
   // Aqui simula-se a resposta: o gateway devolve o codigo de transacao e a entidade.
   // O contribuinte espelha o requerente ate alguem o editar
   // O contribuinte e sempre o requerente: nao se pode pagar por outra pessoa
-  const contribuinteAtual = () => ({
-    nif: certificateData.nif,
-    nome: certificateData.fullName,
-    email: certificateData.contactType === 'Email' ? certificateData.contact : '',
-  });
+  const contribuinteAtual = () => currentView === 'certificate_registration_extravio'
+    ? { nif: certificateExtravioData.nif, nome: certificateExtravioData.fullName, email: certificateExtravioData.email }
+    : {
+        nif: certificateData.nif,
+        nome: certificateData.fullName,
+        email: certificateData.contactType === 'Email' ? certificateData.contact : '',
+      };
 
   // Visualizacao do DUC, com impressao e download
   const imprimirDuc = () => window.print();
@@ -1378,6 +1383,168 @@ export default function App() {
     }, 600);
   };
 
+  const entrarNoPagamentoExtravio = () => {
+    setPaymentData(prev => ({
+      ...prev,
+      emailSigov: prev.emailSigov || user?.email || '',
+      recebedoria: prev.recebedoria || 'Recebedoria da Praia',
+      rubricas: prev.rubricas.length > 0 ? prev.rubricas : [
+        { codigo: '12456910', descricao: 'Taxa de emissão do Certificado de Extravio', valor: '500' },
+      ],
+    }));
+    setCertificateExtravioStep(3);
+  };
+
+  // O DUC é emitido no backend pelo gateway de pagamento. No protótipo simula-se a resposta.
+  const gerarDucExtravio = () => {
+    if (ducAPedir) return;
+    setDucAPedir(true);
+    setTimeout(() => {
+      setPaymentData(prev => ({
+        ...prev,
+        entidade: prev.entidade || String(Math.floor(10000 + Math.random() * 89999)),
+        referencia: prev.referencia || String(Math.floor(100000000 + Math.random() * 899999999)),
+      }));
+      setDucAPedir(false);
+      setCertificateExtravioStep(4);
+    }, 800);
+  };
+
+  const gravarSolicitacaoExtravio = () => {
+    const d = certificateExtravioData;
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    const todos = [...mockCertificatesExtravio, ...mockAnalysisCertificatesExtravio, ...mockDecisionCertificatesExtravio, ...mockConcludedCertificatesExtravio];
+    const seqAtual = Math.max(0, ...todos.map((c: any) => (/^\d+$/.test(c.id || '') ? parseInt(c.id, 10) : 0)));
+    const registo: any = {
+      id: String(seqAtual + 1).padStart(6, '0'),
+      name: d.fullName || 'Novo Pedido',
+      birthDate: d.birthDate || '---',
+      requestDate: hoje,
+      status: 'Por Pagar',
+      nationality: d.nationality,
+      island: d.island,
+      county: d.county,
+      parish: d.parish,
+      locality: d.locality,
+      zone: d.zone,
+      biographic: {
+        fullName: d.fullName || 'Novo Pedido',
+        birthDate: d.birthDate,
+        gender: d.gender,
+        civilStatus: d.civilStatus,
+        birthPlace: d.birthPlace,
+        nationality: d.nationality,
+        fatherName: d.fatherName,
+        motherName: d.motherName,
+        nif: d.nif,
+        profession: d.profession,
+      },
+      address: { island: d.island, council: d.county, parish: d.parish, locality: d.locality, zone: d.zone, reference: d.reference },
+      contact: { mobile: d.phone, email: d.email },
+      documentosExtraviados: { docType: d.lostDocType },
+      attachments: savedAttachments.map((a: any) => ({ ...a, name: a.name || a.title })),
+      observations: [],
+      ducs: [{
+        estado: 'Por Pagar',
+        valor: String(totalRubricas(paymentData.rubricas)),
+        moeda: paymentData.moeda,
+        entidade: paymentData.entidade,
+        referencia: paymentData.referencia,
+        recebedoria: paymentData.recebedoria,
+        rubricas: [...paymentData.rubricas],
+        observacao: paymentData.observacao,
+        descricao: paymentData.descricao,
+        metodo: paymentData.metodo,
+        emailSigov: paymentData.emailSigov,
+        contribuinte: contribuinteAtual(),
+        dataEmissao: hoje,
+      }],
+      history: [{ date: hoje, phase: 'Solicitação', status: 'Por Pagar', user: user?.name || '---' }],
+    };
+    setMockCertificatesExtravio(prev => [...prev, registo]);
+    setSuccessMessage('Solicitação de Certificado de Extravio Registada com Sucesso.');
+    setShowSuccessModal(true);
+    setCurrentView('certificate_list_extravio');
+  };
+
+  // Extravio: atualizar estado do DUC e enviar o pedido pago para a fila de Analise
+  const [ducExtravioAAtualizar, setDucExtravioAAtualizar] = useState<number | null>(null);
+  const [ducExtravioOpen, setDucExtravioOpen] = useState(false);
+  // Edição bloco a bloco no Detalhe do Pedido de extravio (solicitação)
+  const [extravioEditSection, setExtravioEditSection] = useState<'dados' | 'documento' | null>(null);
+  const [extravioEditDraft, setExtravioEditDraft] = useState<any>(null);
+  const abrirEdicaoExtravio = (sec: 'dados' | 'documento') => {
+    const c = selectedHistoryCertificateExtravio;
+    if (!c) return;
+    setExtravioEditDraft({
+      biographic: { ...(c.biographic || {}), birthDate: dataParaInput(c.biographic?.birthDate || '') },
+      address: { ...(c.address || {}) },
+      contact: { ...(c.contact || {}) },
+      documentosExtraviados: { ...(c.documentosExtraviados || {}) },
+    });
+    setExtravioEditSection(sec);
+  };
+  const fecharEdicaoExtravio = () => { setExtravioEditSection(null); setExtravioEditDraft(null); };
+  const guardarEdicaoExtravio = () => {
+    const c = selectedHistoryCertificateExtravio;
+    const d = extravioEditDraft;
+    if (!c || !d) return;
+    const atualizado = {
+      ...c,
+      biographic: d.biographic,
+      address: d.address,
+      contact: d.contact,
+      documentosExtraviados: d.documentosExtraviados,
+      name: d.biographic.fullName || c.name,
+      birthDate: dataParaGuardar(d.biographic.birthDate) || c.birthDate,
+    };
+    const trocar = (x: any) => x.id === atualizado.id ? { ...x, name: atualizado.name, birthDate: atualizado.birthDate, biographic: atualizado.biographic, address: atualizado.address, contact: atualizado.contact, documentosExtraviados: atualizado.documentosExtraviados } : x;
+    setMockCertificatesExtravio(prev => prev.map(trocar));
+    setCertificateExtravioSearchResults(prev => prev ? prev.map(trocar) : prev);
+    setSelectedHistoryCertificateExtravio(atualizado);
+    setSuccessMessage(`${extravioEditSection === 'dados' ? 'Dados Biográficos' : 'Documento Extraviado'} atualizado com sucesso.`);
+    setShowSuccessModal(true);
+    fecharEdicaoExtravio();
+  };
+
+  const atualizarEstadoDucExtravio = (idx: number) => {
+    const atual = selectedHistoryCertificateExtravio;
+    if (!atual || ducExtravioAAtualizar !== null) return;
+    setDucExtravioAAtualizar(idx);
+    setTimeout(() => {
+      const ducs = (atual.ducs || []).map((d: any, i: number) => i === idx ? { ...d, estado: 'Pago' } : d);
+      const estadoPedido = ducs.length > 0 && ducs.every((d: any) => d.estado === 'Pago') ? 'Pago' : 'Por Pagar';
+      const atualizado = { ...atual, ducs, status: estadoPedido };
+      const trocar = (c: any) => c.id === atualizado.id ? { ...c, ducs, status: estadoPedido } : c;
+      setMockCertificatesExtravio(prev => prev.map(trocar));
+      setCertificateExtravioSearchResults(prev => prev ? prev.map(trocar) : prev);
+      setSelectedHistoryCertificateExtravio(atualizado);
+      setDucExtravioAAtualizar(null);
+    }, 600);
+  };
+
+  const enviarParaAnaliseExtravio = () => {
+    const c = selectedHistoryCertificateExtravio;
+    if (!c || c.status !== 'Pago') return;
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    const { _fase, ducs, ...base } = c;
+    const paraAnalise = {
+      ...base,
+      status: 'Por analisar',
+      attachments: c.attachments || [],
+      observations: c.observations || [],
+      history: [...(c.history || []), { date: hoje, phase: 'Análise', status: 'Por analisar', user: user?.name || 'Administrador do Sistema' }],
+    };
+    setMockAnalysisCertificatesExtravio(prev => [...prev.filter((x: any) => x.id !== paraAnalise.id), paraAnalise]);
+    // Sai da Solicitação: passa a viver na fila da Análise
+    setMockCertificatesExtravio(prev => prev.filter((x: any) => x.id !== c.id));
+    setCertificateExtravioSearchResults(prev => prev ? prev.filter((x: any) => x.id !== c.id) : prev);
+    setSelectedHistoryCertificateExtravio(null);
+    setSuccessMessage(`Pedido ${c.id} enviado para análise.`);
+    setShowSuccessModal(true);
+    setCurrentView('certificate_list_extravio');
+  };
+
   const guardarCert = () => {
 
     const sec = editingCertSection;
@@ -1537,6 +1704,41 @@ export default function App() {
     w.document.write(html);
     w.document.close();
   };
+  // Certificado de Extravio como ficheiro autonomo (abre a janela de impressao/PDF)
+  const descarregarCertificadoExtravio = (cert: any) => {
+    const b = cert.biographic || {};
+    const esc = (v: any) => String(v ?? '---').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as any)[ch]);
+    const linha = (rot: string, val: any) => `<tr><th>${rot}</th><td>${esc(val || '---')}</td></tr>`;
+    const html = `<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>certificado-extravio-${esc(cert.id)}</title>
+      <style>
+        body { font-family: Arial, sans-serif; color: #0f172a; margin: 48px; }
+        h1 { text-align: center; font-size: 20px; letter-spacing: 2px; margin: 0; }
+        .sub { text-align: center; font-size: 12px; color: #475569; margin: 4px 0 32px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
+        th { width: 35%; color: #475569; font-weight: normal; }
+        .rod { margin-top: 64px; font-size: 12px; color: #475569; display: flex; justify-content: space-between; }
+        .ass { border-top: 1px solid #0f172a; padding-top: 4px; width: 240px; text-align: center; }
+      </style></head><body>
+      <h1>CERTIFICADO DE EXTRAVIO</h1>
+      <p class="sub">CEEXT n.º ${esc(cert.certificateNumber || 'por atribuir')} · Pedido n.º ${esc(cert.id)}</p>
+      <table>
+        ${linha('Nome', b.fullName || cert.name)}
+        ${linha('Data de Nascimento', cert.birthDate)}
+        ${linha('Filiação', [b.fatherName, b.motherName].filter(Boolean).join(' e '))}
+        ${linha('Naturalidade', b.birthPlace)}
+        ${linha('Nacionalidade', b.nationality)}
+        ${linha('NIF', b.nif)}
+        ${linha('Documento Extraviado', cert.documentosExtraviados?.docType || cert.docType)}
+      </table>
+      <div class="rod"><span>Emitido em ${esc(cert.concludedAt || cert.requestDate)}</span><span class="ass">O Responsável</span></div>
+      <script>window.onload = () => window.print();<\/script>
+      </body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) { setErrorMessage('O browser bloqueou a janela do certificado. Permita pop-ups para este site.'); setShowErrorModal(true); return; }
+    w.document.write(html);
+    w.document.close();
+  };
   // Historico do certificado de cadastro: fase (Analise/Decisao) e estado do pedido nessa fase
   const historicoCertificados = () => [
     ...mockAnalysisCertificates.map(c => ({ ...c, _fase: 'Análise', _faseColor: 'bg-blue-50 text-blue-600',
@@ -1580,12 +1782,175 @@ export default function App() {
 
   const [certificateExtravioStep, setCertificateExtravioStep] = useState(1);
 
-  const [certificateExtravioSearchFilters, setCertificateExtravioSearchFilters] = useState({
+  const emptyExtravioFilters = {
     orderNumber: '',
     name: '',
     birthDate: '',
-    requestDate: ''
-  });
+    requestDate: '',
+    docType: '',
+    docNumber: '',
+    nationality: '',
+    island: '',
+    county: '',
+    parish: '',
+    locality: '',
+    zone: '',
+    estado: ''
+  };
+  const [certificateExtravioSearchFilters, setCertificateExtravioSearchFilters] = useState(emptyExtravioFilters);
+  const [certificateExtravioSearchResults, setCertificateExtravioSearchResults] = useState<any[] | null>(null);
+  const [showExtravioAdvancedFilters, setShowExtravioAdvancedFilters] = useState(false);
+  // Filtros da lista de Análise de extravio (independentes dos da Solicitação)
+  const [analiseExtravioFilters, setAnaliseExtravioFilters] = useState(emptyExtravioFilters);
+  const [analiseExtravioResults, setAnaliseExtravioResults] = useState<any[] | null>(null);
+  const [showAnaliseExtravioAdvanced, setShowAnaliseExtravioAdvanced] = useState(false);
+  // Filtros da lista de Decisão de extravio (independentes dos de Solicitação e Análise)
+  const [decisaoExtravioFilters, setDecisaoExtravioFilters] = useState(emptyExtravioFilters);
+  const [decisaoExtravioResults, setDecisaoExtravioResults] = useState<any[] | null>(null);
+  const [showDecisaoExtravioAdvanced, setShowDecisaoExtravioAdvanced] = useState(false);
+  // Filtros da lista do Histórico de extravio
+  const [historicoExtravioFilters, setHistoricoExtravioFilters] = useState(emptyExtravioFilters);
+  const [historicoExtravioResults, setHistoricoExtravioResults] = useState<any[] | null>(null);
+  const [showHistoricoExtravioAdvanced, setShowHistoricoExtravioAdvanced] = useState(false);
+
+  // Filtra pedidos de extravio (qualquer fase), tolerando as duas formas dos dados (lista simples ou com biographic/address)
+  const filtrarPedidosExtravio = (lista: any[], f: typeof emptyExtravioFilters) => {
+    const mesmaData = (valor: string, filtro: string) => {
+      if (!filtro) return true;
+      if (!valor) return false;
+      const iso = valor.includes('/') ? valor.split('/').reverse().join('-') : valor;
+      return iso === filtro;
+    };
+    return lista.filter((cert: any) => {
+      const bio = cert.biographic || {};
+      const end = cert.address || {};
+      if (f.orderNumber && !(cert.id || '').toLowerCase().includes(f.orderNumber.toLowerCase())) return false;
+      if (f.name && !(cert.name || '').toLowerCase().includes(f.name.toLowerCase())) return false;
+      if (!mesmaData(cert.birthDate, f.birthDate)) return false;
+      if (!mesmaData(cert.requestDate, f.requestDate)) return false;
+      if (f.docType && (cert.documentosExtraviados?.docType || cert.docType) !== f.docType) return false;
+      if (f.nationality && (bio.nationality || cert.nationality) !== f.nationality) return false;
+      if (f.island && (end.island || cert.island) !== f.island) return false;
+      if (f.county && (end.council || cert.county) !== f.county) return false;
+      if (f.parish && (end.parish || cert.parish) !== f.parish) return false;
+      if (f.locality && (end.locality || cert.locality) !== f.locality) return false;
+      if (f.zone && (end.zone || cert.zone) !== f.zone) return false;
+      return true;
+    });
+  };
+
+  const [pagamentoExtravioOpen, setPagamentoExtravioOpen] = useState(false);
+
+  // Bloco "Meio de Pagamento" dos Detalhes do Pedido (cadastro e extravio): um cartão por DUC
+  const renderMeioPagamento = (ducs: any[], aberto: boolean, alternar: () => void) => (
+    <div className="space-y-2">
+      <button onClick={alternar} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-slate-900 text-white rounded-lg"><Wallet size={18} /></div>
+          <span className="uppercase tracking-widest text-xs">Meio de Pagamento</span>
+        </div>
+        {aberto ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+      </button>
+      <AnimatePresence>
+        {aberto && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6 mt-1">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <DetailField label="Meio de Pagamento" value={(ducs.find((d: any) => d.metodo) || {}).metodo || 'Por definir'} />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+
+  // Cartão de filtros igual ao do Certificado de Cadastro, sem Tipo/Nº de documento
+  const renderFiltrosExtravio = (
+    f: typeof emptyExtravioFilters,
+    setF: (v: typeof emptyExtravioFilters) => void,
+    avancados: boolean,
+    setAvancados: (fn: (v: boolean) => boolean) => void,
+    aoPesquisar: () => void,
+    aoLimpar: () => void,
+    comEstado: boolean = false,
+  ) => {
+    const texto = (label: string, k: keyof typeof emptyExtravioFilters, placeholder: string) => (
+      <div className="space-y-2">
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
+        <input type="text" value={f[k]} placeholder={placeholder}
+          onChange={(e) => setF({ ...f, [k]: e.target.value })}
+          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+      </div>
+    );
+    const data = (label: string, k: keyof typeof emptyExtravioFilters) => (
+      <div className="space-y-2">
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
+        <div className="relative">
+          <input type="date" value={f[k]}
+            onChange={(e) => setF({ ...f, [k]: e.target.value })}
+            className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+          <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+        </div>
+      </div>
+    );
+    const lista = (label: string, k: keyof typeof emptyExtravioFilters, opcoes: string[]) => (
+      <div className="space-y-2">
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
+        <select value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })}
+          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all appearance-none">
+          <option value="">Clique para selecionar...</option>
+          {opcoes.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      </div>
+    );
+    return (
+      <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
+        <div className="flex flex-wrap items-center gap-3 px-8 pt-8 pb-6 border-b border-slate-100">
+          <div className="p-2 bg-slate-900 text-white rounded-lg"><Search size={16} /></div>
+          <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex-1">Identificação do Pedido</h3>
+          <button
+            type="button"
+            onClick={() => setAvancados(v => !v)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all border-2 ${
+              avancados
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900'
+            }`}
+          >
+            <SlidersHorizontal size={13} />
+            Filtros Avançados
+          </button>
+          <Button variant="outline" onClick={aoLimpar}>Limpar</Button>
+          <Button variant="primary" icon={Search} onClick={aoPesquisar}>Pesquisar</Button>
+        </div>
+        <div className="px-8 py-6 space-y-6">
+          <p className="text-sm font-bold text-slate-500">Insira os dados do Pedido</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+            {texto('Nº Pedido', 'orderNumber', 'Ex: 000003')}
+            {texto('Nome Requerente', 'name', 'Nome completo')}
+            {data('Data Nascimento', 'birthDate')}
+            {data('Data Pedido', 'requestDate')}
+            {lista('Documento Extraviado', 'docType', ['BI', 'CNI', 'Passaporte', 'TRE'])}
+            {comEstado && lista('Estado', 'estado', ['Por analisar', 'Devolvido', 'Em Decisão', 'Concluído'])}
+          </div>
+          {avancados && (
+            <div className="space-y-6 pt-6 border-t border-slate-100">
+              <p className="text-sm font-bold text-slate-500">Dados de Origem e Localização</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                {lista('Nacionalidade', 'nationality', ['Cabo-verdiana', 'Portuguesa', 'Angolana', 'Outra'])}
+                {lista('Ilha', 'island', ['Santiago', 'São Vicente', 'Sal', 'Boa Vista', 'Fogo', 'Maio', 'Brava', 'Santo Antão', 'São Nicolau'])}
+                {lista('Concelho', 'county', ['Praia', 'Santa Catarina', 'São Vicente'])}
+                {lista('Freguesia', 'parish', ['Nossa Senhora da Graça', 'São Nicolau Tolentino', 'Santíssimo Nome de Jesus'])}
+                {lista('Localidade', 'locality', ['Achada Santo António', 'Platô', 'Fazenda'])}
+                {lista('Zona', 'zone', ['Zona 1', 'Zona 2'])}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
   const [certificateExtravioData, setCertificateExtravioData] = useState({
     fullName: '',
     birthDate: '',
@@ -1595,6 +1960,9 @@ export default function App() {
     nationality: '',
     fatherName: '',
     motherName: '',
+    nif: '',
+    profession: '',
+    zone: '',
     docType: '',
     docNumber: '',
     island: '',
@@ -1617,7 +1985,15 @@ export default function App() {
       name: 'Manuel Sousa',
       birthDate: '29/04/1998',
       requestDate: '19/02/2023',
-      status: 'Concluído'
+      status: 'Por Pagar',
+      docType: 'CNI',
+      docNumber: '001234567LA041',
+      nationality: 'Cabo-verdiana',
+      island: 'Santiago',
+      county: 'Praia',
+      parish: 'Nossa Senhora da Graça',
+      locality: 'Platô',
+      zone: 'Zona 1'
     }
   ]);
 
@@ -1733,6 +2109,8 @@ export default function App() {
         birthDate: person.birthDate || '',
         docType: bioSearchDocType,
         docNumber: person.docNumber || person.number || '',
+        nif: person.nif || '',
+        profession: person.profession || '',
         gender: person.gender || 'Masculino',
         civilStatus: person.civilStatus || 'Solteiro(a)',
         birthPlace: person.birthPlace || '',
@@ -1967,9 +2345,30 @@ export default function App() {
   ]);
   const [mockDecisionCertificatesExtravio, setMockDecisionCertificatesExtravio] = useState<any[]>([]);
   const [mockConcludedCertificatesExtravio, setMockConcludedCertificatesExtravio] = useState<any[]>([]);
+  // Número do certificado de extravio: só existe depois de emitido; sequencial dentro do ano (ex.: 1/2026)
+  const proximoNumeroCertificadoExtravio = () => {
+    const ano = new Date().getFullYear();
+    const doAno = mockConcludedCertificatesExtravio
+      .map((c: any) => /^(\d+)\/(\d{4})$/.exec(c.certificateNumber || ''))
+      .filter((m: any) => m && Number(m[2]) === ano)
+      .map((m: any) => Number(m[1]));
+    return `${Math.max(0, ...doAno) + 1}/${ano}`;
+  };
+  const todosHistoricoExtravio = [
+    ...mockAnalysisCertificatesExtravio.map(c => ({ ...c, _fase: 'Análise', _faseColor: 'bg-blue-50 text-blue-600',
+      _estado: c.status === 'Devolvido' ? 'Devolvido' : 'Por analisar',
+      _estadoColor: c.status === 'Devolvido' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600' })),
+    ...mockDecisionCertificatesExtravio.map(c => ({ ...c, _fase: 'Decisão', _faseColor: 'bg-amber-50 text-amber-600',
+      _estado: 'Em Decisão', _estadoColor: 'bg-amber-50 text-amber-600' })),
+    ...mockConcludedCertificatesExtravio.map((c, i) => ({ ...c, certificateNumber: c.certificateNumber || `${i + 1}/${new Date().getFullYear()}`, _fase: 'Decisão', _faseColor: 'bg-amber-50 text-amber-600',
+      _estado: 'Concluído', _estadoColor: 'bg-emerald-50 text-emerald-600' })),
+  ];
+  const listaHistoricoExtravio = historicoExtravioResults !== null ? historicoExtravioResults : todosHistoricoExtravio;
+
   const [selectedAnalysisCertificateExtravio, setSelectedAnalysisCertificateExtravio] = useState<any>(null);
   const [selectedDecisionCertificateExtravio, setSelectedDecisionCertificateExtravio] = useState<any>(null);
   const [selectedHistoryCertificateExtravio, setSelectedHistoryCertificateExtravio] = useState<any>(null);
+  const [extravioDetailBackView, setExtravioDetailBackView] = useState('certificate_history_extravio');
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [returnReason, setReturnReason] = useState('');
   const [registeredDoc, setRegisteredDoc] = useState<any>(null);
@@ -6047,7 +6446,6 @@ export default function App() {
                                           <div className="md:col-span-3"><DetailField label="Descrição do Movimento" value={duc.descricao || '---'} /></div>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                                          <DetailField label="Método de Pagamento" value={duc.metodo || '---'} />
                                           <DetailField label="Data Emissão" value={duc.dataEmissao || '---'} />
                                         </div>
                                         {(duc.rubricas || []).length > 0 && (
@@ -6073,6 +6471,9 @@ export default function App() {
                           )}
                         </AnimatePresence>
                       </div>
+
+                      {/* Meio de Pagamento */}
+                      {renderMeioPagamento(ducs, !!certDetailExpanded.pagamento, () => alternar('pagamento'))}
                     </>
                   );
                 })()}
@@ -6533,95 +6934,75 @@ export default function App() {
                   <Button icon={Plus} onClick={() => {
                     setCertificateExtravioStep(1);
                     setDucExtravioGenerated(false);
+                    setPaymentData(emptyPaymentData());
+                    setSavedAttachments([]);
                     setCurrentView('certificate_registration_extravio');
                   }}>Nova Solicitação</Button>
                 </div>
 
-                <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">N.º Pedido</label>
-                      <input
-                        type="text"
-                        value={certificateExtravioSearchFilters.orderNumber}
-                        onChange={(e) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, orderNumber: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                        placeholder="Ex: 000004"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</label>
-                      <input
-                        type="text"
-                        value={certificateExtravioSearchFilters.name}
-                        onChange={(e) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, name: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                        placeholder="Nome completo"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Nascimento</label>
-                      <div className="relative">
-                        <input
-                          type="date"
-                          value={certificateExtravioSearchFilters.birthDate}
-                          onChange={(e) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, birthDate: e.target.value})}
-                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                        />
-                        <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Pedido</label>
-                      <div className="relative">
-                        <input
-                          type="date"
-                          value={certificateExtravioSearchFilters.requestDate}
-                          onChange={(e) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, requestDate: e.target.value})}
-                          className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all"
-                        />
-                        <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
-                      </div>
-                    </div>
-
-                    <div className="md:col-span-4 flex justify-end gap-3">
-                      <Button variant="outline" onClick={() => setCertificateExtravioSearchFilters({
-                        orderNumber: '',
-                        name: '',
-                        birthDate: '',
-                        requestDate: ''
-                      })}>Limpar</Button>
-                      <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
-                    </div>
-                  </div>
-                </div>
+                {renderFiltrosExtravio(
+                  certificateExtravioSearchFilters,
+                  setCertificateExtravioSearchFilters,
+                  showExtravioAdvancedFilters,
+                  setShowExtravioAdvancedFilters,
+                  () => setCertificateExtravioSearchResults(filtrarPedidosExtravio(mockCertificatesExtravio, certificateExtravioSearchFilters)),
+                  () => { setCertificateExtravioSearchFilters(emptyExtravioFilters); setCertificateExtravioSearchResults(null); },
+                )}
 
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Listagem de Pedidos</h3>
-                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {mockCertificatesExtravio.length.toString().padStart(2, '0')}</span>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">{certificateExtravioSearchResults !== null ? 'Resultados da Pesquisa' : 'Listagem de Pedidos'}</h3>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {(certificateExtravioSearchResults !== null ? certificateExtravioSearchResults : mockCertificatesExtravio).length.toString().padStart(2, '0')}</span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Número Pedido</th>
-                          <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Nº Pedido</th>
+                          <th className="px-6 py-4">Tipo Documento Extraviado</th>
+                          <th className="px-6 py-4">Nome Requerente</th>
                           <th className="px-6 py-4">Data Nascimento</th>
-                          <th className="px-6 py-4">Data Pedido</th>
+                          <th className="px-6 py-4">Nacionalidade</th>
+                          <th className="px-6 py-4">Ilha</th>
                           <th className="px-6 py-4">Estado</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {mockCertificatesExtravio.map((cert) => (
+                        {(certificateExtravioSearchResults !== null ? certificateExtravioSearchResults : mockCertificatesExtravio).length === 0 && (
+                          <tr>
+                            <td colSpan={7} className="px-6 py-8 text-center text-slate-400 italic text-xs">Nenhum pedido encontrado.</td>
+                          </tr>
+                        )}
+                        {(certificateExtravioSearchResults !== null ? certificateExtravioSearchResults : mockCertificatesExtravio).map((cert) => (
                           <tr
                             key={cert.id}
+                            onClick={() => {
+                              // Qualquer pedido da listagem é uma Solicitação; reaproveita dados completos se existirem
+                              const base = mockAnalysisCertificatesExtravio.find(c => c.id === cert.id) || {};
+                              setSelectedHistoryCertificateExtravio({
+                                biographic: { fullName: cert.name, birthDate: cert.birthDate },
+                                address: {},
+                                contact: {},
+                                documentosExtraviados: {},
+                                attachments: [],
+                                observations: [],
+                                history: [{ date: cert.requestDate, phase: 'Solicitação', status: cert.status, user: '---' }],
+                                ...base,
+                                ...cert,
+                                ducs: cert.ducs || [{ numero: '9865457', valor: '500', moeda: 'CVE', estado: cert.status === 'Pago' ? 'Pago' : 'Por Pagar', dataEmissao: cert.requestDate }],
+                                _fase: 'Solicitação'
+                              });
+                              setExtravioDetailBackView('certificate_list_extravio');
+                              setCurrentView('certificate_history_extravio_detail');
+                            }}
                             className="hover:bg-blue-50 cursor-pointer transition-colors group"
                           >
-                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.id}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{cert.id}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.documentosExtraviados?.docType || cert.docType || <span className="text-slate-300">—</span>}</td>
                             <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
                             <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.nationality || cert.biographic?.nationality || <span className="text-slate-300">—</span>}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.island || cert.address?.island || <span className="text-slate-300">—</span>}</td>
                             <td className="px-6 py-4">
                               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                                 cert.status === 'Por Pagar' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
@@ -6660,15 +7041,17 @@ export default function App() {
                 </div>
 
                 {/* Steps — igual ao certificado de cadastro */}
-                <div className="flex items-center justify-between max-w-2xl mx-auto relative px-4">
+                <div className="flex items-center justify-between max-w-3xl mx-auto relative px-4">
                   <div className="absolute top-6 left-12 right-12 h-1 bg-slate-100 rounded-full"></div>
                   <div
                     className="absolute top-6 left-12 h-1 bg-blue-600 rounded-full transition-all duration-500"
-                    style={{ width: certificateExtravioStep === 1 ? '0%' : '100%' }}
+                    style={{ width: certificateExtravioStep === 1 ? '0%' : certificateExtravioStep === 2 ? '33%' : certificateExtravioStep === 3 ? '66%' : '100%' }}
                   ></div>
                   {[
                     { id: 1, label: 'Identificação', icon: User },
-                    { id: 2, label: 'DUC', icon: FileText }
+                    { id: 2, label: 'Anexo', icon: Paperclip },
+                    { id: 3, label: 'Gerar DUC', icon: FileText },
+                    { id: 4, label: 'Pagamento', icon: CreditCard }
                   ].map((step) => (
                     <div key={step.id} className="relative z-10 flex flex-col items-center gap-3">
                       <div className={`w-12 h-12 rounded-2xl border-2 flex items-center justify-center transition-all duration-300 ${
@@ -6693,10 +7076,10 @@ export default function App() {
                   {/* Card header */}
                   <div className="p-6 bg-slate-50 border-b-2 border-slate-100 flex items-center gap-3">
                     <div className="p-2 bg-slate-900 text-white rounded-lg">
-                      {certificateExtravioStep === 1 ? <User size={18} /> : <FileText size={18} />}
+                      {certificateExtravioStep === 1 ? <User size={18} /> : certificateExtravioStep === 2 ? <Paperclip size={18} /> : certificateExtravioStep === 3 ? <FileText size={18} /> : <CreditCard size={18} />}
                     </div>
                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
-                      {certificateExtravioStep === 1 ? 'Dados de Identificação' : 'Documento Único de Cobrança'}
+                      {certificateExtravioStep === 1 ? 'Dados de Identificação' : certificateExtravioStep === 2 ? 'Anexos' : certificateExtravioStep === 3 ? 'Informações de Pagamento' : 'Pagamento'}
                     </h3>
                   </div>
 
@@ -6748,11 +7131,11 @@ export default function App() {
                               <DetailField label="Sexo" value={certificateExtravioData.gender} type="select" options={['Masculino', 'Feminino']} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, gender: v})} />
                               <DetailField label="Estado Civil" value={certificateExtravioData.civilStatus} type="select" options={['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)']} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, civilStatus: v})} />
                               <DetailField label="Naturalidade" value={certificateExtravioData.birthPlace} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, birthPlace: v})} />
+                              <DetailField label="Profissão" value={certificateExtravioData.profession} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, profession: v})} />
                               <DetailField label="Nacionalidade" value={certificateExtravioData.nationality} type="select" options={['Cabo-verdiana', 'Portuguesa', 'Angolana', 'Outra']} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, nationality: v})} />
                               <DetailField label="Nome Pai" value={certificateExtravioData.fatherName} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, fatherName: v})} />
                               <DetailField label="Nome Mãe" value={certificateExtravioData.motherName} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, motherName: v})} />
-                              <DetailField label="Tipo Documento" value={certificateExtravioData.docType} type="select" options={['BI', 'CNI', 'Passaporte', 'TRE']} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, docType: v})} />
-                              <DetailField label="Número Documento" value={certificateExtravioData.docNumber} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, docNumber: v})} />
+                              <DetailField label="NIF" value={certificateExtravioData.nif} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, nif: v})} />
                             </div>
                           </div>
                         </div>
@@ -6765,6 +7148,7 @@ export default function App() {
                             <DetailField label="Conselho" value={certificateExtravioData.county} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, county: v})} />
                             <DetailField label="Freguesia" value={certificateExtravioData.parish} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, parish: v})} />
                             <DetailField label="Localidade" value={certificateExtravioData.locality} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, locality: v})} />
+                            <DetailField label="Zona" value={certificateExtravioData.zone} type="select" options={['Zona 1', 'Zona 2']} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, zone: v})} />
                             <DetailField label="Ponto de Referencia" value={certificateExtravioData.reference} readOnly={false} icon={MapPin} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, reference: v})} />
                           </div>
                         </div>
@@ -6782,43 +7166,14 @@ export default function App() {
                         <div className="space-y-4">
                           <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-l-4 border-slate-900 pl-4">Documento Extraviado</p>
 
-                          {/* Pesquisa de documento extraviado */}
-                          <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-6 space-y-4">
-                            <div className="flex flex-col md:flex-row gap-4 items-end">
-                              <div className="w-full md:w-32 space-y-2">
-                                <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Tipo Doc</label>
-                                <select value={lostDocSearchType} onChange={(e) => setLostDocSearchType(e.target.value)}
-                                  className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all">
-                                  <option value="CNI">CNI</option>
-                                  <option value="Passaporte">Passaporte</option>
-                                  <option value="TRE">TRE</option>
-                                  <option value="BI">BI</option>
-                                </select>
-                              </div>
-                              <div className="flex-1 space-y-2">
-                                <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">N.º Documento</label>
-                                <input type="text" value={lostDocSearchNumber} onChange={(e) => setLostDocSearchNumber(e.target.value)}
-                                  placeholder="Digite o número do documento..."
-                                  className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
-                              </div>
-                              <div className="flex-1 space-y-2">
-                                <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Nome da Pessoa</label>
-                                <input type="text" value={lostDocSearchName} onChange={(e) => setLostDocSearchName(e.target.value)}
-                                  placeholder="Digite o nome..."
-                                  className="w-full px-4 py-2.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 transition-all" />
-                              </div>
-                              <Button variant="secondary" icon={Search} onClick={handleLostDocSearch}>Pesquisar</Button>
-                            </div>
-                          </div>
-
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <DetailField label="Tipo Documento" value={certificateExtravioData.lostDocType} type="select" options={['BI', 'CNI', 'Passaporte', 'TRE']} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, lostDocType: v})} />
-                            <DetailField label="Número Documento" value={certificateExtravioData.lostDocNumber} readOnly={false} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, lostDocNumber: v})} />
-                            <DetailField label="Data Emissão" value={certificateExtravioData.lostDocIssueDate} type="date" readOnly={false} icon={Calendar} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, lostDocIssueDate: v})} />
-                            <DetailField label="Data Validade" value={certificateExtravioData.lostDocExpiryDate} type="date" readOnly={false} icon={Calendar} onChange={(v) => setCertificateExtravioData({...certificateExtravioData, lostDocExpiryDate: v})} />
                           </div>
                         </div>
 
+                      </div>
+                    ) : certificateExtravioStep === 2 ? (
+                      <div className="space-y-6">
                         {/* Anexos — igual ao cadastro de documentos */}
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
@@ -6856,52 +7211,202 @@ export default function App() {
                           </div>
                         </div>
 
+
+                      </div>
+                    ) : certificateExtravioStep === 3 ? (
+                      <div className="space-y-8">
+                        {/* Dados de Pagamento */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dados de Pagamento</p>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <DetailField label="Recebedoria" value={paymentData.recebedoria} readOnly={false} placeholder="Nome Recebedoria"
+                              onChange={(v: string) => setPaymentData({...paymentData, recebedoria: v})} />
+                            <DetailField label="Valor Total" value={String(totalRubricas(paymentData.rubricas))} />
+                            <DetailField label="Moeda" value={paymentData.moeda} readOnly={false}
+                              onChange={(v: string) => setPaymentData({...paymentData, moeda: v})} />
+                            <DetailField label="Email Utilizador SIGOV" value={paymentData.emailSigov} readOnly={false}
+                              onChange={(v: string) => setPaymentData({...paymentData, emailSigov: v})} />
+                          </div>
+                        </div>
+
+                        {/* Rubricas Económicas */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rubricas Económicas</p>
+                          <div className="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b-2 border-slate-100">
+                                  <th className="px-6 py-3 w-56">Código</th>
+                                  <th className="px-6 py-3">Descrição</th>
+                                  <th className="px-6 py-3 w-40 text-right">Valor</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {paymentData.rubricas.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={3} className="px-6 py-10 text-center text-sm font-bold text-slate-400 italic">
+                                      Nenhuma rubrica associada a este pedido
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  paymentData.rubricas.map((r: any, i: number) => (
+                                    <tr key={i}>
+                                      <td className="px-6 py-4 text-sm font-bold text-slate-900">{r.codigo}</td>
+                                      <td className="px-6 py-4 text-sm font-bold text-slate-600">{r.descricao}</td>
+                                      <td className="px-6 py-4 text-sm font-black text-slate-900 text-right">{r.valor}</td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Dados Contribuinte */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dados Contribuinte</p>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <DetailField label="NIF" value={contribuinteAtual().nif} />
+                            <DetailField label="Nome" value={contribuinteAtual().nome} />
+                            <DetailField label="Email" value={contribuinteAtual().email} />
+                          </div>
+                        </div>
+
+                        {/* Observação */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observação</p>
+                          <textarea
+                            rows={3}
+                            value={paymentData.observacao}
+                            onChange={(e) => setPaymentData({...paymentData, observacao: e.target.value})}
+                            placeholder="Inserir"
+                            className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all resize-none"
+                          />
+                        </div>
+
                       </div>
                     ) : (
                       <div className="space-y-8">
-                        {!ducExtravioGenerated ? (
-                          <div className="flex flex-col items-center justify-center py-16 space-y-6">
-                            <div className="p-6 bg-blue-50 text-blue-600 rounded-2xl">
-                              <FileText size={48} />
+                        {/* Documento Único de Cobrança */}
+                        <div className="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                          <div className="px-6 py-4 bg-slate-50 border-b-2 border-slate-100 flex items-center justify-between gap-3">
+                            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Documento Único de Cobrança</span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={verDuc}
+                                className="px-4 py-1.5 bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-900 hover:text-slate-900 rounded-lg text-[11px] font-bold transition-all flex items-center gap-2"
+                              >
+                                <Eye size={13} /> Ver
+                              </button>
+                              <button
+                                onClick={imprimirDuc}
+                                className="px-4 py-1.5 bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-900 hover:text-slate-900 rounded-lg text-[11px] font-bold transition-all flex items-center gap-2"
+                              >
+                                <Printer size={13} /> Imprimir
+                              </button>
+                              <button
+                                onClick={descarregarDuc}
+                                className="px-4 py-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-[11px] font-bold transition-all flex items-center gap-2"
+                              >
+                                <Download size={13} /> Download
+                              </button>
                             </div>
-                            <div className="text-center space-y-2">
-                              <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Gerar Documento de Cobrança</h3>
-                              <p className="text-sm text-slate-400 font-medium">Clique no botão abaixo para gerar o DUC para este pedido.</p>
-                            </div>
-                            <Button variant="secondary" onClick={() => setDucExtravioGenerated(true)}>Gerar DUC</Button>
                           </div>
-                        ) : (
-                          <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-left border-collapse">
-                                <thead>
-                                  <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                                    <th className="px-6 py-4">Número DUC</th>
-                                    <th className="px-6 py-4">Total a Pagar</th>
-                                    <th className="px-6 py-4">Estado</th>
-                                    <th className="px-6 py-4 text-right">Ações</th>
-                                  </tr>
-                                </thead>
+                          <div className="bg-slate-100 p-6">
+                            <style>{`@media print { body * { visibility: hidden; } #duc-doc, #duc-doc * { visibility: visible; } #duc-doc { position: absolute; left: 0; top: 0; width: 100%; } }`}</style>
+                            <div id="duc-doc" className="bg-white mx-auto p-6 font-mono text-[11px] text-slate-900 shadow-sm" style={{ maxWidth: '640px' }}>
+                              <div className="text-center space-y-1 mb-3">
+                                <p className="text-[13px] font-bold tracking-wide">NIF: 352339403 AF: 223 - PRAIA</p>
+                                <p className="text-[12px]">DOCUMENTO ÚNICO DE COBRANÇA</p>
+                              </div>
+                              <table className="w-full border-collapse">
                                 <tbody>
-                                  <tr className="border-b border-slate-50">
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">9865457</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">500$</td>
-                                    <td className="px-6 py-4">
-                                      <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black uppercase tracking-tighter">Por Pagar</span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                      <div className="flex justify-end gap-2">
-                                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"><Eye size={16} /></button>
-                                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"><Printer size={16} /></button>
-                                        <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"><History size={16} /></button>
-                                      </div>
-                                    </td>
+                                  <tr>
+                                    <td className="border border-slate-900 px-2 py-1 text-center font-bold">Nº DUC</td>
+                                    <td className="border border-slate-900 px-2 py-1 text-center font-bold">Dt. Emissão</td>
+                                    <td className="border border-slate-900 px-2 py-1 text-center font-bold">Dt. Pagamento</td>
+                                    <td className="border border-slate-900 px-2 py-1 text-center" colSpan={2}>{(contribuinteAtual().nome || '').toUpperCase()}</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="border border-slate-900 px-2 py-1">{paymentData.referencia || '---'}</td>
+                                    <td className="border border-slate-900 px-2 py-1 text-center">{new Date().toLocaleDateString('pt-BR')}</td>
+                                    <td className="border border-slate-900 px-2 py-1"></td>
+                                    <td className="border border-slate-900 px-2 py-1 font-bold">NIF:</td>
+                                    <td className="border border-slate-900 px-2 py-1 text-center">{contribuinteAtual().nif || '---'}</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="border border-slate-900 px-2 py-1 font-bold">Entidade:</td>
+                                    <td className="border border-slate-900 px-2 py-1" colSpan={4}>{paymentData.entidade || '---'}</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="border border-slate-900 px-2 py-1 font-bold align-top">Descrição:</td>
+                                    <td className="border border-slate-900 px-2 py-1 align-top h-14" colSpan={4}>{paymentData.descricao || '---'}</td>
                                   </tr>
                                 </tbody>
                               </table>
+                              <table className="w-full border-collapse mt-4">
+                                <thead>
+                                  <tr>
+                                    <th className="border border-slate-900 px-2 py-1 w-28">C.E.</th>
+                                    <th className="border border-slate-900 px-2 py-1">RECEITAS</th>
+                                    <th className="border border-slate-900 px-2 py-1 w-28">VALORES</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paymentData.rubricas.map((r: any, i: number) => (
+                                    <tr key={i}>
+                                      <td className="border border-slate-900 px-2 py-1 text-center">{r.codigo}</td>
+                                      <td className="border border-slate-900 px-2 py-1 text-center">{r.descricao}</td>
+                                      <td className="border border-slate-900 px-2 py-1 text-right">{r.valor}</td>
+                                    </tr>
+                                  ))}
+                                  <tr>
+                                    <td className="px-2 py-1 text-center font-bold">TOTAL</td>
+                                    <td className="px-2 py-1"></td>
+                                    <td className="px-2 py-1 text-right font-bold">{totalRubricas(paymentData.rubricas)}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                              <table className="w-full border-collapse mt-4">
+                                <tbody>
+                                  <tr>
+                                    <td className="border border-slate-900 px-2 py-2 font-bold w-52">Vai pagar a Quantia de:</td>
+                                    <td className="border border-slate-900 px-2 py-2 text-center">{totalRubricas(paymentData.rubricas)} {paymentData.moeda}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                              <div className="grid grid-cols-2 gap-10 mt-10 mb-4 text-center">
+                                <div><p>O Funcionário</p><div className="border-t border-slate-900 mt-8 mx-4"></div></div>
+                                <div><p>O Caixa</p><div className="border-t border-slate-900 mt-8 mx-4"></div></div>
+                              </div>
                             </div>
                           </div>
-                        )}
+                        </div>
+                        {/* Meio de Pagamento */}
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meio de Pagamento</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl">
+                            {[
+                              { id: 'Agora', sigla: 'a.' },
+                              { id: 'Vinti4', sigla: 'v4' },
+                              { id: 'Banco', sigla: 'BCO' },
+                            ].map((m) => (
+
+                              <button
+                                key={m.id}
+                                onClick={() => setPaymentData({...paymentData, metodo: m.id})}
+                                className={`py-5 px-4 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${
+                                  paymentData.metodo === m.id
+                                    ? 'border-blue-500 bg-blue-50 shadow-sm'
+                                    : 'border-slate-100 bg-white hover:border-slate-300'
+                                }`}
+                              >
+                                <span className={`text-lg font-black ${paymentData.metodo === m.id ? 'text-blue-600' : 'text-slate-400'}`}>{m.sigla}</span>
+                                <span className={`text-[10px] font-bold ${paymentData.metodo === m.id ? 'text-blue-600' : 'text-slate-400'}`}>{m.id}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -6910,27 +7415,32 @@ export default function App() {
                   <div className="p-6 bg-slate-50 border-t-2 border-slate-100 flex justify-between items-center">
                     <Button variant="outline" icon={ArrowLeft} onClick={() => {
                       if (certificateExtravioStep === 1) setCurrentView('certificate_list_extravio');
-                      else setCertificateExtravioStep(1);
+                      else setCertificateExtravioStep(certificateExtravioStep - 1);
                     }}>Voltar</Button>
                     <div className="flex gap-3">
                       <Button variant="outline" onClick={() => setCurrentView('certificate_list_extravio')}>Cancelar</Button>
                       {certificateExtravioStep === 1 ? (
                         <Button variant="primary" icon={ArrowRight} onClick={() => setCertificateExtravioStep(2)}>Próximo</Button>
+                      ) : certificateExtravioStep === 2 ? (
+                        <Button variant="primary" icon={ArrowRight} onClick={entrarNoPagamentoExtravio}>Próximo</Button>
+                      ) : certificateExtravioStep === 3 ? (
+                        <Button
+                          variant="primary"
+                          icon={FileText}
+                          disabled={ducAPedir || paymentData.rubricas.length === 0}
+                          onClick={gerarDucExtravio}
+                        >
+                          {ducAPedir ? 'A gerar DUC...' : 'Gerar DUC'}
+                        </Button>
                       ) : (
-                        ducExtravioGenerated && (
-                          <Button variant="primary" icon={Check} onClick={() => {
-                            setMockCertificatesExtravio([...mockCertificatesExtravio, {
-                              id: String(mockCertificatesExtravio.length + 4).padStart(6, '0'),
-                              name: certificateExtravioData.fullName || 'Novo Pedido',
-                              birthDate: certificateExtravioData.birthDate || '---',
-                              requestDate: new Date().toLocaleDateString('pt-BR'),
-                              status: 'Por Pagar'
-                            }]);
-                            setSuccessMessage('Solicitação de Certificado de Extravio Registada com Sucesso.');
-                            setShowSuccessModal(true);
-                            setCurrentView('certificate_list_extravio');
-                          }}>Concluir</Button>
-                        )
+                        <Button
+                          variant="primary"
+                          icon={Check}
+                          disabled={!paymentData.entidade || !paymentData.metodo || paymentData.rubricas.length === 0}
+                          onClick={gravarSolicitacaoExtravio}
+                        >
+                          Concluir
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -7272,7 +7782,7 @@ export default function App() {
                         </button>
                       </div>
 
-                      {suggestedFicha && (
+                      {(suggestedFicha || matchHistory.accepted.length > 0 || matchHistory.rejected.length > 0) && (
                         <>
                           <button
                             onClick={() => toggleSection('associated')}
@@ -7295,10 +7805,15 @@ export default function App() {
                                 exit={{ height: 0, opacity: 0 }}
                                 className="overflow-hidden"
                               >
+                                {suggestedFicha && (
                                 <div className="bg-white border-2 border-blue-100 shadow-blue-50 rounded-2xl p-8 space-y-8 shadow-sm mt-2 relative">
                                   <div className="absolute top-4 right-8 flex items-center gap-3">
                                     <button
-                                      onClick={() => setSuggestedFicha(null)}
+                                      onClick={() => {
+                                        setMatchHistory(h => ({ ...h, rejected: [{ ...suggestedFicha, decidedAt: new Date().toLocaleDateString('pt-BR') }, ...h.rejected] }));
+                                        setSuggestedFicha(null);
+                                        setMatchTab('rejected');
+                                      }}
                                       className="px-4 py-1.5 bg-red-50 text-red-600 border border-red-200 font-bold rounded-xl hover:bg-red-100 transition-colors text-[11px] uppercase tracking-wider flex items-center gap-2"
                                     >
                                       <X size={13} />
@@ -7306,6 +7821,7 @@ export default function App() {
                                     </button>
                                     <button
                                       onClick={() => {
+                                        setMatchHistory(h => ({ ...h, accepted: [{ ...suggestedFicha, decidedAt: new Date().toLocaleDateString('pt-BR') }, ...h.accepted] }));
                                         setAssociatedPerson(suggestedFicha);
                                         setSuggestedFicha(null);
                                         setCertAnalysisHasSearched(true);
@@ -7356,6 +7872,47 @@ export default function App() {
                                     </div>
                                   </div>
                                 </div>
+                                )}
+                                {true && (
+                                  <div className="bg-white border-2 border-slate-100 rounded-2xl mt-4 overflow-hidden">
+                                    <div className="flex items-center gap-6 px-6 border-b border-slate-100">
+                                      {([
+                                        { id: 'accepted', label: 'Aceites', count: matchHistory.accepted.length },
+                                        { id: 'rejected', label: 'Rejeitados', count: matchHistory.rejected.length },
+                                      ] as const).map(tab => (
+                                        <button
+                                          key={tab.id}
+                                          onClick={() => setMatchTab(tab.id)}
+                                          className={`py-3 -mb-px border-b-2 text-[11px] font-black uppercase tracking-wider flex items-center gap-2 transition-colors ${
+                                            matchTab === tab.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                                          }`}
+                                        >
+                                          {tab.label}
+                                          <span className={`text-[10px] px-1.5 rounded-full ${matchTab === tab.id ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>{tab.count}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <div className="divide-y divide-slate-100">
+                                      {matchHistory[matchTab].length === 0 ? (
+                                        <p className="p-6 text-center text-slate-400 italic text-xs">
+                                          {matchTab === 'accepted' ? 'Nenhum match aceite.' : 'Nenhum match rejeitado.'}
+                                        </p>
+                                      ) : matchHistory[matchTab].map((f: any, i: number) => (
+                                        <div key={`${f.number}-${i}`} className="px-6 py-4 flex items-center justify-between gap-4 text-xs">
+                                          <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
+                                            <span className="font-black text-slate-900">{f.number}</span>
+                                            <span className="text-slate-700">{f.name}{f.surname ? ' ' + f.surname : ''}</span>
+                                            <span className="text-slate-500">NIF {f.nif || '---'}</span>
+                                            <span className="text-slate-400">{f.decidedAt}</span>
+                                          </div>
+                                          <span className={`text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full ${matchTab === 'accepted' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                                            {matchTab === 'accepted' ? 'Aceite' : 'Rejeitado'}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </motion.div>
                             )}
                           </AnimatePresence>
@@ -8840,36 +9397,37 @@ export default function App() {
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Análise de Certificado de Extravio</h2>
                 </div>
 
-                <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                    <DetailField label="N.º Pedido" value={certificateExtravioSearchFilters.orderNumber} readOnly={false} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, orderNumber: val})} />
-                    <DetailField label="Nome" value={certificateExtravioSearchFilters.name} readOnly={false} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, name: val})} />
-                    <DetailField label="Data de Nascimento" value={certificateExtravioSearchFilters.birthDate} type="date" readOnly={false} icon={Calendar} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, birthDate: val})} />
-                    <DetailField label="Data Pedido" value={certificateExtravioSearchFilters.requestDate} type="date" readOnly={false} icon={Calendar} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, requestDate: val})} />
-                  </div>
-                  <div className="flex justify-end mt-6">
-                    <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
-                  </div>
-                </div>
+                {renderFiltrosExtravio(
+                  analiseExtravioFilters,
+                  setAnaliseExtravioFilters,
+                  showAnaliseExtravioAdvanced,
+                  setShowAnaliseExtravioAdvanced,
+                  () => setAnaliseExtravioResults(filtrarPedidosExtravio(mockAnalysisCertificatesExtravio, analiseExtravioFilters)),
+                  () => { setAnaliseExtravioFilters(emptyExtravioFilters); setAnaliseExtravioResults(null); },
+                )}
 
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Listagem de Pedidos</h3>
-                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {mockAnalysisCertificatesExtravio.length.toString().padStart(2, '0')}</span>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">{analiseExtravioResults !== null ? 'Resultados da Pesquisa' : 'Listagem de Pedidos'}</h3>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {(analiseExtravioResults !== null ? analiseExtravioResults : mockAnalysisCertificatesExtravio).length.toString().padStart(2, '0')}</span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Número Pedido</th>
-                          <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Nº Pedido</th>
+                          <th className="px-6 py-4">Tipo Documento Extraviado</th>
+                          <th className="px-6 py-4">Nome Requerente</th>
                           <th className="px-6 py-4">Data Nascimento</th>
-                          <th className="px-6 py-4">Data Pedido</th>
+                          <th className="px-6 py-4">Nacionalidade</th>
+                          <th className="px-6 py-4">Ilha</th>
+                          <th className="px-6 py-4">Estado</th>
+                          <th className="px-6 py-4">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {mockAnalysisCertificatesExtravio.length > 0 ? (
-                          mockAnalysisCertificatesExtravio.map((cert) => (
+                        {(analiseExtravioResults !== null ? analiseExtravioResults : mockAnalysisCertificatesExtravio).length > 0 ? (
+                          (analiseExtravioResults !== null ? analiseExtravioResults : mockAnalysisCertificatesExtravio).map((cert) => (
                             <tr
                               key={cert.id}
                               onClick={() => {
@@ -8879,14 +9437,32 @@ export default function App() {
                               className="hover:bg-blue-50 cursor-pointer transition-colors group"
                             >
                               <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{cert.id}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.documentosExtraviados?.docType || cert.docType || <span className="text-slate-300">—</span>}</td>
                               <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
                               <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
-                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.biographic?.nationality || cert.nationality || <span className="text-slate-300">—</span>}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.address?.island || cert.island || <span className="text-slate-300">—</span>}</td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                  cert.status === 'Devolvido' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {cert.status || 'Por Analisar'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedAnalysisCertificateExtravio(cert); setCurrentView('certificate_analysis_extravio_detail'); }}
+                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                  title="Analisar"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                              </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhum pedido aguardando análise.</td>
+                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic text-sm">{analiseExtravioResults !== null ? 'Nenhum pedido encontrado.' : 'Nenhum pedido aguardando análise.'}</td>
                           </tr>
                         )}
                       </tbody>
@@ -8904,6 +9480,22 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6 pb-12"
               >
+                {/* Pedido devolvido pela decisão: aviso no topo */}
+                {(selectedAnalysisCertificateExtravio.status === 'Devolvido' || selectedAnalysisCertificateExtravio.returnReason) && (
+                  <div className="flex items-start gap-3 bg-red-50 border-2 border-red-200 rounded-2xl px-5 py-4">
+                    <XCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-black text-red-700">Pedido devolvido para nova análise</p>
+                      <p className="text-xs font-medium text-red-600">
+                        O processo foi devolvido para a etapa de análise{selectedAnalysisCertificateExtravio.returnedAt ? ` em ${selectedAnalysisCertificateExtravio.returnedAt}` : ''}{selectedAnalysisCertificateExtravio.returnedBy ? ` por ${selectedAnalysisCertificateExtravio.returnedBy}` : ''}. Foram identificadas informações que necessitam de revisão antes de o processo seguir para decisão.
+                      </p>
+                      {selectedAnalysisCertificateExtravio.returnReason && (
+                        <p className="text-xs text-red-700"><span className="font-black">Motivo:</span> {selectedAnalysisCertificateExtravio.returnReason}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Análise de Certificado de Extravio</h2>
                 </div>
@@ -8929,13 +9521,11 @@ export default function App() {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                             <DetailField label="Naturalidade" value={selectedAnalysisCertificateExtravio.biographic.birthPlace} />
+                            <DetailField label="Profissão" value={selectedAnalysisCertificateExtravio.biographic.profession || '---'} />
                             <DetailField label="Nacionalidade" value={selectedAnalysisCertificateExtravio.biographic.nationality} />
                             <DetailField label="Nome Pai" value={selectedAnalysisCertificateExtravio.biographic.fatherName} />
                             <DetailField label="Nome Mãe" value={selectedAnalysisCertificateExtravio.biographic.motherName} />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <DetailField label="Tipo Documento" value={selectedAnalysisCertificateExtravio.biographic.docType} />
-                            <DetailField label="Número Documento" value={selectedAnalysisCertificateExtravio.biographic.docNumber} />
+                            <DetailField label="NIF" value={selectedAnalysisCertificateExtravio.biographic.nif || '---'} />
                           </div>
                           <div className="space-y-4 pt-4 border-t border-slate-100">
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço</h4>
@@ -8944,6 +9534,7 @@ export default function App() {
                               <DetailField label="Conselho" value={selectedAnalysisCertificateExtravio.address.council} />
                               <DetailField label="Freguesia" value={selectedAnalysisCertificateExtravio.address.parish} />
                               <DetailField label="Localidade" value={selectedAnalysisCertificateExtravio.address.locality} />
+                              <DetailField label="Zona" value={selectedAnalysisCertificateExtravio.address.zone || selectedAnalysisCertificateExtravio.zone || '---'} />
                               <DetailField label="Ponto de Referencia" value={selectedAnalysisCertificateExtravio.address.reference} icon={MapPin} />
                             </div>
                           </div>
@@ -8975,9 +9566,47 @@ export default function App() {
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6 mt-1">
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <DetailField label="Tipo Documento" value={selectedAnalysisCertificateExtravio.documentosExtraviados.docType} />
-                            <DetailField label="Número Documento" value={selectedAnalysisCertificateExtravio.documentosExtraviados.docNumber} />
-                            <DetailField label="Data Emissão" value={selectedAnalysisCertificateExtravio.documentosExtraviados.docIssueDate} icon={Calendar} />
-                            <DetailField label="Data Validade" value={selectedAnalysisCertificateExtravio.documentosExtraviados.docExpiryDate} icon={Calendar} />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Histórico do Pedido */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioHistory')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Histórico do Pedido</span>
+                    </div>
+                    {expandedSections.extravioHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioHistory && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mt-1">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                                  <th className="px-6 py-4">Data</th>
+                                  <th className="px-6 py-4">Fase</th>
+                                  <th className="px-6 py-4">Estado</th>
+                                  <th className="px-6 py-4">Utilizador</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {selectedAnalysisCertificateExtravio.history.map((h: any, idx: number) => (
+                                  <tr key={idx} className="bg-white">
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       </motion.div>
@@ -9117,47 +9746,6 @@ export default function App() {
                   </AnimatePresence>
                 </div>
 
-                {/* Histórico do Pedido */}
-                <div className="space-y-2">
-                  <button onClick={() => toggleSection('extravioHistory')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
-                      <span className="uppercase tracking-widest text-xs">Histórico do Pedido</span>
-                    </div>
-                    {expandedSections.extravioHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                  </button>
-                  <AnimatePresence>
-                    {expandedSections.extravioHistory && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mt-1">
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                              <thead>
-                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                                  <th className="px-6 py-4">Data</th>
-                                  <th className="px-6 py-4">Fase</th>
-                                  <th className="px-6 py-4">Estado</th>
-                                  <th className="px-6 py-4">Utilizador</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-50">
-                                {selectedAnalysisCertificateExtravio.history.map((h: any, idx: number) => (
-                                  <tr key={idx} className="bg-white">
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
                 <div className="flex justify-between pt-8 border-t border-slate-100">
                   <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_analysis_extravio')}>Voltar</Button>
                   <Button
@@ -9168,6 +9756,7 @@ export default function App() {
                       setPendingConcluirAction(() => () => {
                         const newDecisionCert = {
                           ...selectedAnalysisCertificateExtravio,
+                          analyzedBy: user?.name || 'Sistema',
                           status: 'Para Decisão',
                           history: [
                             ...selectedAnalysisCertificateExtravio.history,
@@ -9197,36 +9786,37 @@ export default function App() {
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Decisão de Certificado de Extravio</h2>
                 </div>
 
-                <div className="bg-white p-8 rounded-2xl border-2 border-slate-100 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                    <DetailField label="N.º Pedido" value={certificateExtravioSearchFilters.orderNumber} readOnly={false} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, orderNumber: val})} />
-                    <DetailField label="Nome" value={certificateExtravioSearchFilters.name} readOnly={false} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, name: val})} />
-                    <DetailField label="Data de Nascimento" value={certificateExtravioSearchFilters.birthDate} type="date" readOnly={false} icon={Calendar} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, birthDate: val})} />
-                    <DetailField label="Data Pedido" value={certificateExtravioSearchFilters.requestDate} type="date" readOnly={false} icon={Calendar} onChange={(val) => setCertificateExtravioSearchFilters({...certificateExtravioSearchFilters, requestDate: val})} />
-                  </div>
-                  <div className="flex justify-end mt-6">
-                    <Button variant="primary" icon={Search} onClick={() => {}}>Pesquisar</Button>
-                  </div>
-                </div>
+                {renderFiltrosExtravio(
+                  decisaoExtravioFilters,
+                  setDecisaoExtravioFilters,
+                  showDecisaoExtravioAdvanced,
+                  setShowDecisaoExtravioAdvanced,
+                  () => setDecisaoExtravioResults(filtrarPedidosExtravio(mockDecisionCertificatesExtravio, decisaoExtravioFilters)),
+                  () => { setDecisaoExtravioFilters(emptyExtravioFilters); setDecisaoExtravioResults(null); },
+                )}
 
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Listagem de Pedidos para Decisão</h3>
-                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {mockDecisionCertificatesExtravio.length.toString().padStart(2, '0')}</span>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">{decisaoExtravioResults !== null ? 'Resultados da Pesquisa' : 'Listagem de Pedidos para Decisão'}</h3>
+                    <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">Total : {(decisaoExtravioResults !== null ? decisaoExtravioResults : mockDecisionCertificatesExtravio).length.toString().padStart(2, '0')}</span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Número Pedido</th>
-                          <th className="px-6 py-4">Nome</th>
+                          <th className="px-6 py-4">Nº Pedido</th>
+                          <th className="px-6 py-4">Tipo Documento Extraviado</th>
+                          <th className="px-6 py-4">Nome Requerente</th>
                           <th className="px-6 py-4">Data Nascimento</th>
-                          <th className="px-6 py-4">Data Pedido</th>
+                          <th className="px-6 py-4">Nacionalidade</th>
+                          <th className="px-6 py-4">Analisado por</th>
+                          <th className="px-6 py-4">Estado</th>
+                          <th className="px-6 py-4">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {mockDecisionCertificatesExtravio.length > 0 ? (
-                          mockDecisionCertificatesExtravio.map((cert) => (
+                        {(decisaoExtravioResults !== null ? decisaoExtravioResults : mockDecisionCertificatesExtravio).length > 0 ? (
+                          (decisaoExtravioResults !== null ? decisaoExtravioResults : mockDecisionCertificatesExtravio).map((cert) => (
                             <tr
                               key={cert.id}
                               onClick={() => {
@@ -9236,14 +9826,30 @@ export default function App() {
                               className="hover:bg-blue-50 cursor-pointer transition-colors group"
                             >
                               <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{cert.id}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.documentosExtraviados?.docType || cert.docType || <span className="text-slate-300">—</span>}</td>
                               <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
                               <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
-                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.biographic?.nationality || cert.nationality || <span className="text-slate-300">—</span>}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.analyzedBy || <span className="text-slate-300">—</span>}</td>
+                              <td className="px-6 py-4">
+                                <span className="inline-block whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-700">
+                                  Em Decisão
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedDecisionCertificateExtravio(cert); setCurrentView('certificate_decision_extravio_detail'); }}
+                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                  title="Ver pedido"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                              </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhum pedido aguardando decisão.</td>
+                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic text-sm">{decisaoExtravioResults !== null ? 'Nenhum pedido encontrado.' : 'Nenhum pedido aguardando decisão.'}</td>
                           </tr>
                         )}
                       </tbody>
@@ -9307,13 +9913,11 @@ export default function App() {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                             <DetailField label="Naturalidade" value={selectedDecisionCertificateExtravio.biographic.birthPlace} />
+                            <DetailField label="Profissão" value={selectedDecisionCertificateExtravio.biographic.profession || '---'} />
                             <DetailField label="Nacionalidade" value={selectedDecisionCertificateExtravio.biographic.nationality} />
                             <DetailField label="Nome Pai" value={selectedDecisionCertificateExtravio.biographic.fatherName} />
                             <DetailField label="Nome Mãe" value={selectedDecisionCertificateExtravio.biographic.motherName} />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <DetailField label="Tipo Documento" value={selectedDecisionCertificateExtravio.biographic.docType} />
-                            <DetailField label="Número Documento" value={selectedDecisionCertificateExtravio.biographic.docNumber} />
+                            <DetailField label="NIF" value={selectedDecisionCertificateExtravio.biographic.nif || '---'} />
                           </div>
                           <div className="space-y-4 pt-4 border-t border-slate-100">
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço</h4>
@@ -9322,6 +9926,7 @@ export default function App() {
                               <DetailField label="Conselho" value={selectedDecisionCertificateExtravio.address.council} />
                               <DetailField label="Freguesia" value={selectedDecisionCertificateExtravio.address.parish} />
                               <DetailField label="Localidade" value={selectedDecisionCertificateExtravio.address.locality} />
+                              <DetailField label="Zona" value={selectedDecisionCertificateExtravio.address.zone || selectedDecisionCertificateExtravio.zone || '---'} />
                               <DetailField label="Ponto de Referencia" value={selectedDecisionCertificateExtravio.address.reference} icon={MapPin} />
                             </div>
                           </div>
@@ -9353,9 +9958,47 @@ export default function App() {
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6 mt-1">
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <DetailField label="Tipo Documento" value={selectedDecisionCertificateExtravio.documentosExtraviados.docType} />
-                            <DetailField label="Número Documento" value={selectedDecisionCertificateExtravio.documentosExtraviados.docNumber} />
-                            <DetailField label="Data Emissão" value={selectedDecisionCertificateExtravio.documentosExtraviados.docIssueDate} icon={Calendar} />
-                            <DetailField label="Data Validade" value={selectedDecisionCertificateExtravio.documentosExtraviados.docExpiryDate} icon={Calendar} />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Histórico */}
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioHistory')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Histórico do Pedido</span>
+                    </div>
+                    {expandedSections.extravioHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioHistory && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mt-1">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                                  <th className="px-6 py-4">Data</th>
+                                  <th className="px-6 py-4">Fase</th>
+                                  <th className="px-6 py-4">Estado</th>
+                                  <th className="px-6 py-4">Utilizador</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {selectedDecisionCertificateExtravio.history.map((h: any, idx: number) => (
+                                  <tr key={idx} className="bg-white">
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       </motion.div>
@@ -9486,47 +10129,6 @@ export default function App() {
                   </AnimatePresence>
                 </div>
 
-                {/* Histórico */}
-                <div className="space-y-2">
-                  <button onClick={() => toggleSection('extravioHistory')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
-                      <span className="uppercase tracking-widest text-xs">Histórico do Pedido</span>
-                    </div>
-                    {expandedSections.extravioHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                  </button>
-                  <AnimatePresence>
-                    {expandedSections.extravioHistory && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mt-1">
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                              <thead>
-                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                                  <th className="px-6 py-4">Data</th>
-                                  <th className="px-6 py-4">Fase</th>
-                                  <th className="px-6 py-4">Estado</th>
-                                  <th className="px-6 py-4">Utilizador</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-50">
-                                {selectedDecisionCertificateExtravio.history.map((h: any, idx: number) => (
-                                  <tr key={idx} className="bg-white">
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
                 <div className="flex justify-between pt-8 border-t border-slate-100">
                   <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_decision_extravio')}>Voltar</Button>
                   <div className="flex gap-4">
@@ -9546,6 +10148,7 @@ export default function App() {
                         setPendingConcluirAction(() => () => {
                           const concludedCert = {
                             ...selectedDecisionCertificateExtravio,
+                            certificateNumber: proximoNumeroCertificadoExtravio(),
                             status: 'Concluído',
                             concludedAt: new Date().toLocaleDateString('pt-BR'),
                             history: [
@@ -9577,53 +10180,74 @@ export default function App() {
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Histórico Comunicações de Extravio</h2>
                 </div>
 
+                {renderFiltrosExtravio(
+                  historicoExtravioFilters,
+                  setHistoricoExtravioFilters,
+                  showHistoricoExtravioAdvanced,
+                  setShowHistoricoExtravioAdvanced,
+                  () => setHistoricoExtravioResults(filtrarPedidosExtravio(todosHistoricoExtravio, historicoExtravioFilters).filter((c: any) => !historicoExtravioFilters.estado || c._estado === historicoExtravioFilters.estado)),
+                  () => { setHistoricoExtravioFilters(emptyExtravioFilters); setHistoricoExtravioResults(null); },
+                  true,
+                )}
+
                 <div className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Todos os Pedidos</h3>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">{historicoExtravioResults !== null ? 'Resultados da Pesquisa' : 'Todos os Pedidos'}</h3>
                     <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter">
-                      Total : {(mockAnalysisCertificatesExtravio.length + mockDecisionCertificatesExtravio.length + mockConcludedCertificatesExtravio.length).toString().padStart(2, '0')}
+                      Total : {listaHistoricoExtravio.length.toString().padStart(2, '0')}
                     </span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-white text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                          <th className="px-6 py-4">Número Pedido</th>
+                          <th className="px-6 py-4">Nº Pedido</th>
+                          <th className="px-6 py-4">Nº Certificado</th>
+                          <th className="px-6 py-4">Tipo Documento Extraviado</th>
                           <th className="px-6 py-4">Nome</th>
                           <th className="px-6 py-4">Data Nascimento</th>
                           <th className="px-6 py-4">Data Pedido</th>
                           <th className="px-6 py-4">Fase</th>
+                          <th className="px-6 py-4">Estado</th>
+                          <th className="px-6 py-4">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {[
-                          ...mockAnalysisCertificatesExtravio.map(c => ({ ...c, _fase: 'Análise', _faseColor: 'bg-blue-50 text-blue-600' })),
-                          ...mockDecisionCertificatesExtravio.map(c => ({ ...c, _fase: 'Decisão', _faseColor: 'bg-amber-50 text-amber-600' })),
-                          ...mockConcludedCertificatesExtravio.map(c => ({ ...c, _fase: 'Concluído', _faseColor: 'bg-emerald-50 text-emerald-600' })),
-                        ].length > 0 ? [
-                          ...mockAnalysisCertificatesExtravio.map(c => ({ ...c, _fase: 'Análise', _faseColor: 'bg-blue-50 text-blue-600' })),
-                          ...mockDecisionCertificatesExtravio.map(c => ({ ...c, _fase: 'Decisão', _faseColor: 'bg-amber-50 text-amber-600' })),
-                          ...mockConcludedCertificatesExtravio.map(c => ({ ...c, _fase: 'Concluído', _faseColor: 'bg-emerald-50 text-emerald-600' })),
-                        ].map((cert) => (
+                        {listaHistoricoExtravio.length > 0 ? listaHistoricoExtravio.map((cert) => (
                           <tr
                             key={cert.id + cert._fase}
                             onClick={() => {
                               setSelectedHistoryCertificateExtravio(cert);
+                              setExtravioDetailBackView('certificate_history_extravio');
                               setCurrentView('certificate_history_extravio_detail');
                             }}
                             className="hover:bg-blue-50 cursor-pointer transition-colors group"
                           >
                             <td className="px-6 py-4 text-sm font-bold text-blue-600 group-hover:underline">{cert.id}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-900 whitespace-nowrap">{cert.certificateNumber ? `CEEXT n.º ${cert.certificateNumber}` : <span className="text-slate-300">—</span>}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.documentosExtraviados?.docType || cert.docType || <span className="text-slate-300">—</span>}</td>
                             <td className="px-6 py-4 text-sm font-bold text-slate-900">{cert.name}</td>
                             <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.birthDate}</td>
                             <td className="px-6 py-4 text-sm font-bold text-slate-600">{cert.requestDate}</td>
                             <td className="px-6 py-4">
                               <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${cert._faseColor}`}>{cert._fase}</span>
                             </td>
+                            <td className="px-6 py-4">
+                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${cert._estadoColor}`}>{cert._estado}</span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setSelectedHistoryCertificateExtravio(cert); setExtravioDetailBackView('certificate_history_extravio'); setCurrentView('certificate_history_extravio_detail'); }}
+                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                title="Ver pedido"
+                              >
+                                <Eye size={16} />
+                              </button>
+                            </td>
                           </tr>
                         )) : (
                           <tr>
-                            <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhum pedido encontrado.</td>
+                            <td colSpan={9} className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhum pedido encontrado.</td>
                           </tr>
                         )}
                       </tbody>
@@ -9644,11 +10268,18 @@ export default function App() {
               >
                 <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4">
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Detalhe do Pedido</h2>
-                  <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                  <div className="flex items-center gap-3">
+                    {(selectedHistoryCertificateExtravio._estado === 'Concluído' || selectedHistoryCertificateExtravio._fase === 'Concluído') && (
+                      <Button variant="outline" icon={Download} onClick={() => descarregarCertificadoExtravio(selectedHistoryCertificateExtravio)}>Descarregar Certificado</Button>
+                    )}
+                    <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                    selectedHistoryCertificateExtravio._fase === 'Solicitação'
+                      ? (selectedHistoryCertificateExtravio.status === 'Pago' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200') :
                     selectedHistoryCertificateExtravio._fase === 'Concluído' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
                     selectedHistoryCertificateExtravio._fase === 'Decisão' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
                     'bg-blue-50 text-blue-600 border border-blue-200'
-                  }`}>{selectedHistoryCertificateExtravio._fase}</span>
+                  }`}>{selectedHistoryCertificateExtravio._fase === 'Solicitação' ? (selectedHistoryCertificateExtravio.status || 'Por Pagar') : selectedHistoryCertificateExtravio._estado ? `${selectedHistoryCertificateExtravio._fase} · ${selectedHistoryCertificateExtravio._estado}` : selectedHistoryCertificateExtravio._fase}</span>
+                  </div>
                 </div>
 
                 {/* Devolução Warning */}
@@ -9674,13 +10305,25 @@ export default function App() {
 
                 {/* Dados Biográficos */}
                 <div className="space-y-2">
-                  <button onClick={() => toggleSection('extravioBiographic')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                  <div className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-900 text-white rounded-lg"><User size={18} /></div>
                       <span className="uppercase tracking-widest text-xs">Dados Biográficos</span>
                     </div>
-                    {expandedSections.extravioBiographic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                  </button>
+                    <div className="flex items-center gap-2">
+                      {extravioDetailBackView === 'certificate_list_extravio' && (
+                        <button
+                          onClick={() => abrirEdicaoExtravio('dados')}
+                          className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border-2 border-slate-100 hover:border-blue-200 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all"
+                        >
+                          <Edit size={14} /> Editar
+                        </button>
+                      )}
+                      <button onClick={() => toggleSection('extravioBiographic')} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all">
+                        {expandedSections.extravioBiographic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </button>
+                    </div>
+                  </div>
                   <AnimatePresence>
                     {expandedSections.extravioBiographic && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -9693,13 +10336,11 @@ export default function App() {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                             <DetailField label="Naturalidade" value={selectedHistoryCertificateExtravio.biographic.birthPlace} />
+                            <DetailField label="Profissão" value={selectedHistoryCertificateExtravio.biographic.profession || '---'} />
                             <DetailField label="Nacionalidade" value={selectedHistoryCertificateExtravio.biographic.nationality} />
                             <DetailField label="Nome Pai" value={selectedHistoryCertificateExtravio.biographic.fatherName} />
                             <DetailField label="Nome Mãe" value={selectedHistoryCertificateExtravio.biographic.motherName} />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <DetailField label="Tipo Documento" value={selectedHistoryCertificateExtravio.biographic.docType} />
-                            <DetailField label="Número Documento" value={selectedHistoryCertificateExtravio.biographic.docNumber} />
+                            <DetailField label="NIF" value={selectedHistoryCertificateExtravio.biographic.nif || '---'} />
                           </div>
                           <div className="space-y-4 pt-4 border-t border-slate-100">
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço</h4>
@@ -9708,6 +10349,7 @@ export default function App() {
                               <DetailField label="Conselho" value={selectedHistoryCertificateExtravio.address.council} />
                               <DetailField label="Freguesia" value={selectedHistoryCertificateExtravio.address.parish} />
                               <DetailField label="Localidade" value={selectedHistoryCertificateExtravio.address.locality} />
+                              <DetailField label="Zona" value={selectedHistoryCertificateExtravio.address.zone || selectedHistoryCertificateExtravio.zone || '---'} />
                               <DetailField label="Ponto de Referencia" value={selectedHistoryCertificateExtravio.address.reference} icon={MapPin} />
                             </div>
                           </div>
@@ -9726,22 +10368,31 @@ export default function App() {
 
                 {/* Documento Extraviado */}
                 <div className="space-y-2">
-                  <button onClick={() => toggleSection('extravioDocuments')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                  <div className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-900 text-white rounded-lg"><FileWarning size={18} /></div>
                       <span className="uppercase tracking-widest text-xs">Documento Extraviado</span>
                     </div>
-                    {expandedSections.extravioDocuments ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                  </button>
+                    <div className="flex items-center gap-2">
+                      {extravioDetailBackView === 'certificate_list_extravio' && (
+                        <button
+                          onClick={() => abrirEdicaoExtravio('documento')}
+                          className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border-2 border-slate-100 hover:border-blue-200 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all"
+                        >
+                          <Edit size={14} /> Editar
+                        </button>
+                      )}
+                      <button onClick={() => toggleSection('extravioDocuments')} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all">
+                        {expandedSections.extravioDocuments ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </button>
+                    </div>
+                  </div>
                   <AnimatePresence>
                     {expandedSections.extravioDocuments && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                         <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6 mt-1">
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <DetailField label="Tipo Documento" value={selectedHistoryCertificateExtravio.documentosExtraviados.docType} />
-                            <DetailField label="Número Documento" value={selectedHistoryCertificateExtravio.documentosExtraviados.docNumber} />
-                            <DetailField label="Data Emissão" value={selectedHistoryCertificateExtravio.documentosExtraviados.docIssueDate} icon={Calendar} />
-                            <DetailField label="Data Validade" value={selectedHistoryCertificateExtravio.documentosExtraviados.docExpiryDate} icon={Calendar} />
                           </div>
                         </div>
                       </motion.div>
@@ -9749,7 +10400,130 @@ export default function App() {
                   </AnimatePresence>
                 </div>
 
-                {/* Modelo de Certificado de Extravio */}
+                {/* Informações do DUC (pedidos em Solicitação) */}
+                {extravioDetailBackView === 'certificate_list_extravio' && (() => {
+                  const ducs = selectedHistoryCertificateExtravio.ducs || [];
+                  return (
+                    <div className="space-y-2">
+                      <button onClick={() => setDucExtravioOpen(v => !v)} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-slate-900 text-white rounded-lg"><CreditCard size={18} /></div>
+                          <span className="uppercase tracking-widest text-xs">Informações do DUC</span>
+                          <span className="text-[10px] font-black bg-slate-900 text-white px-2 py-0.5 rounded-full">{ducs.length}</span>
+                        </div>
+                        {ducExtravioOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </button>
+                      <AnimatePresence>
+                        {ducExtravioOpen && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="bg-white border-2 border-slate-100 rounded-2xl p-8 shadow-sm space-y-6 mt-1">
+                              {ducs.length === 0 ? (
+                                <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                                  <CreditCard size={28} className="mx-auto text-slate-200 mb-2" />
+                                  <p className="text-slate-400 text-sm italic">Nenhum documento de cobrança emitido</p>
+                                </div>
+                              ) : ducs.map((duc: any, idx: number) => (
+                                <div key={idx} className="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                                  <div className="px-6 py-4 bg-slate-50 border-b-2 border-slate-100 flex items-center justify-between gap-3">
+                                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Documento de Cobrança {idx + 1}</span>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => atualizarEstadoDucExtravio(idx)}
+                                        disabled={ducExtravioAAtualizar !== null}
+                                        className="px-3 py-1.5 bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-500 hover:text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        <RotateCcw size={13} className={ducExtravioAAtualizar === idx ? 'animate-spin' : ''} />
+                                        {ducExtravioAAtualizar === idx ? 'A atualizar...' : 'Atualizar Estado'}
+                                      </button>
+                                      <button className="px-3 py-1.5 bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-900 hover:text-slate-900 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all">
+                                        <Printer size={13} /> Imprimir
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-8">
+                                    <DetailField label="Número DUC" value={duc.numero || duc.referencia || '---'} />
+                                    <DetailField label="Valor Total" value={duc.valor ? `${duc.valor} ${duc.moeda || ''}`.trim() : '---'} />
+                                    <div className="space-y-2">
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</p>
+                                      <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                        duc.estado === 'Pago' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                      }`}>{duc.estado}</span>
+                                    </div>
+                                    <DetailField label="Data Emissão" value={duc.dataEmissao || '---'} />
+                                    {duc.entidade && <DetailField label="Entidade" value={duc.entidade} />}
+                                    {duc.recebedoria && <DetailField label="Recebedoria" value={duc.recebedoria} />}
+                                    {(duc.rubricas || []).length > 0 && (
+                                      <div className="md:col-span-4 space-y-2">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rubricas</p>
+                                        {duc.rubricas.map((r: any, j: number) => (
+                                          <div key={j} className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                            <span className="text-[10px] font-black bg-slate-900 text-white px-2.5 py-1 rounded-lg tracking-tight whitespace-nowrap">{r.codigo}</span>
+                                            <p className="flex-1 min-w-0 text-sm font-bold text-slate-700 truncate">{r.descricao}</p>
+                                            <span className="text-sm font-black text-slate-900 whitespace-nowrap">{r.valor} {duc.moeda}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })()}
+
+                {/* Meio de Pagamento (pedidos em Solicitação) */}
+                {extravioDetailBackView === 'certificate_list_extravio' &&
+                  renderMeioPagamento(selectedHistoryCertificateExtravio.ducs || [], pagamentoExtravioOpen, () => setPagamentoExtravioOpen(v => !v))}
+
+                {/* Histórico (não existe na fase de Solicitação) */}
+                {extravioDetailBackView !== 'certificate_list_extravio' && (
+                <div className="space-y-2">
+                  <button onClick={() => toggleSection('extravioHistory')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
+                      <span className="uppercase tracking-widest text-xs">Histórico do Pedido</span>
+                    </div>
+                    {expandedSections.extravioHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  <AnimatePresence>
+                    {expandedSections.extravioHistory && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mt-1">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
+                                  <th className="px-6 py-4">Data</th>
+                                  <th className="px-6 py-4">Fase</th>
+                                  <th className="px-6 py-4">Estado</th>
+                                  <th className="px-6 py-4">Utilizador</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {selectedHistoryCertificateExtravio.history.map((h: any, idx: number) => (
+                                  <tr key={idx} className="bg-white">
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
+                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                )}
+
+                {/* Modelo de Certificado de Extravio (não existe na fase de Solicitação) */}
+                {extravioDetailBackView !== 'certificate_list_extravio' && (
                 <div className="space-y-2">
                   <button onClick={() => toggleSection('extravioCertificateModel')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
                     <div className="flex items-center gap-3">
@@ -9814,6 +10588,7 @@ export default function App() {
                     )}
                   </AnimatePresence>
                 </div>
+                )}
 
                 {/* Anexos */}
                 <div className="space-y-2">
@@ -9841,7 +10616,8 @@ export default function App() {
                   </AnimatePresence>
                 </div>
 
-                {/* Observações */}
+                {/* Observações (não existe na fase de Solicitação) */}
+                {extravioDetailBackView !== 'certificate_list_extravio' && (
                 <div className="space-y-2">
                   <button onClick={() => toggleSection('extravioObservations')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
                     <div className="flex items-center gap-3">
@@ -9871,50 +10647,20 @@ export default function App() {
                     )}
                   </AnimatePresence>
                 </div>
+                )}
 
-                {/* Histórico */}
-                <div className="space-y-2">
-                  <button onClick={() => toggleSection('extravioHistory')} className="w-full bg-white border-2 border-slate-100 py-4 px-6 rounded-2xl flex items-center justify-between font-black text-slate-900 hover:bg-slate-50 transition-all shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-900 text-white rounded-lg"><History size={18} /></div>
-                      <span className="uppercase tracking-widest text-xs">Histórico do Pedido</span>
-                    </div>
-                    {expandedSections.extravioHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                  </button>
-                  <AnimatePresence>
-                    {expandedSections.extravioHistory && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                        <div className="bg-white border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mt-1">
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                              <thead>
-                                <tr className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] border-b border-slate-100">
-                                  <th className="px-6 py-4">Data</th>
-                                  <th className="px-6 py-4">Fase</th>
-                                  <th className="px-6 py-4">Estado</th>
-                                  <th className="px-6 py-4">Utilizador</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-50">
-                                {selectedHistoryCertificateExtravio.history.map((h: any, idx: number) => (
-                                  <tr key={idx} className="bg-white">
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{h.date}</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.phase}</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.status}</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{h.user}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                <div className="flex justify-start pt-8 border-t border-slate-100">
-                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView('certificate_history_extravio')}>Voltar</Button>
+                <div className="flex justify-between items-center pt-8 border-t border-slate-100">
+                  <Button variant="outline" icon={ArrowLeft} onClick={() => setCurrentView(extravioDetailBackView as any)}>Voltar</Button>
+                  {selectedHistoryCertificateExtravio._fase === 'Solicitação' && (
+                    <Button
+                      variant="primary"
+                      icon={ArrowRight}
+                      disabled={selectedHistoryCertificateExtravio.status !== 'Pago'}
+                      onClick={enviarParaAnaliseExtravio}
+                    >
+                      Enviar para Análise
+                    </Button>
+                  )}
                 </div>
               </motion.div>
 
@@ -13082,7 +13828,19 @@ export default function App() {
                   
                   { (associatedPerson || isNewRegistration) ? (
                     <div className="flex gap-4">
-                      <button 
+                      <button
+                        onClick={() => {
+                          if (!selectedPerson) return;
+                          const draftPerson = {
+                            ...selectedPerson,
+                            associated_ficha: associatedPerson || null,
+                            is_new_registration: isNewRegistration,
+                            draft_saved_date: new Date().toISOString()
+                          };
+                          setSelectedPerson(draftPerson);
+                          setPersons(persons.map(p => p.id === draftPerson.id ? draftPerson : p));
+                          alert('Alterações guardadas com sucesso.');
+                        }}
                         className="px-8 py-2 bg-blue-500 text-white font-bold rounded hover:bg-blue-600 transition-colors text-sm border border-blue-600 shadow-md"
                       >
                         Guardar
@@ -14456,6 +15214,85 @@ export default function App() {
           </div>
         )}
 
+        {/* Modal: editar um bloco do Detalhe do Pedido de extravio */}
+        {extravioEditSection && extravioEditDraft && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border-2 border-slate-100"
+            >
+              <div className="bg-slate-900 px-6 py-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/10 rounded-lg"><Edit size={18} className="text-white" /></div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Editar {extravioEditSection === 'dados' ? 'Dados Biográficos' : 'Documento Extraviado'}</h3>
+                </div>
+                <button onClick={fecharEdicaoExtravio} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6 overflow-y-auto">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pedido {selectedHistoryCertificateExtravio?.id}</p>
+
+                {extravioEditSection === 'dados' && (() => {
+                  const d = extravioEditDraft;
+                  const setB = (k: string, v: string) => setExtravioEditDraft({ ...d, biographic: { ...d.biographic, [k]: v } });
+                  const setA = (k: string, v: string) => setExtravioEditDraft({ ...d, address: { ...d.address, [k]: v } });
+                  const setC = (k: string, v: string) => setExtravioEditDraft({ ...d, contact: { ...d.contact, [k]: v } });
+                  return (
+                    <div className="space-y-8">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="md:col-span-2"><DetailField label="Nome Completo" value={d.biographic.fullName} readOnly={false} onChange={(v: string) => setB('fullName', v)} /></div>
+                        <DetailField label="Data Nascimento" value={d.biographic.birthDate} type="date" readOnly={false} onChange={(v: string) => setB('birthDate', v)} />
+                        <DetailField label="Sexo" value={d.biographic.gender} type="select" readOnly={false} options={['Masculino', 'Feminino']} onChange={(v: string) => setB('gender', v)} />
+                        <DetailField label="Estado Civil" value={d.biographic.civilStatus} type="select" readOnly={false} options={['Solteiro', 'Casado', 'Divorciado', 'Viúvo', 'União de Facto']} onChange={(v: string) => setB('civilStatus', v)} />
+                        <DetailField label="Naturalidade" value={d.biographic.birthPlace} readOnly={false} onChange={(v: string) => setB('birthPlace', v)} />
+                        <DetailField label="Profissão" value={d.biographic.profession} readOnly={false} onChange={(v: string) => setB('profession', v)} />
+                        <DetailField label="Nacionalidade" value={d.biographic.nationality} type="select" readOnly={false} options={['Cabo-verdiana', 'Portuguesa', 'Angolana', 'Senegalesa', 'Guineense']} onChange={(v: string) => setB('nationality', v)} />
+                        <DetailField label="Nome Pai" value={d.biographic.fatherName} readOnly={false} onChange={(v: string) => setB('fatherName', v)} />
+                        <DetailField label="Nome Mãe" value={d.biographic.motherName} readOnly={false} onChange={(v: string) => setB('motherName', v)} />
+                        <DetailField label="NIF" value={d.biographic.nif} readOnly={false} onChange={(v: string) => setB('nif', v)} />
+                      </div>
+                      <div className="space-y-4 pt-4 border-t border-slate-100">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                          <DetailField label="Ilha" value={d.address.island} type="select" readOnly={false} options={['Santiago', 'São Vicente', 'Sal', 'Boa Vista', 'Fogo', 'Maio', 'Brava', 'Santo Antão', 'São Nicolau']} onChange={(v: string) => setA('island', v)} />
+                          <DetailField label="Conselho" value={d.address.council} readOnly={false} onChange={(v: string) => setA('council', v)} />
+                          <DetailField label="Freguesia" value={d.address.parish} readOnly={false} onChange={(v: string) => setA('parish', v)} />
+                          <DetailField label="Localidade" value={d.address.locality} readOnly={false} onChange={(v: string) => setA('locality', v)} />
+                          <DetailField label="Zona" value={d.address.zone} type="select" readOnly={false} options={['Zona 1', 'Zona 2']} onChange={(v: string) => setA('zone', v)} />
+                          <div className="md:col-span-2"><DetailField label="Ponto de Referencia" value={d.address.reference} readOnly={false} onChange={(v: string) => setA('reference', v)} /></div>
+                        </div>
+                      </div>
+                      <div className="space-y-4 pt-4 border-t border-slate-100">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <DetailField label="Telemovel" value={d.contact.mobile} readOnly={false} onChange={(v: string) => setC('mobile', v)} />
+                          <DetailField label="Email" value={d.contact.email} readOnly={false} onChange={(v: string) => setC('email', v)} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {extravioEditSection === 'documento' && (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <DetailField label="Tipo Documento" value={extravioEditDraft.documentosExtraviados.docType} type="select" readOnly={false}
+                      options={['BI', 'CNI', 'Passaporte', 'TRE']}
+                      onChange={(v: string) => setExtravioEditDraft({ ...extravioEditDraft, documentosExtraviados: { ...extravioEditDraft.documentosExtraviados, docType: v } })} />
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-4 border-t-2 border-slate-100 flex gap-3 justify-end">
+                <Button variant="outline" onClick={fecharEdicaoExtravio}>Cancelar</Button>
+                <Button variant="success" icon={Check} onClick={guardarEdicaoExtravio}>Guardar</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {/* Modal: editar um bloco do Detalhe do Pedido */}
 
         {editingCertSection && editCertDraft && (
@@ -14584,7 +15421,7 @@ export default function App() {
                 {editingSection === 'documentoEncontrado' && (
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <DetailField label="Tipo Documento" value={editSectionDraft.document.type} type="select" readOnly={false}
-                      options={(paramDomains['Documentos Extraviados'] || []).filter(m => m.estado === 'Ativo').map(m => m.valor)}
+                      options={['BI', 'CNI', 'Passaporte', 'TRE']}
                       onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, type: v}})} />
                     <DetailField label="Identificação de Documento" value={editSectionDraft.document.number} readOnly={false}
                       onChange={(v: string) => setEditSectionDraft({...editSectionDraft, document: {...editSectionDraft.document, number: v}})} />
@@ -16632,11 +17469,13 @@ export default function App() {
                       <span className="text-sm font-bold text-slate-600">Clique para carregar ficheiro</span>
                       <input type="file" className="hidden" onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file && attachmentTitle) {
+                        if (file) {
+                          // Sem título escrito, usa o nome do ficheiro (antes não acontecia nada e o anexo perdia-se)
+                          const titulo = attachmentTitle.trim() || file.name;
                           const novo = {
-                            title: attachmentTitle,
+                            title: titulo,
                             name: file.name,
-                            description: attachmentTitle,
+                            description: titulo,
                             size: file.size,
                             type: attachmentType,
                             uploadedBy: user?.name || 'Administrador do Sistema',
@@ -16652,6 +17491,7 @@ export default function App() {
                           setAttachmentTitle('');
                           setAttachmentTarget('documento');
                         }
+                        e.target.value = '';
                       }} />
                     </label>
                   </div>
